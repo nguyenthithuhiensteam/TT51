@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ListChecks, Printer } from "lucide-react";
+import { ArrowLeft, ListChecks, Printer, Sparkles } from "lucide-react";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { StatusBadge } from "../../components/ui/Badge";
@@ -22,6 +22,8 @@ import {
 import { createTask } from "../../lib/db/taskRepo";
 import { linkDocumentToTask } from "../../lib/db/documentRepo";
 import { DOC_TYPE_LABELS } from "../../lib/db/types";
+import { generateWithAi } from "../../lib/ai/gateway";
+import { redactText } from "../../lib/ai/redact";
 
 interface DocAction {
   label: string;
@@ -72,6 +74,11 @@ export function DocumentDetailPage() {
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDueDate, setTaskDueDate] = useState("");
   const [busy, setBusy] = useState(false);
+  const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [aiInstruction, setAiInstruction] = useState("");
+  const [aiResult, setAiResult] = useState<string | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   async function refresh() {
     if (!id) return;
@@ -122,6 +129,36 @@ export function DocumentDetailPage() {
       refresh();
     } finally {
       setBusy(false);
+    }
+  }
+
+  function buildAiUserPrompt(): string {
+    if (!doc) return "";
+    const raw = [
+      `Loại văn bản: ${DOC_TYPE_LABELS[doc.doc_type]}`,
+      `Tiêu đề: ${doc.title}`,
+      doc.summary ? `Trích yếu: ${doc.summary}` : "",
+      `Yêu cầu cụ thể: ${aiInstruction || "Soạn nội dung phù hợp với tiêu đề và trích yếu trên"}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+    return redactText(raw).redacted;
+  }
+
+  async function runAiDraft() {
+    setAiLoading(true);
+    setAiError(null);
+    setAiResult(null);
+    try {
+      const systemPrompt =
+        "Bạn là trợ lý soạn thảo văn bản hành chính cho trường mầm non công lập tại Việt Nam. " +
+        "Viết văn phong trang trọng, đúng thể thức văn bản hành chính, tiếng Việt chuẩn, không bịa đặt số liệu.";
+      const result = await generateWithAi(systemPrompt, buildAiUserPrompt());
+      setAiResult(result.content);
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : "Không thể tạo nội dung AI");
+    } finally {
+      setAiLoading(false);
     }
   }
 
@@ -211,9 +248,24 @@ export function DocumentDetailPage() {
       <Card className="print:hidden">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-navy">Nội dung (phiên bản mới nhất)</h2>
-          <span className="text-xs text-navy/50">
-            {versions.length > 0 ? `Phiên bản ${versions[0].version_no}` : "Chưa có nội dung"}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-navy/50">
+              {versions.length > 0 ? `Phiên bản ${versions[0].version_no}` : "Chưa có nội dung"}
+            </span>
+            {doc.status !== "published" && doc.status !== "archived" && hasPermission("document.create") && (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  setAiResult(null);
+                  setAiError(null);
+                  setAiModalOpen(true);
+                }}
+              >
+                <Sparkles size={14} /> Soạn dự thảo bằng AI
+              </Button>
+            )}
+          </div>
         </div>
         <Textarea
           value={editingContent}
@@ -298,6 +350,52 @@ export function DocumentDetailPage() {
               Tạo nhiệm vụ
             </Button>
           </div>
+        </div>
+      </Modal>
+
+      <Modal open={aiModalOpen} onClose={() => setAiModalOpen(false)} title="Soạn dự thảo bằng AI" wide>
+        <div className="space-y-3">
+          <Field label="Yêu cầu cụ thể (tùy chọn)">
+            <Textarea
+              value={aiInstruction}
+              onChange={(e) => setAiInstruction(e.target.value)}
+              placeholder="VD: Soạn theo thể thức công văn, nhấn mạnh mốc thời gian thực hiện..."
+            />
+          </Field>
+          <div>
+            <p className="mb-1 text-xs font-medium text-navy/60">
+              Nội dung sẽ gửi cho AI (đã ẩn danh số điện thoại/ngày tháng nếu có):
+            </p>
+            <pre className="max-h-32 overflow-y-auto whitespace-pre-wrap rounded-lg bg-cream p-2 text-xs text-navy/70">
+              {buildAiUserPrompt()}
+            </pre>
+          </div>
+          <div className="flex justify-end">
+            <Button size="sm" disabled={aiLoading} onClick={runAiDraft}>
+              {aiLoading ? "Đang tạo..." : "Tạo dự thảo"}
+            </Button>
+          </div>
+          {aiError && <p className="text-sm text-danger">{aiError}</p>}
+          {aiResult && (
+            <div className="space-y-2 rounded-lg border border-mint/30 bg-mint/5 p-3">
+              <p className="text-xs font-semibold text-mint">Nội dung do AI hỗ trợ — cần kiểm tra trước khi lưu</p>
+              <p className="whitespace-pre-wrap text-sm text-navy">{aiResult}</p>
+              <div className="flex justify-end">
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setEditingContent(
+                      (prev) =>
+                        `${prev ? prev + "\n\n" : ""}[Nội dung do AI hỗ trợ — đã kiểm tra]\n${aiResult}`,
+                    );
+                    setAiModalOpen(false);
+                  }}
+                >
+                  Chèn vào nội dung
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </Modal>
     </div>

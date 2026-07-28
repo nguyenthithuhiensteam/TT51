@@ -68,7 +68,7 @@ Nguyên tắc cốt lõi:
 
 ## 5. Phạm vi theo giai đoạn
 
-Xem chi tiết trong `docs/ROADMAP.md`. Giai đoạn 0–3 (đã triển khai):
+Xem chi tiết trong `docs/ROADMAP.md`. Giai đoạn 0–4 (đã triển khai):
 
 - Giai đoạn 1: Khởi tạo dự án, cơ sở dữ liệu, đăng nhập, phân quyền, cấu hình trường/năm học,
   giao diện chính, Tổng quan, Công việc, Văn phòng số (quy trình cơ bản), sao lưu/khôi phục.
@@ -80,9 +80,13 @@ Xem chi tiết trong `docs/ROADMAP.md`. Giai đoạn 0–3 (đã triển khai):
   ứng, kiểm thực ba bước, giao nhận thực phẩm), Sức khỏe – An toàn (hồ sơ sức khỏe, tăng
   trưởng, tiêm chủng, sự cố/tai nạn, kiểm tra an toàn có kế hoạch khắc phục), Tài chính – Tài
   sản (khoản thu, phiếu thu/chi theo quy trình lập-kiểm tra-phê duyệt, danh mục tài sản).
+- Giai đoạn 4: Kiểm định (tiêu chuẩn/tiêu chí, tự đánh giá, kho minh chứng N-N chống tải
+  trùng), Công tác Đảng (phân hệ tách biệt hoàn toàn, chỉ `party_committee` truy cập được),
+  Phụ huynh (giao diện tập trung, chỉ dữ liệu con mình, xin nghỉ, trao đổi với giáo viên),
+  AI Gateway (cấu hình đa nhà cung cấp, ẩn danh dữ liệu trẻ trước khi gửi).
 
-Giai đoạn 4–5 (kế hoạch, chưa triển khai mã): Kiểm định, Công tác Đảng, Phụ huynh, AI Gateway,
-xuất PDF, đóng gói bộ cài Windows.
+Giai đoạn 5 (kế hoạch, chưa triển khai mã): xuất PDF, đóng gói bộ cài Windows, đồng bộ mạng
+LAN/đám mây (cần hạ tầng máy chủ), thông báo đa kênh (cần dịch vụ SMS/email/Zalo ngoài).
 
 ## 6. Vai trò người dùng (tóm tắt, chi tiết ở `docs/PERMISSIONS.md`)
 
@@ -95,12 +99,15 @@ Nhân viên y tế, Nhân viên nuôi dưỡng, Cấp ủy, Phụ huynh, Quản 
 → Đã khóa → Đã lưu trữ / Đã hủy`. Mọi thay đổi trạng thái ghi vào `Approvals`/`AuditLogs`
 kèm người thực hiện, thời điểm, trạng thái trước/sau, lý do, phiên đăng nhập.
 
-## 8. Giới hạn đã biết ở bản Giai đoạn 1-3
+## 8. Giới hạn đã biết ở bản Giai đoạn 1-4
 
 - Chưa đóng gói bộ cài `.msi`/`.exe` Windows cuối cùng (cần máy Windows có Visual Studio
   Build Tools; môi trường xây dựng hiện tại là Linux headless, chỉ kiểm tra biên dịch
   `cargo check` được).
-- Chưa có AI Gateway, đồng bộ mạng LAN, xuất PDF — thuộc giai đoạn sau (đã có xuất Word/Excel).
+- AI Gateway đã có khung cấu hình + lệnh gọi Rust cho 3 nhà cung cấp nhưng **chưa kiểm thử với
+  khóa API thật** (môi trường phát triển không có khóa); đồng bộ mạng LAN/đám mây và thông báo
+  đa kênh (SMS/email/Zalo) chưa triển khai vì cần hạ tầng máy chủ/dịch vụ ngoài chưa tồn tại.
+- Chưa có xuất PDF — thuộc giai đoạn sau (đã có xuất Word/Excel).
 - Điểm danh (Trẻ em) nay đã liên kết tự động với số trẻ ăn (Nuôi dưỡng); chưa có tính khẩu
   phần/giá thành suất ăn tự động theo định lượng thực phẩm (thuộc phạm vi mở rộng sau).
 - Các phân hệ Kiểm định, Công tác Đảng, Phụ huynh mới có ở mức schema dữ liệu định hướng,

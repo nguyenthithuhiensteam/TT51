@@ -2,7 +2,14 @@ import { dbExecute, dbSelect, nowIso } from "./client";
 import { newId } from "../utils/id";
 import { logAudit } from "./authRepo";
 import type { PagedResult } from "./taskRepo";
-import type { AttendanceStatus, Child, ChildStatus, Guardian, SchoolClass } from "./types";
+import type {
+  AttendanceStatus,
+  Child,
+  ChildStatus,
+  Guardian,
+  LeaveRequestStatus,
+  SchoolClass,
+} from "./types";
 
 // ===================== LỚP =====================
 
@@ -402,5 +409,78 @@ export async function getChildrenAttendanceSummary(
      GROUP BY ch.id
      ORDER BY ch.full_name ASC`,
     [fromDate, toDate, classId],
+  );
+}
+
+// ===================== ĐƠN XIN NGHỈ & TRAO ĐỔI VỚI PHỤ HUYNH (PHÍA GIÁO VIÊN) =====================
+
+export interface StaffLeaveRequestRow {
+  id: string;
+  code: string;
+  child_name: string;
+  start_date: string;
+  end_date: string;
+  reason: string;
+  status: LeaveRequestStatus;
+  created_at: string;
+}
+
+export async function listLeaveRequestsForChild(childId: string): Promise<StaffLeaveRequestRow[]> {
+  return dbSelect<StaffLeaveRequestRow>(
+    `SELECT lr.id, lr.code, ch.full_name AS child_name, lr.start_date, lr.end_date, lr.reason,
+       lr.status, lr.created_at
+     FROM child_leave_requests lr JOIN children ch ON ch.id = lr.child_id
+     WHERE lr.child_id = ? ORDER BY lr.created_at DESC`,
+    [childId],
+  );
+}
+
+export async function decideLeaveRequest(
+  id: string,
+  approve: boolean,
+  decidedBy: string,
+  note: string | undefined,
+): Promise<void> {
+  const toStatus: LeaveRequestStatus = approve ? "approved" : "needs_revision";
+  await dbExecute(
+    "UPDATE child_leave_requests SET status = ?, decided_by = ?, decided_at = ?, decision_note = ? WHERE id = ?",
+    [toStatus, decidedBy, nowIso(), note ?? null, id],
+  );
+  await logAudit({
+    entityTable: "child_leave_requests",
+    entityId: id,
+    action: approve ? "approve" : "reject",
+    userId: decidedBy,
+    sessionId: null,
+  });
+}
+
+export interface StaffMessageRow {
+  id: string;
+  sender_role: "parent" | "teacher";
+  sender_name: string;
+  content: string;
+  created_at: string;
+}
+
+export async function listMessagesForChild(childId: string): Promise<StaffMessageRow[]> {
+  return dbSelect<StaffMessageRow>(
+    `SELECT pm.id, pm.sender_role, u.full_name AS sender_name, pm.content, pm.created_at
+     FROM parent_messages pm JOIN users u ON u.id = pm.sender_user_id
+     WHERE pm.child_id = ? ORDER BY pm.created_at ASC`,
+    [childId],
+  );
+}
+
+export async function replyAsTeacher(childId: string, teacherId: string, content: string): Promise<void> {
+  const guardianRows = await dbSelect<{ guardian_id: string }>(
+    "SELECT guardian_id FROM child_guardians WHERE child_id = ? LIMIT 1",
+    [childId],
+  );
+  const guardianId = guardianRows[0]?.guardian_id;
+  if (!guardianId) throw new Error("Trẻ chưa có thông tin phụ huynh liên kết");
+  await dbExecute(
+    "INSERT INTO parent_messages (id, child_id, guardian_id, sender_role, sender_user_id, content, is_read, created_at) VALUES (?, ?, ?, 'teacher', ?, ?, 0, ?)",
+    [newId(), childId, guardianId, teacherId, content, nowIso()],
   );
 }

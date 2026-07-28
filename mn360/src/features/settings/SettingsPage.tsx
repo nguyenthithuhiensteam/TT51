@@ -17,8 +17,11 @@ import { getDataDir, setDataDir } from "../../lib/db/backupRepo";
 import { useAppStore } from "../../store/appStore";
 import { useAuthStore } from "../../store/authStore";
 import type { School, SchoolYear } from "../../lib/db/types";
+import { defaultModelFor, loadAiConfig, saveAiConfig, type AiConfig, type AiProvider } from "../../lib/ai/gateway";
+import { Select } from "../../components/ui/Input";
 
 export function SettingsPage() {
+  const user = useAuthStore((s) => s.user);
   const hasPermission = useAuthStore((s) => s.hasPermission);
   const setSchoolContext = useAppStore((s) => s.setSchoolContext);
   const [school, setSchool] = useState<School | null>(null);
@@ -26,6 +29,9 @@ export function SettingsPage() {
   const [dataDir, setDataDirState] = useState("");
   const [dirBusy, setDirBusy] = useState(false);
   const [dirMessage, setDirMessage] = useState<string | null>(null);
+  const [aiConfig, setAiConfig] = useState<AiConfig>({ provider: "off", apiKey: "", model: "" });
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiMessage, setAiMessage] = useState<string | null>(null);
   const canEdit = hasPermission("system.edit");
 
   const schoolForm = useForm<SchoolFormInput>({ resolver: zodResolver(schoolSchema) });
@@ -44,6 +50,7 @@ export function SettingsPage() {
       setYears(await listSchoolYears(s.id));
     }
     setDataDirState(await getDataDir());
+    setAiConfig(await loadAiConfig());
   }
 
   useEffect(() => {
@@ -199,6 +206,71 @@ export function SettingsPage() {
           </Button>
         )}
         {dirMessage && <p className="mt-2 text-sm text-warn">{dirMessage}</p>}
+      </Card>
+
+      <Card>
+        <h2 className="mb-2 text-sm font-semibold text-navy">Trợ lý AI (AI Gateway)</h2>
+        <p className="mb-3 text-sm text-navy/60">
+          AI chỉ hoạt động khi có Internet và đã cấu hình khóa API. Không gửi tên, ngày sinh,
+          địa chỉ, số điện thoại của trẻ/phụ huynh — dữ liệu được ẩn danh trước khi gửi. Kết quả
+          AI luôn có nhãn "Nội dung do AI hỗ trợ" và cần người kiểm tra trước khi lưu chính thức.
+        </p>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <Field label="Nhà cung cấp">
+            <Select
+              disabled={!canEdit}
+              value={aiConfig.provider}
+              onChange={(e) => {
+                const provider = e.target.value as AiProvider;
+                setAiConfig((p) => ({ ...p, provider, model: p.model || defaultModelFor(provider) }));
+              }}
+            >
+              <option value="off">Tắt hoàn toàn</option>
+              <option value="openai">OpenAI</option>
+              <option value="gemini">Google Gemini</option>
+              <option value="claude">Anthropic Claude</option>
+            </Select>
+          </Field>
+          <Field label="Model">
+            <Input
+              disabled={!canEdit || aiConfig.provider === "off"}
+              value={aiConfig.model}
+              placeholder={defaultModelFor(aiConfig.provider)}
+              onChange={(e) => setAiConfig((p) => ({ ...p, model: e.target.value }))}
+            />
+          </Field>
+          <Field label="Khóa API">
+            <Input
+              type="password"
+              disabled={!canEdit || aiConfig.provider === "off"}
+              value={aiConfig.apiKey}
+              onChange={(e) => setAiConfig((p) => ({ ...p, apiKey: e.target.value }))}
+              placeholder="Dán khóa API tại đây"
+            />
+          </Field>
+        </div>
+        {canEdit && (
+          <div className="mt-3">
+            <Button
+              size="sm"
+              disabled={aiBusy}
+              onClick={async () => {
+                if (!user) return;
+                setAiBusy(true);
+                setAiMessage(null);
+                try {
+                  await saveAiConfig(aiConfig, user.id);
+                  setAiMessage("Đã lưu cấu hình AI.");
+                } finally {
+                  setAiBusy(false);
+                }
+              }}
+            >
+              Lưu cấu hình AI
+            </Button>
+            {aiMessage && <span className="ml-3 text-sm text-mint">{aiMessage}</span>}
+          </div>
+        )}
       </Card>
     </div>
   );

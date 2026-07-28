@@ -392,3 +392,53 @@ export const ASSET_STATUS_LABELS: Record<AssetStatus, string> = {
   transferred: "Đã điều chuyển",
   disposed: "Đã thanh lý",
 };
+
+// ===================== GIAI ĐOẠN 4: CÔNG TÁC ĐẢNG =====================
+
+export type PartyCellPosition = "bi_thu" | "pho_bi_thu" | "chi_uy_vien" | "dang_vien";
+
+export const PARTY_POSITION_LABELS: Record<PartyCellPosition, string> = {
+  bi_thu: "Bí thư",
+  pho_bi_thu: "Phó bí thư",
+  chi_uy_vien: "Chi ủy viên",
+  dang_vien: "Đảng viên",
+};
+
+export type PartyMeetingType = "dinh_ky" | "chuyen_de";
+
+export const PARTY_MEETING_TYPE_LABELS: Record<PartyMeetingType, string> = {
+  dinh_ky: "Sinh hoạt định kỳ",
+  chuyen_de: "Sinh hoạt chuyên đề",
+};
+
+export type ResolutionTrackingStatus = "chua_thuc_hien" | "dang_thuc_hien" | "hoan_thanh";
+
+export const RESOLUTION_STATUS_LABELS: Record<ResolutionTrackingStatus, string> = {
+  chua_thuc_hien: "Chưa thực hiện",
+  dang_thuc_hien: "Đang thực hiện",
+  hoan_thanh: "Hoàn thành",
+};
+
+export type PartyMemberRating =
+  | "hoan_thanh_xuat_sac"
+  | "hoan_thanh_tot"
+  | "hoan_thanh"
+  | "khong_hoan_thanh";
+
+export const PARTY_RATING_LABELS: Record<PartyMemberRating, string> = {
+  hoan_thanh_xuat_sac: "Hoàn thành xuất sắc nhiệm vụ",
+  hoan_thanh_tot: "Hoàn thành tốt nhiệm vụ",
+  hoan_thanh: "Hoàn thành nhiệm vụ",
+  khong_hoan_thanh: "Không hoàn thành nhiệm vụ",
+};
+
+// ===================== GIAI ĐOẠN 4: PHỤ HUYNH =====================
+
+export type LeaveRequestStatus = "pending_approval" | "approved" | "needs_revision" | "cancelled";
+
+export const LEAVE_REQUEST_STATUS_LABELS: Record<LeaveRequestStatus, string> = {
+  pending_approval: "Chờ duyệt",
+  approved: "Đã duyệt",
+  needs_revision: "Từ chối",
+  cancelled: "Đã hủy",
+};

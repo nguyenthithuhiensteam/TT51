@@ -10,7 +10,6 @@ import { DocumentsListPage } from "./features/documents/DocumentsListPage";
 import { DocumentDetailPage } from "./features/documents/DocumentDetailPage";
 import { SettingsPage } from "./features/settings/SettingsPage";
 import { BackupPage } from "./features/backup/BackupPage";
-import { PlaceholderPage } from "./features/common/PlaceholderPage";
 import { ChildrenPage } from "./features/children/ChildrenPage";
 import { ChildDetailPage } from "./features/children/ChildDetailPage";
 import { StaffListPage } from "./features/staff/StaffListPage";
@@ -20,6 +19,9 @@ import { PlanDetailPage } from "./features/curriculum/PlanDetailPage";
 import { NutritionPage } from "./features/nutrition/NutritionPage";
 import { HealthSafetyPage } from "./features/health/HealthSafetyPage";
 import { FinancePage } from "./features/finance/FinancePage";
+import { AccreditationPage } from "./features/accreditation/AccreditationPage";
+import { PartyPage } from "./features/party/PartyPage";
+import { ParentPortalPage } from "./features/parent/ParentPortalPage";
 
 export default function App() {
   return (
@@ -151,7 +153,7 @@ export default function App() {
             path="kiem-dinh"
             element={
               <RequirePermission permission="accreditation.view">
-                <PlaceholderPage title="Kiểm định" phase="Giai đoạn 4" />
+                <AccreditationPage />
               </RequirePermission>
             }
           />
@@ -159,7 +161,7 @@ export default function App() {
             path="cong-tac-dang"
             element={
               <RequirePermission permission="party.view">
-                <PlaceholderPage title="Công tác Đảng" phase="Giai đoạn 4" />
+                <PartyPage />
               </RequirePermission>
             }
           />
@@ -167,7 +169,7 @@ export default function App() {
             path="phu-huynh"
             element={
               <RequirePermission permission="parent.view">
-                <PlaceholderPage title="Phụ huynh" phase="Giai đoạn 4" />
+                <ParentPortalPage />
               </RequirePermission>
             }
           />

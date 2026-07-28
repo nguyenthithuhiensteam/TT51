@@ -24,6 +24,7 @@ pub fn run() {
             commands::backup::backup_database,
             commands::backup::restore_database,
             commands::backup::list_backups,
+            commands::ai::ai_generate,
         ])
         .run(tauri::generate_context!())
         .expect("error while running MN360");

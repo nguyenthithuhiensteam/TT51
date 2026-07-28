@@ -10,14 +10,20 @@ import { useAppStore } from "../../store/appStore";
 import {
   addGuardianToChild,
   changeChildStatus,
+  decideLeaveRequest,
   getChildById,
   listChildStatusHistory,
   listClasses,
   listGuardiansOfChild,
+  listLeaveRequestsForChild,
+  listMessagesForChild,
+  replyAsTeacher,
   type ChildStatusHistoryRow,
   type ChildWithClass,
   type ClassWithTeacher,
   type GuardianOfChild,
+  type StaffLeaveRequestRow,
+  type StaffMessageRow,
 } from "../../lib/db/childRepo";
 import {
   addChildAssessment,
@@ -27,7 +33,7 @@ import {
   type ChildAssessmentRow,
   type ObservationRow,
 } from "../../lib/db/curriculumRepo";
-import { CHILD_STATUS_LABELS, ASSESSMENT_DOMAIN_LABELS } from "../../lib/db/types";
+import { CHILD_STATUS_LABELS, ASSESSMENT_DOMAIN_LABELS, LEAVE_REQUEST_STATUS_LABELS } from "../../lib/db/types";
 import type { AssessmentDomain, ChildStatus } from "../../lib/db/types";
 
 export function ChildDetailPage() {
@@ -55,6 +61,9 @@ export function ChildDetailPage() {
 
   const [obsContent, setObsContent] = useState("");
   const [assessForm, setAssessForm] = useState({ period: "", domain: "the_chat" as AssessmentDomain, result: "", note: "" });
+  const [leaveRequests, setLeaveRequests] = useState<StaffLeaveRequestRow[]>([]);
+  const [messages, setMessages] = useState<StaffMessageRow[]>([]);
+  const [replyText, setReplyText] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function refresh() {
@@ -65,6 +74,8 @@ export function ChildDetailPage() {
     setHistory(await listChildStatusHistory(id));
     setObservations(await listObservationsByChild(id));
     setAssessments(await listChildAssessments(id));
+    setLeaveRequests(await listLeaveRequestsForChild(id));
+    setMessages(await listMessagesForChild(id));
   }
 
   useEffect(() => {
@@ -318,6 +329,85 @@ export function ChildDetailPage() {
           </table>
         </div>
       </Card>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card>
+          <h2 className="mb-2 text-sm font-semibold text-navy">Đơn xin nghỉ từ phụ huynh</h2>
+          <div className="space-y-2 text-sm">
+            {leaveRequests.map((l) => (
+              <div key={l.id} className="rounded-lg border border-navy/5 p-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs text-navy/50">{l.code}</span>
+                  <span className="text-xs text-navy/60">{LEAVE_REQUEST_STATUS_LABELS[l.status]}</span>
+                </div>
+                <p className="text-navy">{l.start_date} → {l.end_date}: {l.reason}</p>
+                {l.status === "pending_approval" && hasPermission("children.approve") && (
+                  <div className="mt-1 flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="success"
+                      onClick={async () => {
+                        if (!user) return;
+                        await decideLeaveRequest(l.id, true, user.id, undefined);
+                        refresh();
+                      }}
+                    >
+                      Duyệt
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onClick={async () => {
+                        if (!user) return;
+                        await decideLeaveRequest(l.id, false, user.id, "Không phù hợp, đề nghị liên hệ giáo viên");
+                        refresh();
+                      }}
+                    >
+                      Từ chối
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ))}
+            {leaveRequests.length === 0 && <p className="text-navy/50">Chưa có đơn xin nghỉ.</p>}
+          </div>
+        </Card>
+
+        <Card>
+          <h2 className="mb-2 text-sm font-semibold text-navy">Trao đổi với phụ huynh</h2>
+          <div className="mb-3 max-h-40 space-y-1 overflow-y-auto text-sm">
+            {messages.map((m) => (
+              <div key={m.id} className={`rounded-lg p-2 ${m.sender_role === "teacher" ? "bg-brand/10" : "bg-cream"}`}>
+                <p className="text-navy">{m.content}</p>
+                <p className="text-xs text-navy/50">{m.sender_name} · {new Date(m.created_at).toLocaleString("vi-VN")}</p>
+              </div>
+            ))}
+            {messages.length === 0 && <p className="text-navy/50">Chưa có trao đổi nào.</p>}
+          </div>
+          {hasPermission("children.edit") && (
+            <div className="flex gap-2">
+              <Textarea value={replyText} onChange={(e) => setReplyText(e.target.value)} placeholder="Trả lời phụ huynh..." className="min-h-[50px]" />
+              <Button
+                size="sm"
+                disabled={!replyText.trim() || busy}
+                onClick={async () => {
+                  if (!user || !child) return;
+                  setBusy(true);
+                  try {
+                    await replyAsTeacher(child.id, user.id, replyText.trim());
+                    setReplyText("");
+                    refresh();
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                Gửi
+              </Button>
+            </div>
+          )}
+        </Card>
+      </div>
 
       <Modal open={statusModalOpen} onClose={() => setStatusModalOpen(false)} title="Chuyển trạng thái trẻ">
         <div className="space-y-3">

@@ -92,14 +92,42 @@ Chú thích trạng thái: `✅ Hoàn thành` · `🚧 Đang làm` · `⬜ Chưa
 - ✅ `tsc --noEmit`, ESLint, Vitest (27 test), `cargo check`, `vite build` chạy sạch; đã chạy
   thử toàn bộ ứng dụng qua Xvfb+WebKitGTK xác nhận 13 migration khởi tạo không lỗi
 
-## Giai đoạn 4 — Chất lượng và kết nối — ⬜ Chưa bắt đầu
+## Giai đoạn 4 — Chất lượng và kết nối — ✅ Hoàn thành (bản đầu, xem giới hạn bên dưới)
 
-- Kiểm định chất lượng (tự đánh giá, minh chứng, kế hoạch cải tiến)
-- Công tác Đảng (phân hệ tách biệt, phân quyền riêng)
-- Phụ huynh (giao diện tối giản, chỉ xem dữ liệu con mình)
-- Thông báo đa kênh
-- Đồng bộ dữ liệu qua mạng LAN/đám mây
-- AI Gateway (đa nhà cung cấp, ẩn danh dữ liệu trẻ, có kiểm duyệt con người)
+- ✅ Migration 014-018: quyền chi tiết accreditation/party/parent.*, schema Kiểm định
+  (tiêu chuẩn, tiêu chí, phân công, kho minh chứng N-N), schema Công tác Đảng (**7 bảng hoàn
+  toàn tách biệt** khỏi mọi bảng nghiệp vụ khác — không JOIN/reuse bảng chung), schema Phụ
+  huynh (`guardians.user_id` liên kết tài khoản, đơn xin nghỉ, tin nhắn), dữ liệu demo
+- ✅ Kiểm định: tiêu chuẩn/tiêu chí theo khung kiểm định, phân công phụ trách, tự đánh giá
+  (mô tả hiện trạng/điểm mạnh/điểm yếu/kế hoạch cải tiến) theo quy trình phê duyệt, kho minh
+  chứng — mỗi tệp có mã duy nhất, liên kết N-N với nhiều tiêu chí, **không tải trùng** (chọn
+  minh chứng có sẵn để liên kết thay vì tải lại)
+- ✅ Công tác Đảng: hồ sơ đảng viên (chức vụ chi bộ), sinh hoạt chi bộ định kỳ/chuyên đề kèm
+  biên bản, nghị quyết và theo dõi thực hiện, đánh giá đảng viên cuối năm, đảng phí theo
+  tháng. Đã xác nhận bằng script: **không role nào ngoài `party_committee` có bất kỳ quyền
+  `party.*` nào**, kể cả `system_admin`/`principal`/`tech_admin`
+- ✅ Phụ huynh: giao diện tập trung một trang, mọi truy vấn lọc theo `guardian_id` suy ra từ
+  tài khoản đăng nhập ở tầng `parentRepo.ts` (không nhận `child_id` tùy ý từ client) — xem
+  thông tin con, chuyên cần, thực đơn hôm nay (chỉ khi đã duyệt), khoản thu, gửi đơn xin nghỉ,
+  trao đổi với giáo viên; phía giáo viên duyệt đơn nghỉ và trả lời tin nhắn ngay trong hồ sơ
+  trẻ (`ChildDetailPage`)
+- ✅ AI Gateway: cấu hình đa nhà cung cấp (OpenAI/Gemini/Claude/Tắt) tại Cài đặt, khóa API
+  lưu cục bộ (không trong mã nguồn), lớp ẩn danh `redactText()` tự ẩn số điện thoại/ngày
+  tháng/tên trẻ-phụ huynh trước khi gửi, xem trước nội dung sẽ gửi, kết quả luôn có nhãn
+  "Nội dung do AI hỗ trợ" và người dùng phải bấm "Chèn vào nội dung" mới lưu — không có bước
+  nào tự động ban hành. Lệnh gọi AI thật chạy ở phía Rust (`ai_generate`, dùng `reqwest`) để
+  không bị chặn CORS như gọi thẳng từ webview — **kiến trúc đã biên dịch và chạy được nhưng
+  chưa kiểm thử với khóa API thật** vì môi trường phát triển không có khóa.
+- ⬜ **Đồng bộ dữ liệu qua mạng LAN/đám mây — chưa triển khai.** Bảng `sync_queue` đã có sẵn
+  từ Giai đoạn 1 nhưng cần một máy chủ tiếp nhận (chưa tồn tại); xây dựng giả một cơ chế đồng
+  bộ không có máy chủ thật để kiểm thử sẽ vi phạm nguyên tắc "không giả lập chức năng" nên để
+  lại cho giai đoạn có hạ tầng máy chủ.
+- ⬜ **Thông báo đa kênh (SMS/Zalo/email) — chưa triển khai.** Cần tài khoản dịch vụ ngoài
+  (SMTP, Zalo OA, nhà mạng SMS) chưa được cấu hình; thông báo trong ứng dụng (in-app, đã có từ
+  Giai đoạn 1) tiếp tục hoạt động đầy đủ cho các nghiệp vụ mới (đơn xin nghỉ, tin nhắn).
+- ✅ `tsc --noEmit`, ESLint, Vitest (30 test), `cargo check` (bao gồm biên dịch `reqwest`),
+  `vite build` chạy sạch; đã chạy thử toàn bộ ứng dụng qua Xvfb+WebKitGTK xác nhận 18
+  migration khởi tạo không lỗi
 
 ## Giai đoạn 5 — Hoàn thiện — ⬜ Chưa bắt đầu
 
@@ -108,7 +136,7 @@ Chú thích trạng thái: `✅ Hoàn thành` · `🚧 Đang làm` · `⬜ Chưa
 - Đóng gói bộ cài Windows (.msi/.exe) chính thức
 - Hướng dẫn sử dụng và bàn giao
 
-## Hướng dẫn chạy thử Giai đoạn 1-3 (PowerShell trên Windows)
+## Hướng dẫn chạy thử Giai đoạn 1-4 (PowerShell trên Windows)
 
 Xem chi tiết đầy đủ trong `mn360/README.md`, tóm tắt:
 
@@ -119,6 +147,8 @@ npm run tauri dev
 ```
 
 Tài khoản demo: `hieutruong` / `MN360@2026` (bắt buộc đổi mật khẩu lần đăng nhập đầu).
+Để thử Phụ huynh, đăng nhập `phuhuynh1` / `MN360@2026` (đã liên kết sẵn với trẻ "Nguyễn Văn An").
 
 Nếu đã chạy ứng dụng từ trước, CSDL SQLite hiện có sẽ tự động áp dụng thêm các migration mới
-(004-008 của Giai đoạn 2, 009-013 của Giai đoạn 3) khi mở lại ứng dụng — không cần xóa dữ liệu cũ.
+(004-008 Giai đoạn 2, 009-013 Giai đoạn 3, 014-018 Giai đoạn 4) khi mở lại ứng dụng — không
+cần xóa dữ liệu cũ.

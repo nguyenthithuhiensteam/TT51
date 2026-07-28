@@ -82,5 +82,35 @@ pub fn get_migrations() -> Vec<Migration> {
             sql: include_str!("./sql/013_seed_demo_phase3.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 14,
+            description: "extend_permissions_phase4",
+            sql: include_str!("./sql/014_extend_permissions_phase4.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 15,
+            description: "accreditation_schema",
+            sql: include_str!("./sql/015_accreditation.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 16,
+            description: "party_schema",
+            sql: include_str!("./sql/016_party.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 17,
+            description: "parent_portal_schema",
+            sql: include_str!("./sql/017_parent_portal.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 18,
+            description: "seed_demo_data_phase4",
+            sql: include_str!("./sql/018_seed_demo_phase4.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }
