@@ -11,6 +11,12 @@ import { DocumentDetailPage } from "./features/documents/DocumentDetailPage";
 import { SettingsPage } from "./features/settings/SettingsPage";
 import { BackupPage } from "./features/backup/BackupPage";
 import { PlaceholderPage } from "./features/common/PlaceholderPage";
+import { ChildrenPage } from "./features/children/ChildrenPage";
+import { ChildDetailPage } from "./features/children/ChildDetailPage";
+import { StaffListPage } from "./features/staff/StaffListPage";
+import { StaffDetailPage } from "./features/staff/StaffDetailPage";
+import { EducationPlansListPage } from "./features/curriculum/EducationPlansListPage";
+import { PlanDetailPage } from "./features/curriculum/PlanDetailPage";
 
 export default function App() {
   return (
@@ -70,7 +76,15 @@ export default function App() {
             path="tre-em"
             element={
               <RequirePermission permission="children.view">
-                <PlaceholderPage title="Trẻ em" phase="Giai đoạn 2" />
+                <ChildrenPage />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="tre-em/:id"
+            element={
+              <RequirePermission permission="children.view">
+                <ChildDetailPage />
               </RequirePermission>
             }
           />
@@ -78,7 +92,15 @@ export default function App() {
             path="doi-ngu"
             element={
               <RequirePermission permission="staff.view">
-                <PlaceholderPage title="Đội ngũ" phase="Giai đoạn 2" />
+                <StaffListPage />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="doi-ngu/:id"
+            element={
+              <RequirePermission permission="staff.view">
+                <StaffDetailPage />
               </RequirePermission>
             }
           />
@@ -86,7 +108,15 @@ export default function App() {
             path="chuyen-mon"
             element={
               <RequirePermission permission="curriculum.view">
-                <PlaceholderPage title="Chuyên môn" phase="Giai đoạn 2" />
+                <EducationPlansListPage />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="chuyen-mon/:id"
+            element={
+              <RequirePermission permission="curriculum.view">
+                <PlanDetailPage />
               </RequirePermission>
             }
           />

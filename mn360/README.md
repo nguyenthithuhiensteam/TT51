@@ -46,6 +46,10 @@ Mật khẩu demo cho **tất cả** tài khoản: `MN360@2026` (bắt buộc đ
 | `quantrikythuat` | Quản trị kỹ thuật (không xem được trẻ em/sức khỏe/tài chính/Đảng) |
 | `phuhuynh1` | Phụ huynh |
 
+Dữ liệu demo Giai đoạn 2 đã có sẵn: 3 lớp (Mẫu giáo lớn A, Mẫu giáo nhỡ B, Nhà trẻ C), 12 trẻ
+kèm phụ huynh, 15 hồ sơ cán bộ (gắn với các tài khoản ở trên), một số kế hoạch giáo dục theo
+các trạng thái phê duyệt khác nhau để thử nghiệm quy trình.
+
 ## Kiểm thử
 
 ```powershell
@@ -86,7 +90,8 @@ mn360/
 │   ├── features/       # Từng phân hệ nghiệp vụ (auth, dashboard, tasks, documents, ...)
 │   ├── lib/db/         # Lớp truy cập dữ liệu (DAL) qua SQLite, dễ thay bằng PostgreSQL
 │   ├── lib/schemas/    # Zod schema kiểm tra dữ liệu đầu vào
+│   ├── lib/export/     # Xuất Word (docx) và Excel (exceljs)
 │   └── store/          # Zustand store (phiên đăng nhập, trạng thái ứng dụng)
 └── src-tauri/          # Backend Rust (Tauri 2), migrations SQL có phiên bản, lệnh hệ thống
-    └── src/db/sql/     # Các tệp migration 001, 002, 003...
+    └── src/db/sql/     # Các tệp migration 001-008 (nền tảng, RBAC mở rộng, Trẻ em, Đội ngũ, Chuyên môn)
 ```

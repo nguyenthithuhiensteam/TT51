@@ -68,14 +68,17 @@ Nguyên tắc cốt lõi:
 
 ## 5. Phạm vi theo giai đoạn
 
-Xem chi tiết trong `docs/ROADMAP.md`. Giai đoạn 0–1 (đã triển khai trong lần này):
+Xem chi tiết trong `docs/ROADMAP.md`. Giai đoạn 0–2 (đã triển khai):
 
-- Khởi tạo dự án, cơ sở dữ liệu, đăng nhập, phân quyền, cấu hình trường/năm học, giao diện
-  chính, Tổng quan, Công việc, Văn phòng số (quy trình cơ bản), sao lưu/khôi phục.
+- Giai đoạn 1: Khởi tạo dự án, cơ sở dữ liệu, đăng nhập, phân quyền, cấu hình trường/năm học,
+  giao diện chính, Tổng quan, Công việc, Văn phòng số (quy trình cơ bản), sao lưu/khôi phục.
+- Giai đoạn 2: Trẻ em (hồ sơ, xếp lớp, điểm danh, chuyên cần, chuyển lớp/bảo lưu/chuyển
+  trường/thôi học/hoàn thành), Đội ngũ (hồ sơ, phân công, nghỉ phép, đánh giá 3 cấp), Chuyên
+  môn (kế hoạch giáo dục theo quy trình 6 bước, quan sát, đánh giá phát triển trẻ), xuất
+  Word/Excel.
 
-Giai đoạn 2–5 (kế hoạch, chưa triển khai mã trong lần này): Trẻ em, Đội ngũ, Chuyên môn,
-Nuôi dưỡng, Sức khỏe – An toàn, Tài chính – Tài sản, Kiểm định, Công tác Đảng, Phụ huynh,
-AI Gateway, đóng gói bộ cài Windows cuối cùng.
+Giai đoạn 3–5 (kế hoạch, chưa triển khai mã): Nuôi dưỡng, Sức khỏe – An toàn, Tài chính – Tài
+sản, Kiểm định, Công tác Đảng, Phụ huynh, AI Gateway, xuất PDF, đóng gói bộ cài Windows.
 
 ## 6. Vai trò người dùng (tóm tắt, chi tiết ở `docs/PERMISSIONS.md`)
 
@@ -88,11 +91,12 @@ Nhân viên y tế, Nhân viên nuôi dưỡng, Cấp ủy, Phụ huynh, Quản 
 → Đã khóa → Đã lưu trữ / Đã hủy`. Mọi thay đổi trạng thái ghi vào `Approvals`/`AuditLogs`
 kèm người thực hiện, thời điểm, trạng thái trước/sau, lý do, phiên đăng nhập.
 
-## 8. Giới hạn đã biết ở bản Giai đoạn 1
+## 8. Giới hạn đã biết ở bản Giai đoạn 1-2
 
 - Chưa đóng gói bộ cài `.msi`/`.exe` Windows cuối cùng (cần máy Windows có Visual Studio
   Build Tools; môi trường xây dựng hiện tại là Linux headless, chỉ kiểm tra biên dịch
   `cargo check` được).
-- Chưa có AI Gateway, đồng bộ mạng LAN, xuất Word/Excel/PDF — thuộc giai đoạn sau.
-- Các phân hệ nghiệp vụ ngoài Công việc/Văn phòng số mới có ở mức schema dữ liệu, chưa có
-  giao diện.
+- Chưa có AI Gateway, đồng bộ mạng LAN, xuất PDF — thuộc giai đoạn sau (đã có xuất Word/Excel).
+- Điểm danh (Trẻ em) chưa liên kết tự động với suất ăn vì phân hệ Nuôi dưỡng thuộc Giai đoạn 3.
+- Các phân hệ Nuôi dưỡng, Sức khỏe – An toàn, Tài chính – Tài sản, Kiểm định, Công tác Đảng,
+  Phụ huynh mới có ở mức schema dữ liệu định hướng, chưa có giao diện.

@@ -139,6 +139,151 @@ export const DOC_TYPE_LABELS: Record<DocumentType, string> = {
   draft: "Dự thảo",
 };
 
+export interface SchoolClass {
+  id: string;
+  school_year_id: string;
+  code: string;
+  name: string;
+  age_group: string;
+  homeroom_teacher_id: string | null;
+  room: string | null;
+  capacity: number | null;
+  status: RecordStatus;
+  version: number;
+  created_by: string;
+  created_at: string;
+  updated_by: string | null;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export type ChildStatus =
+  | "studying"
+  | "transferred_class"
+  | "reserved"
+  | "transferred_school"
+  | "dropped_out"
+  | "completed";
+
+export const CHILD_STATUS_LABELS: Record<ChildStatus, string> = {
+  studying: "Đang học",
+  transferred_class: "Đã chuyển lớp",
+  reserved: "Bảo lưu",
+  transferred_school: "Đã chuyển trường",
+  dropped_out: "Đã thôi học",
+  completed: "Hoàn thành chương trình",
+};
+
+export interface Child {
+  id: string;
+  code: string;
+  school_year_id: string;
+  class_id: string | null;
+  full_name: string;
+  dob: string;
+  gender: "male" | "female";
+  enrollment_date: string;
+  status: ChildStatus;
+  note: string | null;
+  version: number;
+  created_by: string;
+  created_at: string;
+  updated_by: string | null;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface Guardian {
+  id: string;
+  full_name: string;
+  relationship: string | null;
+  phone: string | null;
+  address: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type AttendanceStatus = "present" | "absent_excused" | "absent_unexcused" | "late";
+
+export const ATTENDANCE_LABELS: Record<AttendanceStatus, string> = {
+  present: "Có mặt",
+  absent_excused: "Nghỉ có phép",
+  absent_unexcused: "Nghỉ không phép",
+  late: "Đi muộn",
+};
+
+export type EmploymentType = "payroll" | "contract" | "probation";
+
+export const EMPLOYMENT_TYPE_LABELS: Record<EmploymentType, string> = {
+  payroll: "Biên chế",
+  contract: "Hợp đồng",
+  probation: "Thử việc",
+};
+
+export interface Staff {
+  id: string;
+  user_id: string;
+  employee_code: string;
+  position: string;
+  employment_type: EmploymentType;
+  degree: string | null;
+  start_date: string | null;
+  status: "active" | "on_leave" | "resigned";
+  note: string | null;
+  version: number;
+  created_by: string;
+  created_at: string;
+  updated_by: string | null;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export type EvaluatorRole = "self" | "team_lead" | "principal";
+
+export const EVALUATOR_ROLE_LABELS: Record<EvaluatorRole, string> = {
+  self: "Tự đánh giá",
+  team_lead: "Tổ trưởng đánh giá",
+  principal: "Lãnh đạo đánh giá",
+};
+
+export type PlanType =
+  | "year"
+  | "month"
+  | "topic"
+  | "week"
+  | "day"
+  | "activity"
+  | "steam"
+  | "sel"
+  | "inclusive";
+
+export const PLAN_TYPE_LABELS: Record<PlanType, string> = {
+  year: "Kế hoạch năm",
+  month: "Kế hoạch tháng",
+  topic: "Kế hoạch chủ đề/dự án",
+  week: "Kế hoạch tuần",
+  day: "Kế hoạch ngày",
+  activity: "Kế hoạch hoạt động",
+  steam: "Kế hoạch STEAM",
+  sel: "Kế hoạch SEL",
+  inclusive: "Giáo dục hòa nhập",
+};
+
+export type AssessmentDomain =
+  | "the_chat"
+  | "nhan_thuc"
+  | "ngon_ngu"
+  | "tinh_cam_xa_hoi"
+  | "tham_my";
+
+export const ASSESSMENT_DOMAIN_LABELS: Record<AssessmentDomain, string> = {
+  the_chat: "Thể chất",
+  nhan_thuc: "Nhận thức",
+  ngon_ngu: "Ngôn ngữ",
+  tinh_cam_xa_hoi: "Tình cảm - xã hội",
+  tham_my: "Thẩm mỹ",
+};
+
 export interface DocumentRecord {
   id: string;
   code: string;

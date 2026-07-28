@@ -22,5 +22,35 @@ pub fn get_migrations() -> Vec<Migration> {
             sql: include_str!("./sql/003_seed_demo_data.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 4,
+            description: "extend_permissions_phase2",
+            sql: include_str!("./sql/004_extend_permissions_phase2.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 5,
+            description: "children_classes_schema",
+            sql: include_str!("./sql/005_children_classes.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 6,
+            description: "staff_schema",
+            sql: include_str!("./sql/006_staff.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 7,
+            description: "curriculum_schema",
+            sql: include_str!("./sql/007_curriculum.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 8,
+            description: "seed_demo_data_phase2",
+            sql: include_str!("./sql/008_seed_demo_phase2.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }

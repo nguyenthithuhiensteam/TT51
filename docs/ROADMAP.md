@@ -31,21 +31,45 @@ Chú thích trạng thái: `✅ Hoàn thành` · `🚧 Đang làm` · `⬜ Chưa
   Visual Studio Build Tools + WebView2 (môi trường hiện tại là Linux headless, chỉ chạy được
   `cargo check`, không build MSI/NSIS). Hướng dẫn chạy thử bằng PowerShell ở cuối tài liệu.
 
-### Việc chưa làm trong Giai đoạn 1 (dời sang giai đoạn sau)
+### Việc chưa làm trong Giai đoạn 1 (dời sang giai đoạn sau) — đã xử lý ở Giai đoạn 2
 
-- Xuất Word/Excel/PDF (thuộc Giai đoạn 2 theo yêu cầu gốc).
-- Đồng bộ mạng LAN/máy chủ, AI Gateway (Giai đoạn 4).
-- Toàn bộ 9 phân hệ nghiệp vụ còn lại (Trẻ em, Đội ngũ, Chuyên môn, Nuôi dưỡng, Sức khỏe – An
-  toàn, Tài chính – Tài sản, Kiểm định, Công tác Đảng, Phụ huynh) — đã có schema định hướng
+- ~~Xuất Word/Excel/PDF~~ → đã có ở Giai đoạn 2 (xem bên dưới).
+- Đồng bộ mạng LAN/máy chủ, AI Gateway — vẫn thuộc Giai đoạn 4.
+- ~~Trẻ em, Đội ngũ, Chuyên môn~~ → đã triển khai ở Giai đoạn 2. Nuôi dưỡng, Sức khỏe – An
+  toàn, Tài chính – Tài sản, Kiểm định, Công tác Đảng, Phụ huynh vẫn ở dạng schema định hướng
   trong `docs/DATA_MODEL.md` mục 3, chưa có bảng thật/migration/giao diện.
 
-## Giai đoạn 2 — Nghiệp vụ cốt lõi — ⬜ Chưa bắt đầu
+## Giai đoạn 2 — Nghiệp vụ cốt lõi — ✅ Hoàn thành (bản đầu)
 
-- Trẻ em (hồ sơ, tuyển sinh, xếp lớp, điểm danh, chuyên cần...)
-- Đội ngũ (hồ sơ, phân công, chấm công, đánh giá viên chức, KPI...)
-- Chuyên môn (kế hoạch giáo dục các cấp, giáo án, quan sát/đánh giá trẻ)
-- Phê duyệt kế hoạch chuyên môn theo quy trình 6 bước
-- Xuất Word/Excel/PDF theo mẫu nhà trường
+- ✅ Migration 004-008 (`src-tauri/src/db/sql/`): mở rộng quyền chi tiết (children/staff/
+  curriculum.*), schema Trẻ em (lớp, trẻ, phụ huynh, điểm danh), Đội ngũ (hồ sơ, phân công,
+  nghỉ phép, đánh giá 3 cấp), Chuyên môn (kế hoạch giáo dục, quan sát, đánh giá trẻ), dữ liệu
+  demo Phase 2 (3 lớp, 12 trẻ, 12 phụ huynh, 15 hồ sơ cán bộ, kế hoạch/quan sát/đánh giá mẫu)
+- ✅ Trẻ em: danh sách lớp + thêm lớp, hồ sơ trẻ (mã định danh riêng `TRE-YYYY-NNNN`, không
+  dùng họ tên làm khóa), tiếp nhận trẻ, xếp lớp, chuyển lớp/bảo lưu/chuyển trường/thôi học/
+  hoàn thành chương trình (có lịch sử), điểm danh theo lớp/ngày với thống kê chuyên cần, thêm
+  phụ huynh, nhật ký quan sát, đánh giá sự phát triển theo 5 lĩnh vực
+- ✅ Đội ngũ: hồ sơ cán bộ (gắn với tài khoản người dùng), phân công (chủ nhiệm/chuyên môn/hỗ
+  trợ/quản lý), nghỉ phép (gửi đề nghị → duyệt/từ chối), đánh giá viên chức 3 cấp (tự đánh giá,
+  tổ trưởng, lãnh đạo) với trạng thái nháp/gửi/hoàn tất
+- ✅ Chuyên môn: kế hoạch giáo dục theo 9 loại (năm/tháng/chủ đề/tuần/ngày/hoạt động/STEAM/SEL/
+  hòa nhập), quy trình Giáo viên soạn → Tổ trưởng góp ý → Phó hiệu trưởng duyệt → ban hành →
+  lưu trữ (dùng chung bảng `approvals`/`audit_logs`), liên kết mục tiêu/yêu cầu cần đạt/nội
+  dung/hoạt động/môi trường/học liệu/phương pháp/đánh giá/điều chỉnh trong cùng một hồ sơ
+- ✅ Xuất Word: kế hoạch giáo dục (`docx`, tải qua Blob, không cần plugin fs riêng)
+- ✅ Xuất Excel: danh sách công việc, danh sách trẻ, báo cáo chuyên cần theo tháng (`exceljs`)
+- ✅ `tsc --noEmit`, ESLint, Vitest (27 test), `cargo check`, `vite build` chạy sạch; đã chạy
+  thử ứng dụng đầy đủ (Xvfb + WebKitGTK) xác nhận migration 001-008 khởi tạo không lỗi
+
+### Ghi chú kỹ thuật Giai đoạn 2
+
+- Các thư viện xuất tệp (`docx`, `exceljs`, `jspdf`) kéo theo một số cảnh báo bảo mật ở
+  dependency bậc sâu (chủ yếu liên quan tính năng không dùng tới như `jsPDF.html()` hoặc nén
+  zip nâng cao). Vì đây là ứng dụng nội bộ, offline, dữ liệu đầu vào do chính hệ thống tạo ra
+  (không phải nội dung người dùng ngoài tải lên), rủi ro thực tế thấp; sẽ rà soát nâng cấp lên
+  phiên bản mới hơn (có thể có breaking changes) ở Giai đoạn 5 khi làm cứng bảo mật toàn diện.
+- Đổi mật khẩu/xóa hồ sơ trẻ vẫn dùng lưu trữ mềm (`deleted_at`), chưa có giao diện "khôi phục
+  hồ sơ đã xóa" riêng — sẽ bổ sung khi làm kho lưu trữ chung ở Giai đoạn 5.
 
 ## Giai đoạn 3 — Chăm sóc và vận hành — ⬜ Chưa bắt đầu
 
@@ -71,9 +95,9 @@ Chú thích trạng thái: `✅ Hoàn thành` · `🚧 Đang làm` · `⬜ Chưa
 - Đóng gói bộ cài Windows (.msi/.exe) chính thức
 - Hướng dẫn sử dụng và bàn giao
 
-## Hướng dẫn chạy thử Giai đoạn 1 (PowerShell trên Windows)
+## Hướng dẫn chạy thử Giai đoạn 1-2 (PowerShell trên Windows)
 
-Xem chi tiết đầy đủ trong `README.md` ở thư mục gốc dự án, tóm tắt:
+Xem chi tiết đầy đủ trong `mn360/README.md`, tóm tắt:
 
 ```powershell
 cd mn360
@@ -82,3 +106,6 @@ npm run tauri dev
 ```
 
 Tài khoản demo: `hieutruong` / `MN360@2026` (bắt buộc đổi mật khẩu lần đăng nhập đầu).
+
+Nếu đã chạy ứng dụng từ trước (bản Giai đoạn 1), CSDL SQLite hiện có sẽ tự động áp dụng thêm
+các migration 004-008 của Giai đoạn 2 khi mở lại ứng dụng — không cần xóa dữ liệu cũ.

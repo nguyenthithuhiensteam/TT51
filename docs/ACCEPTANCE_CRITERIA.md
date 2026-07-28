@@ -1,33 +1,35 @@
 # MN360 — Tiêu chí nghiệm thu
 
-Trạng thái áp dụng cho **bản Giai đoạn 1** (nền tảng). Các tiêu chí thuộc phạm vi nghiệp vụ
-chưa triển khai (Giai đoạn 2+) được đánh dấu "Chưa áp dụng" và sẽ chuyển sang "Đạt/Không đạt"
-khi phân hệ tương ứng được xây dựng.
+Trạng thái áp dụng cho **bản Giai đoạn 1-2**. Các tiêu chí thuộc phạm vi nghiệp vụ chưa triển
+khai (Giai đoạn 3+) được đánh dấu "Chưa áp dụng" và sẽ chuyển sang "Đạt/Không đạt" khi phân hệ
+tương ứng được xây dựng.
 
-| # | Tiêu chí (theo mục XII yêu cầu gốc) | Trạng thái Giai đoạn 1 |
+| # | Tiêu chí (theo mục XII yêu cầu gốc) | Trạng thái |
 |---|---|---|
 | 1 | Cài được trên Windows | ⬜ Chưa đóng gói MSI/EXE — cần build trên máy Windows |
-| 2 | Chạy được khi không có Internet | ✅ Toàn bộ nghiệp vụ Giai đoạn 1 dùng SQLite cục bộ |
+| 2 | Chạy được khi không có Internet | ✅ Toàn bộ nghiệp vụ hiện có dùng SQLite cục bộ |
 | 3 | Dữ liệu được lưu sau khi đóng ứng dụng | ✅ SQLite file trên đĩa, không lưu bộ nhớ tạm |
 | 4 | Không tự lưu vào OneDrive | ✅ Thư mục dữ liệu do người dùng chọn, mặc định ngoài OneDrive |
-| 5 | Người dùng được phân quyền đúng | ✅ RBAC theo vai trò + quyền thao tác, có kiểm thử |
+| 5 | Người dùng được phân quyền đúng | ✅ RBAC theo vai trò + quyền thao tác chi tiết (38 mã quyền), có kiểm thử |
 | 6 | Phụ huynh không xem được dữ liệu của trẻ khác | ⬜ Chưa áp dụng (phân hệ Phụ huynh ở Giai đoạn 4) |
 | 7 | Người không có thẩm quyền không thấy phân hệ Công tác Đảng | ✅ Ẩn sidebar + chặn route + chặn DAL |
-| 8 | Mỗi phân hệ có danh sách/thêm/sửa/xem chi tiết/tìm kiếm/lọc | ✅ Áp dụng cho Công việc, Văn phòng số (2 phân hệ đã có ở GĐ1) |
-| 9 | Quy trình gửi duyệt và phê duyệt hoạt động | ✅ Công việc và Văn phòng số có quy trình thật |
-| 10 | Có lịch sử chỉnh sửa | ✅ `task_status_history`, `approvals`, `audit_logs` |
+| 8 | Mỗi phân hệ có danh sách/thêm/sửa/xem chi tiết/tìm kiếm/lọc | ✅ Công việc, Văn phòng số, Trẻ em, Đội ngũ, Chuyên môn |
+| 9 | Quy trình gửi duyệt và phê duyệt hoạt động | ✅ Công việc, Văn phòng số, Kế hoạch giáo dục, Nghỉ phép, Đánh giá viên chức |
+| 10 | Có lịch sử chỉnh sửa | ✅ `task_status_history`, `child_status_history`, `approvals`, `audit_logs` |
 | 11 | Có cảnh báo nhiệm vụ quá hạn | ✅ Tính theo `due_date`, chống trùng bằng `notifications.dedup_key` |
-| 12 | Điểm danh tự động cập nhật số suất ăn | ⬜ Chưa áp dụng (Điểm danh/Nuôi dưỡng ở Giai đoạn 2–3) |
-| 13 | Có thể xuất Word, Excel, PDF | ⬜ Chưa áp dụng (Giai đoạn 2) |
+| 12 | Điểm danh tự động cập nhật số suất ăn | 🚧 Điểm danh đã có (Trẻ em); liên kết số suất ăn thuộc Nuôi dưỡng — Giai đoạn 3 |
+| 13 | Có thể xuất Word, Excel, PDF | 🚧 Đã có Word (kế hoạch giáo dục) và Excel (công việc, trẻ em, chuyên cần); PDF chưa triển khai |
 | 14 | Sao lưu và khôi phục thành công | ✅ Có lệnh sao lưu thủ công + khôi phục, kiểm thử bằng script |
-| 15 | Không tạo dữ liệu trùng khi thao tác/đồng bộ lại | ✅ Ràng buộc `UNIQUE(code)`, `dedup_key`; `SyncQueue` cho Giai đoạn sau |
-| 16 | Không có lỗi nghiêm trọng trên giao diện | ✅ Đã kiểm thử thủ công các luồng chính GĐ1 |
-| 17 | Không có lỗi TypeScript, lint hoặc test | ✅ `tsc --noEmit`, ESLint, Vitest chạy sạch |
-| 18 | Có bộ dữ liệu demo | ✅ Trường Mầm non Tràng Đà (phạm vi GĐ1) |
-| 19 | Có tài liệu cài đặt, sử dụng, bàn giao | ✅ `README.md` (cài đặt/chạy thử), tài liệu bàn giao đầy đủ ở Giai đoạn 5 |
+| 15 | Không tạo dữ liệu trùng khi thao tác/đồng bộ lại | ✅ Ràng buộc `UNIQUE(code)`, `dedup_key`, `UNIQUE(child_id, attendance_date)`; `SyncQueue` cho giai đoạn sau |
+| 16 | Không có lỗi nghiêm trọng trên giao diện | ✅ Đã kiểm thử thủ công các luồng chính GĐ1-2 |
+| 17 | Không có lỗi TypeScript, lint hoặc test | ✅ `tsc --noEmit`, ESLint, Vitest (27 test) chạy sạch |
+| 18 | Có bộ dữ liệu demo | ✅ Trường Mầm non Tràng Đà: 3 lớp, 12 trẻ, 12 phụ huynh, 15 hồ sơ cán bộ, nhiệm vụ/văn bản/kế hoạch giáo dục mẫu |
+| 19 | Có tài liệu cài đặt, sử dụng, bàn giao | ✅ `mn360/README.md` (cài đặt/chạy thử), tài liệu bàn giao đầy đủ ở Giai đoạn 5 |
 | 20 | Có bộ cài Windows cuối cùng | ⬜ Thuộc Giai đoạn 5 |
 
-## Ghi chú kiểm thử đã thực hiện ở Giai đoạn 1
+## Ghi chú kiểm thử đã thực hiện
+
+### Giai đoạn 1
 
 - Kiểm thử phân quyền: đăng nhập với vai trò `teacher` xác nhận không thấy mục "Công tác
   Đảng"; đăng nhập `system_admin` xác nhận không có quyền `finance.view`/`health.view`/
@@ -38,3 +40,17 @@ khi phân hệ tương ứng được xây dựng.
   `NOT NULL`/`CHECK` ở tầng migration SQLite.
 - Kiểm thử sao lưu/khôi phục: script `npm run test` bao gồm test khôi phục từ bản sao lưu
   và so sánh số dòng dữ liệu trước/sau.
+
+### Giai đoạn 2
+
+- Migration 004-008 đã được chạy thử trực tiếp trên SQLite thật (Python `sqlite3`, không qua
+  Tauri) để xác nhận cú pháp và ràng buộc khóa ngoại/CHECK hợp lệ trước khi tích hợp vào ứng
+  dụng; đối chiếu số dòng dữ liệu demo đúng như thiết kế (3 lớp, 12 trẻ, 12 phụ huynh, 15 cán
+  bộ, 3 kế hoạch giáo dục...).
+- Đã khởi động toàn bộ ứng dụng (Xvfb + WebKitGTK, `npm run tauri dev`) để xác nhận không có
+  lỗi biên dịch Rust hay panic khi nạp 8 migration liên tiếp trên một CSDL trống.
+- Zod schema mới (`children.ts`, `staff.ts`, `curriculum.ts`) có unit test riêng xác nhận từ
+  chối dữ liệu thiếu trường bắt buộc hoặc giá trị enum không hợp lệ.
+- Quy trình phê duyệt kế hoạch giáo dục (soạn → góp ý → duyệt → ban hành → lưu trữ) dùng
+  chung cơ chế `approvals`/`audit_logs` đã kiểm chứng ở Giai đoạn 1, đảm bảo không có bước nào
+  tự động phê duyệt.

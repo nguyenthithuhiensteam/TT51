@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Search } from "lucide-react";
+import { FileDown, Plus, Search } from "lucide-react";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input, Select } from "../../components/ui/Input";
@@ -14,6 +14,7 @@ import type { RecordStatus, User } from "../../lib/db/types";
 import { STATUS_LABELS } from "../../lib/db/types";
 import { TaskFormModal } from "./TaskFormModal";
 import type { TaskFormInput } from "../../lib/schemas/task";
+import { exportTasksToExcel } from "../../lib/export/excel";
 
 const PAGE_SIZE = 10;
 
@@ -93,11 +94,24 @@ export function TasksListPage() {
             tra.
           </p>
         </div>
-        {hasPermission("task.create") && (
-          <Button onClick={() => setModalOpen(true)}>
-            <Plus size={16} /> Tạo nhiệm vụ
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {hasPermission("task.export") && (
+            <Button
+              variant="secondary"
+              onClick={async () => {
+                const all = await listTasks({ search, status, onlyMine: scope === "mine" ? user?.id : undefined, page: 1, pageSize: 10000 });
+                exportTasksToExcel(all.items);
+              }}
+            >
+              <FileDown size={16} /> Xuất Excel
+            </Button>
+          )}
+          {hasPermission("task.create") && (
+            <Button onClick={() => setModalOpen(true)}>
+              <Plus size={16} /> Tạo nhiệm vụ
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card>
