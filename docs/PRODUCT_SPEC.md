@@ -68,7 +68,7 @@ Nguyên tắc cốt lõi:
 
 ## 5. Phạm vi theo giai đoạn
 
-Xem chi tiết trong `docs/ROADMAP.md`. Giai đoạn 0–2 (đã triển khai):
+Xem chi tiết trong `docs/ROADMAP.md`. Giai đoạn 0–3 (đã triển khai):
 
 - Giai đoạn 1: Khởi tạo dự án, cơ sở dữ liệu, đăng nhập, phân quyền, cấu hình trường/năm học,
   giao diện chính, Tổng quan, Công việc, Văn phòng số (quy trình cơ bản), sao lưu/khôi phục.
@@ -76,9 +76,13 @@ Xem chi tiết trong `docs/ROADMAP.md`. Giai đoạn 0–2 (đã triển khai):
   trường/thôi học/hoàn thành), Đội ngũ (hồ sơ, phân công, nghỉ phép, đánh giá 3 cấp), Chuyên
   môn (kế hoạch giáo dục theo quy trình 6 bước, quan sát, đánh giá phát triển trẻ), xuất
   Word/Excel.
+- Giai đoạn 3: Nuôi dưỡng (món ăn, thực đơn với số trẻ ăn tự động từ điểm danh, cảnh báo dị
+  ứng, kiểm thực ba bước, giao nhận thực phẩm), Sức khỏe – An toàn (hồ sơ sức khỏe, tăng
+  trưởng, tiêm chủng, sự cố/tai nạn, kiểm tra an toàn có kế hoạch khắc phục), Tài chính – Tài
+  sản (khoản thu, phiếu thu/chi theo quy trình lập-kiểm tra-phê duyệt, danh mục tài sản).
 
-Giai đoạn 3–5 (kế hoạch, chưa triển khai mã): Nuôi dưỡng, Sức khỏe – An toàn, Tài chính – Tài
-sản, Kiểm định, Công tác Đảng, Phụ huynh, AI Gateway, xuất PDF, đóng gói bộ cài Windows.
+Giai đoạn 4–5 (kế hoạch, chưa triển khai mã): Kiểm định, Công tác Đảng, Phụ huynh, AI Gateway,
+xuất PDF, đóng gói bộ cài Windows.
 
 ## 6. Vai trò người dùng (tóm tắt, chi tiết ở `docs/PERMISSIONS.md`)
 
@@ -91,12 +95,13 @@ Nhân viên y tế, Nhân viên nuôi dưỡng, Cấp ủy, Phụ huynh, Quản 
 → Đã khóa → Đã lưu trữ / Đã hủy`. Mọi thay đổi trạng thái ghi vào `Approvals`/`AuditLogs`
 kèm người thực hiện, thời điểm, trạng thái trước/sau, lý do, phiên đăng nhập.
 
-## 8. Giới hạn đã biết ở bản Giai đoạn 1-2
+## 8. Giới hạn đã biết ở bản Giai đoạn 1-3
 
 - Chưa đóng gói bộ cài `.msi`/`.exe` Windows cuối cùng (cần máy Windows có Visual Studio
   Build Tools; môi trường xây dựng hiện tại là Linux headless, chỉ kiểm tra biên dịch
   `cargo check` được).
 - Chưa có AI Gateway, đồng bộ mạng LAN, xuất PDF — thuộc giai đoạn sau (đã có xuất Word/Excel).
-- Điểm danh (Trẻ em) chưa liên kết tự động với suất ăn vì phân hệ Nuôi dưỡng thuộc Giai đoạn 3.
-- Các phân hệ Nuôi dưỡng, Sức khỏe – An toàn, Tài chính – Tài sản, Kiểm định, Công tác Đảng,
-  Phụ huynh mới có ở mức schema dữ liệu định hướng, chưa có giao diện.
+- Điểm danh (Trẻ em) nay đã liên kết tự động với số trẻ ăn (Nuôi dưỡng); chưa có tính khẩu
+  phần/giá thành suất ăn tự động theo định lượng thực phẩm (thuộc phạm vi mở rộng sau).
+- Các phân hệ Kiểm định, Công tác Đảng, Phụ huynh mới có ở mức schema dữ liệu định hướng,
+  chưa có giao diện.

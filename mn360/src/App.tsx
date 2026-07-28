@@ -17,6 +17,9 @@ import { StaffListPage } from "./features/staff/StaffListPage";
 import { StaffDetailPage } from "./features/staff/StaffDetailPage";
 import { EducationPlansListPage } from "./features/curriculum/EducationPlansListPage";
 import { PlanDetailPage } from "./features/curriculum/PlanDetailPage";
+import { NutritionPage } from "./features/nutrition/NutritionPage";
+import { HealthSafetyPage } from "./features/health/HealthSafetyPage";
+import { FinancePage } from "./features/finance/FinancePage";
 
 export default function App() {
   return (
@@ -124,7 +127,7 @@ export default function App() {
             path="nuoi-duong"
             element={
               <RequirePermission permission="nutrition.view">
-                <PlaceholderPage title="Nuôi dưỡng" phase="Giai đoạn 3" />
+                <NutritionPage />
               </RequirePermission>
             }
           />
@@ -132,7 +135,7 @@ export default function App() {
             path="suc-khoe-an-toan"
             element={
               <RequirePermission permission="health.view">
-                <PlaceholderPage title="Sức khỏe – An toàn" phase="Giai đoạn 3" />
+                <HealthSafetyPage />
               </RequirePermission>
             }
           />
@@ -140,7 +143,7 @@ export default function App() {
             path="tai-chinh-tai-san"
             element={
               <RequirePermission permission="finance.view">
-                <PlaceholderPage title="Tài chính – Tài sản" phase="Giai đoạn 3" />
+                <FinancePage />
               </RequirePermission>
             }
           />

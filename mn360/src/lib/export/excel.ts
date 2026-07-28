@@ -63,6 +63,15 @@ export interface AttendanceExportRow {
   late: number;
 }
 
+/** Xuất báo cáo dạng bảng tùy ý (dùng cho Tài chính – Tài sản, Nuôi dưỡng...). */
+export async function exportFinanceReportToExcel(
+  sheetName: string,
+  rows: (string | number)[][],
+  headers: string[],
+): Promise<void> {
+  await exportRows(sheetName, `${sheetName}-${new Date().toISOString().slice(0, 10)}.xlsx`, headers, rows);
+}
+
 export async function exportAttendanceReportToExcel(
   className: string,
   fromDate: string,

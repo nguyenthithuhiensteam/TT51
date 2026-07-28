@@ -46,9 +46,12 @@ Mật khẩu demo cho **tất cả** tài khoản: `MN360@2026` (bắt buộc đ
 | `quantrikythuat` | Quản trị kỹ thuật (không xem được trẻ em/sức khỏe/tài chính/Đảng) |
 | `phuhuynh1` | Phụ huynh |
 
-Dữ liệu demo Giai đoạn 2 đã có sẵn: 3 lớp (Mẫu giáo lớn A, Mẫu giáo nhỡ B, Nhà trẻ C), 12 trẻ
+Dữ liệu demo Giai đoạn 2-3 đã có sẵn: 3 lớp (Mẫu giáo lớn A, Mẫu giáo nhỡ B, Nhà trẻ C), 12 trẻ
 kèm phụ huynh, 15 hồ sơ cán bộ (gắn với các tài khoản ở trên), một số kế hoạch giáo dục theo
-các trạng thái phê duyệt khác nhau để thử nghiệm quy trình.
+các trạng thái phê duyệt khác nhau để thử nghiệm quy trình, 8 món ăn với thực đơn mẫu (trẻ
+"Trần Thị Bình" dị ứng trứng để thử tính năng cảnh báo dị ứng), hồ sơ sức khỏe/tăng
+trưởng/tiêm chủng, một sự cố và một đợt kiểm tra an toàn mẫu, khoản thu/phiếu thu-chi/tài sản
+mẫu ở các bước quy trình khác nhau.
 
 ## Kiểm thử
 
@@ -93,5 +96,5 @@ mn360/
 │   ├── lib/export/     # Xuất Word (docx) và Excel (exceljs)
 │   └── store/          # Zustand store (phiên đăng nhập, trạng thái ứng dụng)
 └── src-tauri/          # Backend Rust (Tauri 2), migrations SQL có phiên bản, lệnh hệ thống
-    └── src/db/sql/     # Các tệp migration 001-008 (nền tảng, RBAC mở rộng, Trẻ em, Đội ngũ, Chuyên môn)
+    └── src/db/sql/     # Các tệp migration 001-013 (nền tảng, Trẻ em, Đội ngũ, Chuyên môn, Nuôi dưỡng, Sức khỏe-An toàn, Tài chính-Tài sản)
 ```

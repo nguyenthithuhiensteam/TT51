@@ -13,7 +13,8 @@ chạy local-first trên Windows (Tauri 2 + React + TypeScript + SQLite).
 
 Xem hướng dẫn cài đặt, chạy thử và tài khoản demo trong [`mn360/README.md`](./mn360/README.md).
 
-Trạng thái hiện tại: **Giai đoạn 0 và Giai đoạn 1 đã hoàn thành** (nền tảng: cơ sở dữ liệu,
-đăng nhập, phân quyền, cấu hình trường/năm học, giao diện chính, Tổng quan, Công việc, Văn
-phòng số, sao lưu/khôi phục). Các phân hệ nghiệp vụ còn lại đang theo lộ trình ở
-`docs/ROADMAP.md`.
+Trạng thái hiện tại: **Giai đoạn 0-3 đã hoàn thành** — nền tảng (cơ sở dữ liệu, đăng nhập,
+phân quyền, cấu hình trường/năm học, giao diện chính, Tổng quan, Công việc, Văn phòng số, sao
+lưu/khôi phục), nghiệp vụ cốt lõi (Trẻ em, Đội ngũ, Chuyên môn) và chăm sóc/vận hành (Nuôi
+dưỡng, Sức khỏe – An toàn, Tài chính – Tài sản). Các phân hệ còn lại (Kiểm định, Công tác
+Đảng, Phụ huynh, AI Gateway) đang theo lộ trình ở `docs/ROADMAP.md`.

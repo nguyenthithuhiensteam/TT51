@@ -304,3 +304,91 @@ export interface DocumentRecord {
   updated_at: string;
   deleted_at: string | null;
 }
+
+// ===================== GIAI ĐOẠN 3: NUÔI DƯỠNG =====================
+
+export type DishCategory = "breakfast" | "lunch" | "snack" | "dinner";
+
+export const MEAL_SLOT_LABELS: Record<DishCategory, string> = {
+  breakfast: "Bữa sáng",
+  lunch: "Bữa trưa",
+  snack: "Bữa phụ",
+  dinner: "Bữa chiều",
+};
+
+export interface Dish {
+  id: string;
+  code: string;
+  name: string;
+  category: DishCategory;
+  energy_kcal: number | null;
+  ingredients_note: string | null;
+  allergens_note: string | null;
+  status: "active" | "inactive";
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MenuRecord {
+  id: string;
+  code: string;
+  school_year_id: string;
+  class_id: string | null;
+  menu_date: string;
+  status: RecordStatus;
+  note: string | null;
+  version: number;
+  created_by: string;
+  created_at: string;
+  updated_by: string | null;
+  updated_at: string;
+}
+
+export type InspectionStep = "before_processing" | "before_eating" | "sample_storage";
+
+export const INSPECTION_STEP_LABELS: Record<InspectionStep, string> = {
+  before_processing: "Trước chế biến",
+  before_eating: "Trước khi ăn",
+  sample_storage: "Lưu mẫu",
+};
+
+// ===================== GIAI ĐOẠN 3: SỨC KHỎE – AN TOÀN =====================
+
+export type IncidentSeverity = "low" | "medium" | "high";
+
+export const SEVERITY_LABELS: Record<IncidentSeverity, string> = {
+  low: "Nhẹ",
+  medium: "Trung bình",
+  high: "Nghiêm trọng",
+};
+
+export type SafetyArea = "classroom" | "playground" | "electrical" | "fire_prevention" | "other";
+
+export const SAFETY_AREA_LABELS: Record<SafetyArea, string> = {
+  classroom: "Lớp học",
+  playground: "Sân chơi",
+  electrical: "Điện – nước",
+  fire_prevention: "Phòng cháy chữa cháy",
+  other: "Khác",
+};
+
+// ===================== GIAI ĐOẠN 3: TÀI CHÍNH – TÀI SẢN =====================
+
+export interface FeeItem {
+  id: string;
+  code: string;
+  name: string;
+  amount: number;
+  period: "monthly" | "one_time";
+  category: string | null;
+  is_active: number;
+}
+
+export type AssetStatus = "active" | "repair" | "transferred" | "disposed";
+
+export const ASSET_STATUS_LABELS: Record<AssetStatus, string> = {
+  active: "Đang sử dụng",
+  repair: "Đang sửa chữa",
+  transferred: "Đã điều chuyển",
+  disposed: "Đã thanh lý",
+};

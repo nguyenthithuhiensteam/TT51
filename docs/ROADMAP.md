@@ -71,13 +71,26 @@ Chú thích trạng thái: `✅ Hoàn thành` · `🚧 Đang làm` · `⬜ Chưa
 - Đổi mật khẩu/xóa hồ sơ trẻ vẫn dùng lưu trữ mềm (`deleted_at`), chưa có giao diện "khôi phục
   hồ sơ đã xóa" riêng — sẽ bổ sung khi làm kho lưu trữ chung ở Giai đoạn 5.
 
-## Giai đoạn 3 — Chăm sóc và vận hành — ⬜ Chưa bắt đầu
+## Giai đoạn 3 — Chăm sóc và vận hành — ✅ Hoàn thành (bản đầu)
 
-- Nuôi dưỡng (thực đơn, khẩu phần, kiểm thực ba bước, lưu mẫu...)
-- Sức khỏe (hồ sơ sức khỏe, tăng trưởng, tiêm chủng, dị ứng...)
-- An toàn (kiểm tra lớp/sân chơi, PCCC, điểm nguy cơ, diễn tập)
-- Tài chính (dự toán, thu/chi, công nợ, công khai tài chính)
-- Tài sản (danh mục, kiểm kê, sửa chữa, điều chuyển, thanh lý)
+- ✅ Migration 009-013: mở rộng quyền chi tiết (nutrition/health/finance.*), schema Nuôi dưỡng
+  (món ăn, thực đơn, giao nhận thực phẩm, kiểm thực ba bước), Sức khỏe – An toàn (hồ sơ sức
+  khỏe, tăng trưởng, tiêm chủng, sự cố/tai nạn, kiểm tra an toàn), Tài chính – Tài sản (khoản
+  thu, phiếu thu/chi, tài sản), dữ liệu demo Giai đoạn 3
+- ✅ Nuôi dưỡng: ngân hàng món ăn, thực đơn theo lớp/ngày với **số trẻ ăn lấy trực tiếp từ điểm
+  danh** (không nhập lại — hoàn thành tiêu chí #12 trong `ACCEPTANCE_CRITERIA.md`), cảnh báo
+  dị ứng tự động đối chiếu hồ sơ sức khỏe với thành phần món ăn (yêu cầu người có trách nhiệm
+  xác nhận trước khi duyệt), kiểm thực ba bước (trước chế biến/trước khi ăn/lưu mẫu), giao
+  nhận thực phẩm theo nhà cung cấp, quy trình duyệt thực đơn (draft → pending_approval →
+  approved/needs_revision)
+- ✅ Sức khỏe – An toàn: hồ sơ sức khỏe (nhóm máu, bệnh nền, dị ứng) theo trẻ, biểu theo dõi
+  chiều cao/cân nặng, tiêm chủng, ghi nhận sự cố/tai nạn, kiểm tra an toàn (lớp học/sân
+  chơi/điện-nước/PCCC) với mức độ nguy cơ và kế hoạch khắc phục có quy trình phê duyệt
+- ✅ Tài chính – Tài sản: khoản thu (định kỳ/một lần), phiếu thu/phiếu chi theo đúng quy trình
+  **lập → kiểm tra → phê duyệt** (3 người khác nhau, không có bước nào tự động), danh mục tài
+  sản với kiểm kê phát hiện hỏng/điều chuyển/thanh lý có lịch sử, xuất báo cáo Excel
+- ✅ `tsc --noEmit`, ESLint, Vitest (27 test), `cargo check`, `vite build` chạy sạch; đã chạy
+  thử toàn bộ ứng dụng qua Xvfb+WebKitGTK xác nhận 13 migration khởi tạo không lỗi
 
 ## Giai đoạn 4 — Chất lượng và kết nối — ⬜ Chưa bắt đầu
 
@@ -95,7 +108,7 @@ Chú thích trạng thái: `✅ Hoàn thành` · `🚧 Đang làm` · `⬜ Chưa
 - Đóng gói bộ cài Windows (.msi/.exe) chính thức
 - Hướng dẫn sử dụng và bàn giao
 
-## Hướng dẫn chạy thử Giai đoạn 1-2 (PowerShell trên Windows)
+## Hướng dẫn chạy thử Giai đoạn 1-3 (PowerShell trên Windows)
 
 Xem chi tiết đầy đủ trong `mn360/README.md`, tóm tắt:
 
@@ -107,5 +120,5 @@ npm run tauri dev
 
 Tài khoản demo: `hieutruong` / `MN360@2026` (bắt buộc đổi mật khẩu lần đăng nhập đầu).
 
-Nếu đã chạy ứng dụng từ trước (bản Giai đoạn 1), CSDL SQLite hiện có sẽ tự động áp dụng thêm
-các migration 004-008 của Giai đoạn 2 khi mở lại ứng dụng — không cần xóa dữ liệu cũ.
+Nếu đã chạy ứng dụng từ trước, CSDL SQLite hiện có sẽ tự động áp dụng thêm các migration mới
+(004-008 của Giai đoạn 2, 009-013 của Giai đoạn 3) khi mở lại ứng dụng — không cần xóa dữ liệu cũ.
