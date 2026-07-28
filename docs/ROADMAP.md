@@ -129,14 +129,54 @@ Chú thích trạng thái: `✅ Hoàn thành` · `🚧 Đang làm` · `⬜ Chưa
   `vite build` chạy sạch; đã chạy thử toàn bộ ứng dụng qua Xvfb+WebKitGTK xác nhận 18
   migration khởi tạo không lỗi
 
-## Giai đoạn 5 — Hoàn thiện — ⬜ Chưa bắt đầu
+## Giai đoạn 5 — Hoàn thiện — ✅ Hoàn thành (bản đầu, xem giới hạn bên dưới)
 
-- Kiểm thử tổng thể, phân quyền, mất mạng, dữ liệu thiếu/sai/trùng, sao lưu/khôi phục
-- Tối ưu hiệu năng
-- Đóng gói bộ cài Windows (.msi/.exe) chính thức
-- Hướng dẫn sử dụng và bàn giao
+- ✅ **Tối ưu hiệu năng**: chuyển toàn bộ trang phân hệ (Công việc, Văn phòng số, Trẻ em, Đội
+  ngũ, Chuyên môn, Nuôi dưỡng, Sức khỏe-An toàn, Tài chính-Tài sản, Kiểm định, Công tác Đảng,
+  Phụ huynh, Cài đặt, Sao lưu) sang `React.lazy` + `Suspense` thay vì nạp hết một lần; tách
+  vendor chunk riêng cho `docx`/`exceljs`/`jspdf`/`recharts` trong `vite.config.ts`. Kết quả:
+  bundle JS tải ngay khi mở ứng dụng giảm từ **2163 KB xuống 170 KB** (gzip 51 KB), các thư
+  viện xuất tệp nặng (đặc biệt `exceljs` ~938 KB) chỉ tải khi thật sự dùng tính năng xuất Excel.
+- ✅ **Migration 019** (`019_perf_indexes.sql`): rà soát toàn bộ câu lệnh `WHERE`/join trong
+  `src/lib/db/*.ts`, đối chiếu với chỉ mục đã có (kể cả chỉ mục ngầm từ ràng buộc `UNIQUE`), bổ
+  sung 15 chỉ mục còn thiếu cho các truy vấn tra cứu thường dùng: `task_assignees.user_id`,
+  lịch sử/minh chứng/bình luận theo `task_id`, thông báo theo người dùng, lịch sử trạng thái
+  trẻ/tài sản theo id, `child_guardians.guardian_id` (chiều ngược với UNIQUE hiện có), điểm
+  danh theo trẻ+ngày, khoản thu theo trẻ, thực đơn theo lớp+ngày, biên bản sinh hoạt chi bộ
+  theo cuộc họp, đảng phí theo kỳ. Đã chạy 19 migration liên tiếp trên SQLite thật (Python
+  `sqlite3`) xác nhận không lỗi, tổng 45 chỉ mục tùy chỉnh.
+- ✅ **Kiểm thử tổng thể**: `tsc --noEmit`, ESLint, Vitest (30 test), `cargo check`,
+  `vite build` chạy sạch sau toàn bộ thay đổi Giai đoạn 5; khởi động lại ứng dụng đầy đủ qua
+  Xvfb+WebKitGTK, xác nhận biên dịch/khởi tạo 19 migration không panic/lỗi.
+- ✅ **Chuẩn hóa cấu hình đóng gói Windows**: hoàn thiện `src-tauri/tauri.conf.json` với tên
+  nhà xuất bản, mô tả ngắn/dài, ngôn ngữ cài đặt tiếng Việt (WiX `vi-VN`, NSIS `Vietnamese`),
+  chế độ cài `perMachine`; xác nhận bộ icon đầy đủ và hợp lệ (`32x32`, `128x128`, `128x128@2x`,
+  `.ico` 6 kích thước, `.icns`). Bộ cài `.msi`/`.exe` thật **chưa được tạo ra** trong lần này vì
+  môi trường phát triển là Linux headless — hướng dẫn build đầy đủ trên máy Windows đã có ở
+  `mn360/README.md` mục "Đóng gói bộ cài Windows".
+- ✅ **Tài liệu sử dụng và bàn giao**: `docs/HUONG_DAN_SU_DUNG.md` (hướng dẫn theo từng phân hệ,
+  vòng đời hồ sơ, sao lưu/khôi phục, AI Gateway, xử lý sự cố thường gặp cho người dùng cuối) và
+  `docs/BAN_GIAO.md` (checklist cài đặt lần đầu tại trường, vận hành định kỳ, quản trị tài
+  khoản, xử lý sự cố kỹ thuật, giới hạn đã biết) — cả hai đã liên kết từ `README.md` gốc.
+- ⬜ **Xuất PDF** — vẫn chưa triển khai (đã có Word/Excel từ Giai đoạn 2); không phát sinh thêm
+  trong Giai đoạn 5 vì không nằm trong phạm vi tối ưu/đóng gói/tài liệu đã đặt ra.
+- ⬜ **Rà soát/nâng cấp phiên bản các thư viện xuất tệp có cảnh báo bảo mật bậc sâu** (đã ghi
+  chú từ Giai đoạn 2) — chưa thực hiện trong lần này; rủi ro vẫn ở mức thấp vì ứng dụng offline,
+  dữ liệu đầu vào do chính hệ thống tạo ra.
 
-## Hướng dẫn chạy thử Giai đoạn 1-4 (PowerShell trên Windows)
+### Ghi chú kiểm thử đã thực hiện — Giai đoạn 5
+
+- Đo kích thước bundle trước/sau tối ưu bằng `npm run build`: trước 1 tệp JS duy nhất 2163 KB
+  (gzip 615 KB); sau khi tách route + vendor chunk, tệp tải ngay còn 170 KB (gzip 51 KB), các
+  phần còn lại (từng trang phân hệ, `docx`, `recharts`, `exceljs`, `jspdf`) tải theo yêu cầu.
+- Chạy trực tiếp 19 tệp migration bằng Python `sqlite3` (không qua Tauri) trên CSDL trống, đối
+  chiếu danh sách chỉ mục tạo ra khớp với thiết kế (45 chỉ mục `idx_*`, không trùng tên, không
+  lỗi cú pháp/ràng buộc khóa ngoại).
+- Khởi động ứng dụng qua Xvfb + WebKitGTK sau khi đổi `tauri.conf.json` (thêm cấu hình đóng gói
+  Windows) và thêm migration 019 — xác nhận Tauri tự rebuild khi phát hiện đổi cấu hình, biên
+  dịch thành công, cửa sổ chạy ổn định, không panic trong toàn bộ log.
+
+## Hướng dẫn chạy thử Giai đoạn 1-5 (PowerShell trên Windows)
 
 Xem chi tiết đầy đủ trong `mn360/README.md`, tóm tắt:
 
@@ -150,5 +190,8 @@ Tài khoản demo: `hieutruong` / `MN360@2026` (bắt buộc đổi mật khẩu
 Để thử Phụ huynh, đăng nhập `phuhuynh1` / `MN360@2026` (đã liên kết sẵn với trẻ "Nguyễn Văn An").
 
 Nếu đã chạy ứng dụng từ trước, CSDL SQLite hiện có sẽ tự động áp dụng thêm các migration mới
-(004-008 Giai đoạn 2, 009-013 Giai đoạn 3, 014-018 Giai đoạn 4) khi mở lại ứng dụng — không
-cần xóa dữ liệu cũ.
+(004-008 Giai đoạn 2, 009-013 Giai đoạn 3, 014-018 Giai đoạn 4, 019 Giai đoạn 5) khi mở lại
+ứng dụng — không cần xóa dữ liệu cũ.
+
+Để đóng gói bộ cài `.msi`/`.exe` chính thức, chạy `npm run tauri build` trên máy Windows có đầy
+đủ Visual Studio Build Tools — xem `mn360/README.md` mục "Đóng gói bộ cài Windows".

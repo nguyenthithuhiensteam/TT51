@@ -26,12 +26,26 @@
   "bundle": {
     "active": true,
     "targets": ["msi", "nsis"],
+    "publisher": "Trường Mầm non Tràng Đà",
+    "copyright": "© 2026 Trường Mầm non Tràng Đà",
+    "shortDescription": "Hệ điều hành trường mầm non số",
+    "longDescription": "MN360 – ứng dụng quản trị toàn diện cho trường mầm non công lập: công việc, văn phòng số, trẻ em, đội ngũ, chuyên môn, nuôi dưỡng, sức khỏe - an toàn, tài chính - tài sản, kiểm định, công tác Đảng và cổng phụ huynh. Chạy local-first, hoạt động đầy đủ khi không có Internet.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "windows": {
+      "wix": {
+        "language": "vi-VN"
+      },
+      "nsis": {
+        "displayLanguageSelector": false,
+        "languages": ["Vietnamese"],
+        "installMode": "perMachine"
+      }
+    }
   }
 }

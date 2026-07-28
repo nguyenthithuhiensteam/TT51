@@ -68,7 +68,7 @@ Nguyên tắc cốt lõi:
 
 ## 5. Phạm vi theo giai đoạn
 
-Xem chi tiết trong `docs/ROADMAP.md`. Giai đoạn 0–4 (đã triển khai):
+Xem chi tiết trong `docs/ROADMAP.md`. Giai đoạn 0–5 (đã triển khai):
 
 - Giai đoạn 1: Khởi tạo dự án, cơ sở dữ liệu, đăng nhập, phân quyền, cấu hình trường/năm học,
   giao diện chính, Tổng quan, Công việc, Văn phòng số (quy trình cơ bản), sao lưu/khôi phục.
@@ -85,8 +85,13 @@ Xem chi tiết trong `docs/ROADMAP.md`. Giai đoạn 0–4 (đã triển khai):
   Phụ huynh (giao diện tập trung, chỉ dữ liệu con mình, xin nghỉ, trao đổi với giáo viên),
   AI Gateway (cấu hình đa nhà cung cấp, ẩn danh dữ liệu trẻ trước khi gửi).
 
-Giai đoạn 5 (kế hoạch, chưa triển khai mã): xuất PDF, đóng gói bộ cài Windows, đồng bộ mạng
-LAN/đám mây (cần hạ tầng máy chủ), thông báo đa kênh (cần dịch vụ SMS/email/Zalo ngoài).
+- Giai đoạn 5: tối ưu hiệu năng (code-splitting theo route, tách vendor chunk cho thư viện xuất
+  tệp, bổ sung 15 chỉ mục CSDL còn thiếu), chuẩn hóa cấu hình đóng gói Windows (WiX/NSIS, ngôn
+  ngữ tiếng Việt, icon), tài liệu hướng dẫn sử dụng theo phân hệ và tài liệu bàn giao/vận hành.
+
+Chưa triển khai (dời sang phạm vi mở rộng sau): xuất PDF, bộ cài `.msi`/`.exe` thật (cấu hình
+đã sẵn sàng nhưng cần build trên máy Windows), đồng bộ mạng LAN/đám mây (cần hạ tầng máy chủ),
+thông báo đa kênh (cần dịch vụ SMS/email/Zalo ngoài).
 
 ## 6. Vai trò người dùng (tóm tắt, chi tiết ở `docs/PERMISSIONS.md`)
 
@@ -99,16 +104,18 @@ Nhân viên y tế, Nhân viên nuôi dưỡng, Cấp ủy, Phụ huynh, Quản 
 → Đã khóa → Đã lưu trữ / Đã hủy`. Mọi thay đổi trạng thái ghi vào `Approvals`/`AuditLogs`
 kèm người thực hiện, thời điểm, trạng thái trước/sau, lý do, phiên đăng nhập.
 
-## 8. Giới hạn đã biết ở bản Giai đoạn 1-4
+## 8. Giới hạn đã biết ở bản Giai đoạn 1-5
 
 - Chưa đóng gói bộ cài `.msi`/`.exe` Windows cuối cùng (cần máy Windows có Visual Studio
   Build Tools; môi trường xây dựng hiện tại là Linux headless, chỉ kiểm tra biên dịch
-  `cargo check` được).
+  `cargo check` được). Cấu hình đóng gói (`tauri.conf.json`) đã hoàn thiện — chỉ còn thiếu bước
+  build thật trên Windows theo hướng dẫn ở `mn360/README.md`.
 - AI Gateway đã có khung cấu hình + lệnh gọi Rust cho 3 nhà cung cấp nhưng **chưa kiểm thử với
   khóa API thật** (môi trường phát triển không có khóa); đồng bộ mạng LAN/đám mây và thông báo
   đa kênh (SMS/email/Zalo) chưa triển khai vì cần hạ tầng máy chủ/dịch vụ ngoài chưa tồn tại.
-- Chưa có xuất PDF — thuộc giai đoạn sau (đã có xuất Word/Excel).
+- Chưa có xuất PDF — thuộc phạm vi mở rộng sau (đã có xuất Word/Excel).
 - Điểm danh (Trẻ em) nay đã liên kết tự động với số trẻ ăn (Nuôi dưỡng); chưa có tính khẩu
   phần/giá thành suất ăn tự động theo định lượng thực phẩm (thuộc phạm vi mở rộng sau).
-- Các phân hệ Kiểm định, Công tác Đảng, Phụ huynh mới có ở mức schema dữ liệu định hướng,
-  chưa có giao diện.
+- Rà soát/nâng cấp phiên bản các thư viện xuất tệp có cảnh báo bảo mật ở dependency bậc sâu
+  (ghi chú từ Giai đoạn 2) — chưa thực hiện; rủi ro thực tế thấp vì ứng dụng offline, dữ liệu
+  đầu vào do chính hệ thống tạo ra.

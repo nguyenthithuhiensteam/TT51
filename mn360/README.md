@@ -74,13 +74,31 @@ cargo check
 
 ## Đóng gói bộ cài Windows
 
+Thực hiện trên máy Windows (không thể build MSI/NSIS từ Linux headless):
+
 ```powershell
+# 1. Cài công cụ (một lần)
+#    - Visual Studio Build Tools 2022, chọn "Desktop development with C++"
+#    - Rust: https://rustup.rs (chọn toolchain msvc mặc định)
+#    - Node.js 20+
+#    - WebView2 Runtime (có sẵn trên Windows 10 2004+/Windows 11; nếu thiếu tải tại
+#      https://developer.microsoft.com/microsoft-edge/webview2)
+
+# 2. Build
+cd mn360
+npm install
 npm run tauri build
 ```
 
-Yêu cầu chạy trên máy Windows có đầy đủ Visual Studio Build Tools; kết quả `.msi`/`.exe` nằm
-trong `src-tauri/target/release/bundle/`. Bước này chưa được thực hiện trong môi trường phát
-triển hiện tại (Linux headless) — xem `../docs/ROADMAP.md` mục Giai đoạn 5.
+Kết quả:
+- Bộ cài MSI: `src-tauri/target/release/bundle/msi/MN360_<version>_x64_vi-VN.msi`
+- Bộ cài NSIS (.exe): `src-tauri/target/release/bundle/nsis/MN360_<version>_x64-setup.exe`
+
+Cấu hình đóng gói (`src-tauri/tauri.conf.json`) đã có sẵn tên nhà xuất bản, mô tả, ngôn ngữ cài
+đặt tiếng Việt (WiX `vi-VN`, NSIS `Vietnamese`) và biểu tượng đầy đủ; chỉ cần chạy lệnh trên
+máy Windows để tạo ra bộ cài thật. Môi trường phát triển hiện tại (Linux headless) chỉ kiểm tra
+được biên dịch Rust qua `cargo check`, không tạo được `.msi`/`.exe` — xem `../docs/ROADMAP.md`
+mục Giai đoạn 5.
 
 ## Sao lưu / khôi phục nhanh
 

@@ -1,12 +1,13 @@
 # MN360 — Tiêu chí nghiệm thu
 
-Trạng thái áp dụng cho **bản Giai đoạn 1-4**. Các tiêu chí thuộc phạm vi nghiệp vụ chưa triển
-khai (Giai đoạn 5) được đánh dấu "Chưa áp dụng" và sẽ chuyển sang "Đạt/Không đạt" khi hoàn
-thiện.
+Trạng thái áp dụng cho **bản Giai đoạn 1-5**. Bộ cài Windows chính thức (`.msi`/`.exe`) chưa
+được tạo ra trong môi trường phát triển (Linux headless) — cấu hình đóng gói đã hoàn thiện,
+cần chạy `npm run tauri build` trên máy Windows theo `mn360/README.md` để có tệp cài đặt cuối
+cùng.
 
 | # | Tiêu chí (theo mục XII yêu cầu gốc) | Trạng thái |
 |---|---|---|
-| 1 | Cài được trên Windows | ⬜ Chưa đóng gói MSI/EXE — cần build trên máy Windows |
+| 1 | Cài được trên Windows | 🚧 Cấu hình đóng gói (WiX/NSIS, ngôn ngữ, icon) đã hoàn thiện; chưa build MSI/EXE thật — cần chạy trên máy Windows |
 | 2 | Chạy được khi không có Internet | ✅ Toàn bộ nghiệp vụ nội bộ dùng SQLite cục bộ; chỉ AI Gateway cần mạng |
 | 3 | Dữ liệu được lưu sau khi đóng ứng dụng | ✅ SQLite file trên đĩa, không lưu bộ nhớ tạm |
 | 4 | Không tự lưu vào OneDrive | ✅ Thư mục dữ liệu do người dùng chọn, mặc định ngoài OneDrive |
@@ -18,14 +19,14 @@ thiện.
 | 10 | Có lịch sử chỉnh sửa | ✅ `task_status_history`, `child_status_history`, `asset_status_history`, `approvals`, `audit_logs` |
 | 11 | Có cảnh báo nhiệm vụ quá hạn | ✅ Tính theo `due_date`, chống trùng bằng `notifications.dedup_key` |
 | 12 | Điểm danh tự động cập nhật số suất ăn | ✅ Thực đơn lấy số trẻ ăn trực tiếp từ bảng `attendance`, không nhập lại |
-| 13 | Có thể xuất Word, Excel, PDF | 🚧 Đã có Word (kế hoạch giáo dục) và Excel (công việc, trẻ em, chuyên cần, tài chính); PDF thuộc Giai đoạn 5 |
+| 13 | Có thể xuất Word, Excel, PDF | 🚧 Đã có Word (kế hoạch giáo dục) và Excel (công việc, trẻ em, chuyên cần, tài chính); PDF vẫn chưa triển khai — dời sang phạm vi mở rộng sau |
 | 14 | Sao lưu và khôi phục thành công | ✅ Có lệnh sao lưu thủ công + khôi phục, kiểm thử bằng script |
 | 15 | Không tạo dữ liệu trùng khi thao tác/đồng bộ lại | ✅ Ràng buộc `UNIQUE` trên các cặp khóa nghiệp vụ (mã hồ sơ, ngày điểm danh, bước kiểm thực, kỳ đảng phí...); `SyncQueue` cho giai đoạn có máy chủ |
 | 16 | Không có lỗi nghiêm trọng trên giao diện | ✅ Đã kiểm thử thủ công các luồng chính GĐ1-4 |
 | 17 | Không có lỗi TypeScript, lint hoặc test | ✅ `tsc --noEmit`, ESLint, Vitest (30 test) chạy sạch |
 | 18 | Có bộ dữ liệu demo | ✅ Trường Mầm non Tràng Đà: đầy đủ 12 phân hệ có dữ liệu mẫu, kể cả đảng viên/kiểm định/liên kết phụ huynh |
-| 19 | Có tài liệu cài đặt, sử dụng, bàn giao | ✅ `mn360/README.md` (cài đặt/chạy thử), tài liệu bàn giao đầy đủ ở Giai đoạn 5 |
-| 20 | Có bộ cài Windows cuối cùng | ⬜ Thuộc Giai đoạn 5 |
+| 19 | Có tài liệu cài đặt, sử dụng, bàn giao | ✅ `mn360/README.md` (cài đặt/chạy thử/đóng gói), `docs/HUONG_DAN_SU_DUNG.md` (sử dụng theo phân hệ), `docs/BAN_GIAO.md` (bàn giao và vận hành) |
+| 20 | Có bộ cài Windows cuối cùng | 🚧 Cấu hình đóng gói hoàn thiện; tệp `.msi`/`.exe` cần build trên máy Windows thật (không build được từ Linux headless) |
 
 ## Ghi chú kiểm thử đã thực hiện
 
@@ -87,3 +88,18 @@ thiện.
   rõ trong `docs/ROADMAP.md`.
 - Đã khởi động toàn bộ ứng dụng (Xvfb + WebKitGTK) sau khi thêm migration 014-018 và lệnh
   `ai_generate`, xác nhận biên dịch/khởi tạo không lỗi.
+
+### Giai đoạn 5
+
+- Đo bundle trước/sau tối ưu: `npm run build` trước khi tách route/vendor chunk cho ra 1 tệp
+  JS duy nhất 2163 KB (gzip 615 KB); sau khi áp dụng `React.lazy` cho toàn bộ trang phân hệ và
+  `manualChunks` cho `docx`/`exceljs`/`jspdf`/`recharts`, tệp tải ngay khi mở ứng dụng còn
+  170 KB (gzip 51 KB) — giảm hơn 92%.
+- Migration 019 (15 chỉ mục mới) đã chạy thử trực tiếp trên SQLite thật nối tiếp 18 migration
+  trước, xác nhận tổng 45 chỉ mục tùy chỉnh không trùng tên/không lỗi ràng buộc.
+- `tsc --noEmit`, ESLint, Vitest (30 test), `cargo check`, `vite build` chạy sạch sau toàn bộ
+  thay đổi Giai đoạn 5; khởi động lại ứng dụng qua Xvfb+WebKitGTK sau khi đổi
+  `tauri.conf.json` (cấu hình đóng gói Windows) — Tauri tự phát hiện đổi cấu hình và rebuild,
+  biên dịch thành công, không panic trong log.
+- Icon đóng gói (`32x32.png`, `128x128.png`, `128x128@2x.png`, `icon.ico`, `icon.icns`) đã kiểm
+  tra định dạng bằng `file` — hợp lệ cho cả WiX (MSI) và NSIS.

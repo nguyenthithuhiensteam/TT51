@@ -12,6 +12,18 @@ export default defineConfig({
     },
   },
   clearScreen: false,
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vendor-docx": ["docx"],
+          "vendor-exceljs": ["exceljs"],
+          "vendor-jspdf": ["jspdf", "jspdf-autotable"],
+          "vendor-recharts": ["recharts"],
+        },
+      },
+    },
+  },
   server: {
     port: 1420,
     strictPort: true,

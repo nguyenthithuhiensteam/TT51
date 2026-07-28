@@ -112,5 +112,11 @@ pub fn get_migrations() -> Vec<Migration> {
             sql: include_str!("./sql/018_seed_demo_phase4.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 19,
+            description: "perf_indexes_phase5",
+            sql: include_str!("./sql/019_perf_indexes.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }
