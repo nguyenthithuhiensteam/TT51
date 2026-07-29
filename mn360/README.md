@@ -28,6 +28,23 @@ Lệnh trên sẽ mở cửa sổ ứng dụng MN360, tự động tạo cơ s�
 tại thư mục dữ liệu người dùng của hệ điều hành (mặc định `%APPDATA%\MN360\data\mn360.db` trên
 Windows), và cho phép đổi sang thư mục khác trong màn hình **Cấu hình trường / năm học**.
 
+## Bản xem trước trình duyệt (web preview)
+
+Để xem nhanh giao diện/luồng thao tác trong trình duyệt thường mà không cần cài Rust/Tauri
+(chỉ dùng để xem giao diện — không phải bản chính thức, xem giới hạn bên dưới):
+
+```powershell
+cd mn360
+npm install
+npm run build:web
+npx serve dist-web
+```
+
+Rồi mở địa chỉ mà `npx serve` in ra. Bản này thay SQLite/Rust bằng SQLite mô phỏng trong trình
+duyệt (`sql.js`) nên **dữ liệu chỉ lưu tạm trong bộ nhớ, mất khi tải lại trang**; không có sao
+lưu/khôi phục tệp thật, không gọi AI Gateway thật, không đính kèm tệp thật. Xem chi tiết trong
+`dist-web/HUONG_DAN_MO.txt` sau khi build.
+
 ## Tài khoản demo (Trường Mầm non Tràng Đà)
 
 Mật khẩu demo cho **tất cả** tài khoản: `MN360@2026` (bắt buộc đổi mật khẩu lần đăng nhập đầu).
