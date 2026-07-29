@@ -2,6 +2,7 @@ node_modules
 dist
 dist-ssr
 dist-web
+artifact-dist
 public-web/*.wasm
 *.local
 

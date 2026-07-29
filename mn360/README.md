@@ -45,6 +45,18 @@ duyệt (`sql.js`) nên **dữ liệu chỉ lưu tạm trong bộ nhớ, mất k
 lưu/khôi phục tệp thật, không gọi AI Gateway thật, không đính kèm tệp thật. Xem chi tiết trong
 `dist-web/HUONG_DAN_MO.txt` sau khi build.
 
+### Bản một tệp HTML (để lưu trữ như một trang tĩnh/chia sẻ qua đường dẫn)
+
+```powershell
+npm run build:artifact
+```
+
+Kết quả `artifact-dist/fragment.html` là toàn bộ ứng dụng gộp vào **một tệp HTML duy nhất**
+(nhúng luôn nhị phân sql-wasm dạng base64 — không tải thêm tệp nào qua mạng khi mở). So với
+bản web preview thông thường, bản này **không có tính năng xuất Word/Excel** (bỏ để giảm dung
+lượng khi nhúng) — mọi tính năng khác giữ nguyên. Có thể mở trực tiếp bằng cách chèn nội dung
+tệp vào một trang HTML có `<div id="root"></div>`, hoặc lưu trữ như một trang tĩnh.
+
 ## Tài khoản demo (Trường Mầm non Tràng Đà)
 
 Mật khẩu demo cho **tất cả** tài khoản: `MN360@2026` (bắt buộc đổi mật khẩu lần đăng nhập đầu).

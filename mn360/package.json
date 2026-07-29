@@ -8,6 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "prebuild:web": "node scripts/prepare-web-preview.mjs",
     "build:web": "vite build --config vite.web.config.ts",
+    "build:artifact": "vite build --config vite.artifact.config.ts && node scripts/build-artifact-fragment.mjs",
     "preview": "vite preview",
     "tauri": "tauri",
     "lint": "eslint . --max-warnings 0",

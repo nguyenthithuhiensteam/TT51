@@ -6,6 +6,12 @@
  */
 import initSqlJs, { type Database as SqlJsDatabase, type SqlJsStatic } from "sql.js";
 
+// Bản "artifact" (một tệp HTML duy nhất, không tải tệp phụ qua mạng) truyền nhị phân wasm
+// dạng base64 qua hằng số biên dịch này (xem vite.artifact.config.ts). Các bản build khác
+// (web preview thường, dev, test) không định nghĩa hằng số này — tải sql-wasm-browser.wasm
+// qua đường dẫn tương đối như bình thường.
+declare const __SQL_WASM_BASE64__: string | undefined;
+
 const migrationModules = import.meta.glob("../../../src-tauri/src/db/sql/*.sql", {
   eager: true,
   query: "?raw",
@@ -18,12 +24,22 @@ function sortedMigrationSql(): string[] {
     .map((key) => migrationModules[key]);
 }
 
+function base64ToArrayBuffer(base64: string): ArrayBuffer {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+
 let sqlJsPromise: Promise<SqlJsStatic> | null = null;
 function ensureSqlJs(): Promise<SqlJsStatic> {
   if (!sqlJsPromise) {
-    sqlJsPromise = initSqlJs({
-      locateFile: (file: string) => new URL(file, document.baseURI).toString(),
-    });
+    sqlJsPromise =
+      typeof __SQL_WASM_BASE64__ !== "undefined"
+        ? initSqlJs({ wasmBinary: base64ToArrayBuffer(__SQL_WASM_BASE64__) })
+        : initSqlJs({
+            locateFile: (file: string) => new URL(file, document.baseURI).toString(),
+          });
   }
   return sqlJsPromise;
 }
