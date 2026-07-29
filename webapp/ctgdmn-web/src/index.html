@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Ứng dụng ngoại tuyến quản lý chương trình và kế hoạch giáo dục mầm non"
+    />
+    <title>CTGDMN - Chương trình giáo dục nhà trường</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="loading" class="loading-screen">
+      <div class="loading-mark"><span></span><span></span></div>
+      <strong>Đang nạp kho chương trình...</strong>
+      <small>Ứng dụng đang lập chỉ mục 246 tài liệu.</small>
+    </div>
+
+    <div id="auth-screen" class="auth-screen is-hidden">
+      <div class="auth-card">
+        <img src="../assets/icon.svg" alt="Biểu trưng CTGDMN" class="auth-logo" />
+        <strong id="auth-school-name">CTGDMN</strong>
+        <div id="auth-body"></div>
+        <small class="auth-version">Phiên bản 0.2.0 · Giai đoạn 4</small>
+      </div>
+    </div>
+
+    <div id="app" class="app-shell is-hidden">
+      <aside class="sidebar">
+        <div class="brand">
+          <img src="../assets/icon.svg" alt="Biểu trưng CTGDMN" />
+          <div><strong>CTGDMN</strong><span>CHƯƠNG TRÌNH NHÀ TRƯỜNG</span></div>
+        </div>
+
+        <p class="nav-label">ĐIỀU HƯỚNG</p>
+        <nav id="primary-nav" aria-label="Điều hướng chính">
+          <button class="nav-item is-active" data-route="dashboard">
+            <span class="nav-icon">▦</span><span>Trung tâm công việc</span>
+          </button>
+          <button class="nav-item" data-route="library">
+            <span class="nav-icon">▤</span><span>Kho chương trình</span>
+          </button>
+          <button class="nav-item" data-route="open-data">
+            <span class="nav-icon">⌘</span><span>Kho dữ liệu mở</span>
+          </button>
+          <button class="nav-item" data-route="matrix">
+            <span class="nav-icon">▦</span><span>Ma trận chương trình</span>
+          </button>
+          <button class="nav-item" data-route="ai-tools">
+            <span class="nav-icon">✦</span><span>AI và nguồn trực tuyến</span>
+          </button>
+          <button class="nav-item" data-route="planner">
+            <span class="nav-icon">✎</span><span>Soạn kế hoạch 2026–2027</span>
+          </button>
+          <button class="nav-item" data-route="objectives">
+            <span class="nav-icon">◎</span><span>Mục tiêu và chủ đề</span>
+          </button>
+          <button class="nav-item" data-route="monthly">
+            <span class="nav-icon">□</span><span>Kế hoạch tháng</span>
+          </button>
+          <button class="nav-item" data-route="weekly">
+            <span class="nav-icon">▣</span><span>Kế hoạch và giáo án tuần</span>
+          </button>
+          <button class="nav-item" data-route="review">
+            <span class="nav-icon">✓</span><span>Kiểm tra dữ liệu</span><b id="issue-badge">0</b>
+          </button>
+          <button class="nav-item" data-route="reports">
+            <span class="nav-icon">▥</span><span>Báo cáo thống kê</span>
+          </button>
+          <button class="nav-item" data-route="workflow-plans">
+            <span class="nav-icon">⇄</span><span>Quy trình kế hoạch</span>
+          </button>
+          <button class="nav-item" data-route="videos">
+            <span class="nav-icon">▶</span><span>Video hướng dẫn</span>
+          </button>
+        </nav>
+
+        <div class="nav-divider"></div>
+        <p class="nav-label">QUẢN TRỊ</p>
+        <nav aria-label="Quản trị dữ liệu">
+          <button class="nav-item" data-route="accounts" data-admin-only>
+            <span class="nav-icon">👤</span><span>Tài khoản &amp; phân quyền</span>
+          </button>
+          <button class="nav-item" data-route="activity-log" data-admin-only>
+            <span class="nav-icon">☰</span><span>Nhật ký hoạt động</span>
+          </button>
+          <button class="nav-item" data-route="backup">
+            <span class="nav-icon">▱</span><span>Dữ liệu và sao lưu</span>
+          </button>
+          <button class="nav-item" data-route="about">
+            <span class="nav-icon">○</span><span>Thông tin ứng dụng</span>
+          </button>
+        </nav>
+
+        <div class="profile-card">
+          <div class="profile-avatar" id="profile-avatar">?</div>
+          <div><strong id="profile-name">—</strong><span id="profile-role">—</span></div>
+          <button class="profile-chevron" id="logout-button" title="Đăng xuất">⎋</button>
+        </div>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div class="school-heading">
+            <span>ỨNG DỤNG XÂY DỰNG CHƯƠNG TRÌNH GIÁO DỤC NHÀ TRƯỜNG</span>
+            <strong id="school-name">Trường Mầm non Tràng Đà</strong>
+          </div>
+          <label class="global-search">
+            <span>⌕</span>
+            <input id="global-search" type="search" placeholder="Tìm mục tiêu, chủ đề, kế hoạch..." />
+            <kbd>Ctrl K</kbd>
+          </label>
+          <div class="year-box"><span>NĂM HỌC</span><strong id="school-year">2026 – 2027</strong></div>
+          <button id="quick-add" class="icon-button add-button" title="Tạo hồ sơ theo dõi">＋</button>
+        </header>
+
+        <main id="main-content" tabindex="-1"></main>
+      </section>
+    </div>
+
+    <div id="drawer-backdrop" class="drawer-backdrop is-hidden"></div>
+    <aside id="document-drawer" class="document-drawer" aria-hidden="true">
+      <div id="drawer-content"></div>
+    </aside>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <input id="backup-import" type="file" accept="application/json,.json" hidden />
+    <input id="open-data-import" type="file" accept="application/json,.json" hidden />
+
+    <script type="module" src="./browser-backend.js"></script>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

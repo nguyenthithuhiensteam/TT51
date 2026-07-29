@@ -1,5 +1,7 @@
 import express from "express";
 import cors from "cors";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import "./db.js";
 import { ensureSeedUsers } from "./services/authService.js";
 import { ensureSeedObjectives } from "./seed/seedObjectives.js";
@@ -10,6 +12,9 @@ import { annualPlansRouter } from "./routes/annualPlans.js";
 import { themePlansRouter } from "./routes/themePlans.js";
 import { weeklyPlansRouter } from "./routes/weeklyPlans.js";
 import { lessonPlansRouter } from "./routes/lessonPlans.js";
+import { ctgdmnRouter } from "./routes/ctgdmn.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 ensureSeedUsers();
 ensureSeedObjectives();
@@ -26,6 +31,10 @@ app.use("/api/annual-plans", annualPlansRouter);
 app.use("/api/theme-plans", themePlansRouter);
 app.use("/api/weekly-plans", weeklyPlansRouter);
 app.use("/api/lesson-plans", lessonPlansRouter);
+app.use("/api/ctgdmn", ctgdmnRouter);
+
+const webappDir = path.resolve(__dirname, "..", "..", "webapp", "ctgdmn-web");
+app.use(express.static(webappDir));
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);

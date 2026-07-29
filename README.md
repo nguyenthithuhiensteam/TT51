@@ -5,7 +5,24 @@
 ## Cấu trúc
 
 - `server/` - API Node.js + TypeScript + Express + SQLite (better-sqlite3), lớp dịch vụ AI dùng chung, sinh DOCX/PDF thật.
-- `client/` - Giao diện React + TypeScript + Vite.
+- `client/` - Giao diện React + TypeScript + Vite (ứng dụng soạn kế hoạch mới, xây từ đầu trong phiên này).
+- `webapp/ctgdmn-web/` - Ứng dụng CTGDMN gốc (HTML/CSS/JS thuần, do nhà trường cung cấp) - đã được sửa để dùng backend thật của `server/` thay vì lưu trong trình duyệt, và nối AI thật. Xem mục riêng bên dưới.
+
+## Ứng dụng CTGDMN (webapp/ctgdmn-web)
+
+Đây là ứng dụng gốc nhà trường đã có (quản lý tài khoản/phân quyền 6 vai trò, quy trình soạn - nhận xét - phê duyệt kế hoạch nhiều cấp, kho 246 tài liệu chương trình thật, nhật ký hoạt động, video hướng dẫn). Phiên bản gốc lưu toàn bộ dữ liệu trong `localStorage`/`IndexedDB` của trình duyệt (không dùng chung được giữa nhiều máy) và mục "AI" chỉ mở tab ChatGPT/Gemini/Copilot để copy-paste thủ công.
+
+Đã sửa:
+- `webapp/ctgdmn-web/src/browser-backend.js` được viết lại để gọi API thật tại `/api/ctgdmn/*` (server/) thay vì localStorage - **giữ nguyên toàn bộ giao diện, `app.js`, `auth-client.js`** (chỉ đổi lớp kết nối dữ liệu phía dưới).
+- Toàn bộ tài khoản, kế hoạch, nhận xét, lịch sử chuyển trạng thái, nhật ký hoạt động, video hướng dẫn nay lưu trong SQLite dùng chung (`server/src/ctgdmn/`), đúng theo quy tắc phân quyền gốc (`server/src/ctgdmn/permissions.ts`, chuyển thể từ `browser-backend.js` cũ).
+- Màn hình "AI và nguồn trực tuyến" có thêm khối "Kết nối AI trực tiếp": kiểm tra kết nối thật, cấu hình nhà cung cấp/mô hình/khoá API (chỉ Quản trị hệ thống), và nút "Tạo gợi ý bằng AI (kết nối trực tiếp)" gọi thẳng `aiService` dùng chung với `server/` - vẫn giữ nguyên luồng "Sao chép prompt" thủ công cũ cho ai muốn tự kiểm soát hoàn toàn.
+- Sửa 1 lỗi có sẵn: `state.workflowPlanId` không được gán khi tự động chọn kế hoạch đầu tiên, khiến các nút nhận xét/gửi/duyệt gọi API với id rỗng (lỗi 404) nếu người dùng chưa bấm chọn kế hoạch trong danh sách.
+
+Truy cập tại `http://localhost:8787/src/index.html` (server phục vụ luôn cả API và tệp tĩnh này, không cần chạy riêng).
+
+**Lưu ý khi tạo tài khoản Tổ trưởng/Phó hiệu trưởng chuyên môn:** phải điền cùng một giá trị "Tổ chuyên môn" (teamId) với giáo viên mà họ phụ trách thì mới nhìn thấy kế hoạch của giáo viên đó, đây là quy tắc phân quyền gốc của ứng dụng (Tổ trưởng chỉ thấy kế hoạch cùng tổ), không phải lỗi.
+
+Còn thiếu (chưa kịp hoàn thiện trong phiên này): nội dung kế hoạch trong quy trình "Soạn - nhận xét - phê duyệt" vẫn là một ô văn bản tự do, chưa tách theo đúng mẫu bảng chi tiết của từng cấp (năm/chủ đề/tuần/giáo án) như 4 tệp PDF mẫu; phần "Kho dữ liệu mở"/"Ma trận chương trình" vẫn dùng dữ liệu cục bộ trình duyệt (`localStorage`) như bản gốc, chưa chuyển sang máy chủ dùng chung.
 
 ## Yêu cầu hệ thống
 

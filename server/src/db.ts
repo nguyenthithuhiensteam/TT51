@@ -121,6 +121,102 @@ CREATE TABLE IF NOT EXISTS ai_settings (
 INSERT OR IGNORE INTO ai_settings (id, provider, model) VALUES (1, 'gemini', 'gemini-2.0-flash');
 `);
 
+// ---------------------------------------------------------------------------
+// Bảng dữ liệu cho webapp/ctgdmn-web (bản sửa từ ứng dụng gốc: đưa dữ liệu
+// vốn lưu trong localStorage/IndexedDB của trình duyệt vào cơ sở dữ liệu
+// dùng chung thật trên máy chủ).
+// ---------------------------------------------------------------------------
+db.exec(`
+CREATE TABLE IF NOT EXISTS ctgdmn_users (
+  id TEXT PRIMARY KEY,
+  username TEXT UNIQUE NOT NULL,
+  full_name TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
+  password_salt TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('admin','principal','vice_principal','team_lead','teacher','viewer')),
+  staff_id TEXT,
+  position TEXT,
+  team_id TEXT,
+  class_id TEXT,
+  scope_type TEXT DEFAULT 'school_wide',
+  scope_value TEXT,
+  active INTEGER NOT NULL DEFAULT 1,
+  must_change_password INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  created_by TEXT,
+  last_login_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS ctgdmn_plans (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  owner_id TEXT NOT NULL,
+  team_id TEXT,
+  class_id TEXT,
+  status TEXT NOT NULL DEFAULT 'draft',
+  content_json TEXT NOT NULL DEFAULT '{}',
+  version INTEGER NOT NULL DEFAULT 1,
+  shared_with_viewers INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS ctgdmn_plan_versions (
+  id TEXT PRIMARY KEY,
+  plan_id TEXT NOT NULL,
+  version INTEGER NOT NULL,
+  content_json TEXT NOT NULL,
+  status_at_version TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  created_by TEXT
+);
+
+CREATE TABLE IF NOT EXISTS ctgdmn_plan_history (
+  id TEXT PRIMARY KEY,
+  plan_id TEXT NOT NULL,
+  from_status TEXT,
+  to_status TEXT NOT NULL,
+  actor_id TEXT,
+  note TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS ctgdmn_comments (
+  id TEXT PRIMARY KEY,
+  plan_id TEXT NOT NULL,
+  author_id TEXT,
+  content TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS ctgdmn_activity_log (
+  id TEXT PRIMARY KEY,
+  actor_id TEXT,
+  action TEXT NOT NULL,
+  target TEXT,
+  version TEXT,
+  result TEXT NOT NULL,
+  detail_json TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS ctgdmn_videos (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT,
+  category TEXT,
+  audience_roles_json TEXT NOT NULL DEFAULT '[]',
+  thumbnail TEXT,
+  source_type TEXT NOT NULL CHECK (source_type IN ('online','offline')),
+  source_value TEXT NOT NULL,
+  duration_seconds INTEGER,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_by TEXT
+);
+`);
+
 export function newId(prefix: string) {
   return `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 }

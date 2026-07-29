@@ -227,6 +227,56 @@ export async function generateEducationPlan(args: GenerateArgs) {
   }
 }
 
+export interface RecordSuggestionArgs {
+  ageGroup: string;
+  objective: string;
+  content?: string;
+  activity?: string;
+  instruction?: string;
+  signal?: AbortSignal;
+}
+
+// Dùng cho webapp/ctgdmn-web (màn hình "AI và nguồn trực tuyến"): gợi ý bổ
+// sung hoạt động/nội dung cho một "bản ghi chuẩn hóa" (mục tiêu - nội dung -
+// hoạt động), trả về văn bản thuần thay vì một kế hoạch đầy đủ. Không được
+// tự bịa mã mục tiêu; chỉ được đề xuất diễn giải nội dung/hoạt động.
+export async function suggestForRecord(args: RecordSuggestionArgs) {
+  const { settings, apiKey } = await resolveCredentials();
+  const provider = getProvider(settings.provider);
+  if (!apiKey) throw new AiError("missing_key", VIETNAMESE_ERROR_MESSAGES.missing_key);
+
+  const userPrompt = [
+    `NHIỆM VỤ: Gợi ý bổ sung nội dung giáo dục và hoạt động phù hợp cho mục tiêu/yêu cầu cần đạt dưới đây, dành cho trẻ độ tuổi ${args.ageGroup}.`,
+    `Mục tiêu/yêu cầu cần đạt: ${args.objective}`,
+    args.content ? `Nội dung hiện có: ${args.content}` : "",
+    args.activity ? `Hoạt động hiện có: ${args.activity}` : "",
+    args.instruction ? `Yêu cầu thêm của giáo viên: ${args.instruction}` : "",
+    `Không đưa họ tên, ngày sinh, hình ảnh hoặc thông tin nhận dạng của trẻ vào câu trả lời. Không tự đặt ra mã mục tiêu mới.`,
+    `Chỉ trả về một đối tượng JSON duy nhất dạng {"suggestion": "..."} chứa đoạn gợi ý (định dạng văn bản thường, có thể xuống dòng bằng \\n), không thêm nội dung ngoài cấu trúc.`,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  const started = Date.now();
+  try {
+    const raw = await callWithRetry(
+      provider,
+      { apiKey, model: settings.model, baseUrl: settings.compatible_base_url || undefined, systemPrompt: SYSTEM_PROMPT, userPrompt },
+      args.signal
+    );
+    const json = extractJson(raw);
+    if (typeof json?.suggestion !== "string" || !json.suggestion.trim()) {
+      throw new AiError("invalid_response", "AI không trả về nội dung gợi ý hợp lệ.");
+    }
+    logAiCall({ endpoint: "ctgdmn-suggest", provider: settings.provider, model: settings.model, status: "success", latencyMs: Date.now() - started });
+    return { suggestion: json.suggestion as string };
+  } catch (err) {
+    const aiErr = err instanceof AiError ? err : new AiError("unknown", String((err as Error)?.message || err));
+    logAiCall({ endpoint: "ctgdmn-suggest", provider: settings.provider, model: settings.model, status: "error", latencyMs: Date.now() - started, errorMessage: aiErr.message });
+    throw aiErr;
+  }
+}
+
 interface SectionArgs {
   planType: PlanType;
   ageGroup: string;
