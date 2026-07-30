@@ -1,7 +1,7 @@
 import { dbExecute, dbSelect, nowIso } from "./client";
 import { newId } from "../utils/id";
 import { logAudit } from "./authRepo";
-import type { IncidentSeverity, RecordStatus, SafetyArea } from "./types";
+import type { IncidentSeverity, PhysicalExamSpecialtyFields, RecordStatus, SafetyArea } from "./types";
 
 // ===================== HỒ SƠ SỨC KHỎE =====================
 
@@ -137,6 +137,108 @@ export async function addVaccination(
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [newId(), childId, vaccineName, doseNo, date, place ?? null, note ?? null, createdBy, nowIso()],
   );
+}
+
+// ===================== KHÁM SỨC KHỎE TOÀN DIỆN =====================
+
+export interface PhysicalExamRow extends PhysicalExamSpecialtyFields {
+  id: string | null;
+  child_id: string;
+  full_name: string;
+  code: string;
+  exam_no: number;
+  exam_date: string | null;
+  xep_loai: string | null;
+  ket_luan: string | null;
+}
+
+export interface PhysicalExamRound {
+  examNo: number;
+  examDate: string;
+}
+
+export async function listPhysicalExamRounds(classId: string): Promise<PhysicalExamRound[]> {
+  const rows = await dbSelect<{ exam_no: number; exam_date: string }>(
+    `SELECT exam_no, MAX(exam_date) AS exam_date FROM physical_exams
+     WHERE class_id = ? GROUP BY exam_no ORDER BY exam_no ASC`,
+    [classId],
+  );
+  return rows.map((r) => ({ examNo: r.exam_no, examDate: r.exam_date }));
+}
+
+/** Lưới khám sức khỏe của một lớp cho một đợt khám (Lần N) — trẻ đang học trong lớp, kèm kết
+ * quả đã có (nếu đợt khám đó đã nhập cho trẻ này). */
+export async function getPhysicalExamGrid(classId: string, examNo: number): Promise<PhysicalExamRow[]> {
+  return dbSelect<PhysicalExamRow>(
+    `SELECT ch.id AS child_id, ch.code AS code, ch.full_name AS full_name,
+       ? AS exam_no, pe.id AS id, pe.exam_date AS exam_date,
+       pe.tai_mui_hong AS tai_mui_hong, pe.rang_ham_mat AS rang_ham_mat,
+       pe.co_xuong_khop AS co_xuong_khop, pe.tim_mach AS tim_mach, pe.ho_hap AS ho_hap,
+       pe.tam_than_kinh AS tam_than_kinh, pe.mat AS mat, pe.benh_khac AS benh_khac,
+       pe.xep_loai AS xep_loai, pe.ket_luan AS ket_luan
+     FROM children ch
+     LEFT JOIN physical_exams pe ON pe.child_id = ch.id AND pe.exam_no = ?
+     WHERE ch.class_id = ? AND ch.deleted_at IS NULL AND ch.status = 'studying'
+     ORDER BY ch.full_name ASC`,
+    [examNo, examNo, classId],
+  );
+}
+
+export interface UpsertPhysicalExamInput extends PhysicalExamSpecialtyFields {
+  xepLoai: string;
+  ketLuan: string;
+}
+
+export async function upsertPhysicalExam(
+  childId: string,
+  classId: string,
+  examNo: number,
+  examDate: string,
+  data: UpsertPhysicalExamInput,
+  userId: string,
+): Promise<void> {
+  const ts = nowIso();
+  await dbExecute(
+    `INSERT INTO physical_exams (id, child_id, class_id, exam_no, exam_date, tai_mui_hong,
+       rang_ham_mat, co_xuong_khop, tim_mach, ho_hap, tam_than_kinh, mat, benh_khac, xep_loai,
+       ket_luan, created_by, created_at, updated_by, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(child_id, exam_no) DO UPDATE SET
+       class_id = excluded.class_id, exam_date = excluded.exam_date,
+       tai_mui_hong = excluded.tai_mui_hong, rang_ham_mat = excluded.rang_ham_mat,
+       co_xuong_khop = excluded.co_xuong_khop, tim_mach = excluded.tim_mach,
+       ho_hap = excluded.ho_hap, tam_than_kinh = excluded.tam_than_kinh, mat = excluded.mat,
+       benh_khac = excluded.benh_khac, xep_loai = excluded.xep_loai, ket_luan = excluded.ket_luan,
+       updated_by = excluded.updated_by, updated_at = excluded.updated_at`,
+    [
+      newId(),
+      childId,
+      classId,
+      examNo,
+      examDate,
+      data.tai_mui_hong || null,
+      data.rang_ham_mat || null,
+      data.co_xuong_khop || null,
+      data.tim_mach || null,
+      data.ho_hap || null,
+      data.tam_than_kinh || null,
+      data.mat || null,
+      data.benh_khac || null,
+      data.xepLoai || null,
+      data.ketLuan || "Bình thường",
+      userId,
+      ts,
+      userId,
+      ts,
+    ],
+  );
+  await logAudit({
+    entityTable: "physical_exams",
+    entityId: `${childId}:${examNo}`,
+    action: "upsert",
+    userId,
+    sessionId: null,
+  });
 }
 
 // ===================== SỰ CỐ / TAI NẠN =====================

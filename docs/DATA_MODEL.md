@@ -155,3 +155,15 @@ tính vào cột "Dân tộc" của báo cáo tổng hợp — theo quy ước K
 mặc định `khong` — một phân loại chính, theo đúng cấu trúc 3 cột riêng biệt của biểu mẫu
 "Tổng hợp số lượng học sinh từng thời điểm" trường đang dùng). Không tách bảng riêng vì đây là
 thuộc tính tĩnh 1-1 với hồ sơ trẻ, không có lịch sử thay đổi cần theo dõi.
+
+## 8. Bổ sung đã triển khai: Khám sức khỏe toàn diện (Giai đoạn 7 — Phase C)
+
+Migration 024-025, DAL `src/lib/db/healthRepo.ts`. Bảng `physical_exams`: một dòng/trẻ/đợt khám
+(`exam_no` = "Lần N"), 8 cột chuyên khoa (`tai_mui_hong`, `rang_ham_mat`, `co_xuong_khop`,
+`tim_mach`, `ho_hap`, `tam_than_kinh`, `mat`, `benh_khac` — tất cả TEXT, tự do ghi chú, đúng
+cấu trúc biểu mẫu giấy nhà trường đang dùng), `xep_loai`, `ket_luan` (mặc định "Bình thường").
+`class_id` lưu lại lớp của trẻ tại thời điểm khám (giống `attendance.class_id`) để báo cáo đúng
+dù trẻ chuyển lớp sau này. `UNIQUE(child_id, exam_no)` — mỗi trẻ chỉ có 1 bản ghi cho mỗi đợt
+khám, cập nhật (upsert) nếu nhập lại. Đây là dữ liệu tách biệt khỏi `health_records` (hồ sơ tĩnh
+nhóm máu/dị ứng/bệnh nền) vì bản chất là các đợt khám định kỳ có ngày riêng, không phải hồ sơ
+một-lần cập nhật.

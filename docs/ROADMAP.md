@@ -321,7 +321,28 @@ Không cần đổi CSDL — suy trực tiếp từ bảng `attendance` đã có
   do dữ liệu demo chuyên cần nằm ngoài `school_years.end_date`).
 - ✅ `tsc --noEmit`, ESLint (0 warning), Vitest (30 test), `cargo check` chạy sạch.
 
-### Phase C — Khám sức khỏe toàn diện — ⬜ Chưa bắt đầu
+### Phase C — Khám sức khỏe toàn diện — ✅ Hoàn thành
+
+- ✅ Migration 024: bảng `physical_exams` — mỗi đợt khám (`exam_no` = "Lần N") có 1 dòng/trẻ,
+  8 cột chuyên khoa (Tai mũi họng, Răng hàm mặt, Cơ xương khớp, Tim mạch, Hô hấp, Tâm thần kinh,
+  Mắt, Bệnh khác — đúng cấu trúc biểu mẫu gốc), Xếp loại, Kết luận (mặc định "Bình thường").
+  `class_id` lưu lại lớp của trẻ tại thời điểm khám (giống cách `attendance.class_id` đã làm)
+  để báo cáo đúng dù trẻ sau này chuyển lớp. `UNIQUE(child_id, exam_no)`.
+- ✅ Migration 025: seed demo "Khám sức khỏe toàn diện Lần 1" ngày 28/10/2025 cho lớp Mẫu giáo
+  lớn A, khớp đúng ngày và nội dung ("Bình thường") với biểu mẫu PDF trường gửi kèm.
+- ✅ `healthRepo.ts`: `listPhysicalExamRounds`, `getPhysicalExamGrid` (lưới trẻ đang học trong
+  lớp × kết quả đã có, nếu có), `upsertPhysicalExam` (một dòng/trẻ/đợt khám).
+- ✅ Tab mới "Khám sức khỏe toàn diện" trong Sức khỏe – An toàn: chọn lớp + đợt khám (tự động
+  liệt kê các đợt đã có, cho phép thêm đợt mới), nhập trực tiếp trên bảng (8 cột chuyên khoa +
+  Xếp loại + Kết luận), lưu từng dòng; in đúng khuôn "KHÁM SỨC KHỎE TOÀN DIỆN LẦN N" (chỉ hiện
+  nội dung đã nhập, ẩn cột thao tác khi in, hiển thị đầy đủ văn bản không bị cắt như khi nhập).
+- ✅ Kiểm thử: chạy 25 migration liên tiếp — không lỗi. Kiểm thử UI qua Playwright/Chromium: đợt
+  khám demo hiển thị đúng ngày 28/10/2025 và "Bình thường" cho cả 4 trẻ lớp Mẫu giáo lớn A;
+  tạo được đợt khám mới (Lần 2, ngày khác) độc lập với Lần 1; sửa/lưu một dòng hoạt động đúng;
+  phát hiện và sửa lỗi hiển thị: ô nhập hẹp làm cắt chữ khi in — đã thêm phần tử hiển thị đầy đủ
+  văn bản riêng cho chế độ in.
+- ✅ `tsc --noEmit`, ESLint (0 warning), Vitest (30 test), `cargo check`, `vite build` chạy sạch.
+
 ### Phase D — Đánh giá phát triển qua biểu đồ (SD) + tổng hợp lớp/trường — ⬜ Chưa bắt đầu
 
 ## Hướng dẫn chạy thử Giai đoạn 1-6 (PowerShell trên Windows)

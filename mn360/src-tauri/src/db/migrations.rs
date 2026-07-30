@@ -142,5 +142,17 @@ pub fn get_migrations() -> Vec<Migration> {
             sql: include_str!("./sql/023_seed_children_demographics.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 24,
+            description: "physical_exams_schema",
+            sql: include_str!("./sql/024_physical_exams.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 25,
+            description: "seed_physical_exams",
+            sql: include_str!("./sql/025_seed_physical_exams.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }

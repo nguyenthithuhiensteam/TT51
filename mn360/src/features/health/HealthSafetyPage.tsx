@@ -27,8 +27,9 @@ import {
 } from "../../lib/db/healthRepo";
 import { SAFETY_AREA_LABELS, SEVERITY_LABELS } from "../../lib/db/types";
 import type { IncidentSeverity, SafetyArea } from "../../lib/db/types";
+import { PhysicalExamTab } from "./PhysicalExamTab";
 
-type Tab = "child" | "incidents" | "safety";
+type Tab = "child" | "physicalExam" | "incidents" | "safety";
 
 export function HealthSafetyPage() {
   const [tab, setTab] = useState<Tab>("child");
@@ -44,6 +45,7 @@ export function HealthSafetyPage() {
         {(
           [
             ["child", "Sức khỏe trẻ"],
+            ["physicalExam", "Khám sức khỏe toàn diện"],
             ["incidents", "Sự cố / Tai nạn"],
             ["safety", "Kiểm tra an toàn"],
           ] as [Tab, string][]
@@ -61,6 +63,7 @@ export function HealthSafetyPage() {
         ))}
       </div>
       {tab === "child" && <ChildHealthTab />}
+      {tab === "physicalExam" && <PhysicalExamTab />}
       {tab === "incidents" && <IncidentsTab />}
       {tab === "safety" && <SafetyInspectionsTab />}
     </div>

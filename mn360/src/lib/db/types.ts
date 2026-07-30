@@ -468,6 +468,42 @@ export const SAFETY_AREA_LABELS: Record<SafetyArea, string> = {
   other: "Khác",
 };
 
+export interface PhysicalExamSpecialtyFields {
+  tai_mui_hong: string | null;
+  rang_ham_mat: string | null;
+  co_xuong_khop: string | null;
+  tim_mach: string | null;
+  ho_hap: string | null;
+  tam_than_kinh: string | null;
+  mat: string | null;
+  benh_khac: string | null;
+}
+
+export const PHYSICAL_EXAM_SPECIALTY_LABELS: Record<keyof PhysicalExamSpecialtyFields, string> = {
+  tai_mui_hong: "Tai mũi họng",
+  rang_ham_mat: "Răng hàm mặt",
+  co_xuong_khop: "Cơ, xương khớp",
+  tim_mach: "Tim mạch",
+  ho_hap: "Hô hấp",
+  tam_than_kinh: "Tâm thần kinh",
+  mat: "Mắt",
+  benh_khac: "Bệnh khác",
+};
+
+export interface PhysicalExam extends PhysicalExamSpecialtyFields {
+  id: string;
+  child_id: string;
+  class_id: string;
+  exam_no: number;
+  exam_date: string;
+  xep_loai: string | null;
+  ket_luan: string;
+  created_by: string;
+  created_at: string;
+  updated_by: string | null;
+  updated_at: string;
+}
+
 // ===================== GIAI ĐOẠN 3: TÀI CHÍNH – TÀI SẢN =====================
 
 export interface FeeItem {
