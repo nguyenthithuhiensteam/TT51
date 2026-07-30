@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, HelpCircle, Lock, Search, Wifi, WifiOff, ChevronDown } from "lucide-react";
+import { Bell, HelpCircle, Lock, Search, Wifi, WifiOff, ChevronDown, Menu } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import { useAppStore } from "../../store/appStore";
 import { ROLE_LABELS } from "../../lib/db/types";
@@ -47,7 +47,7 @@ function SearchBox() {
   }, [query]);
 
   return (
-    <div ref={ref} className="relative w-full max-w-md">
+    <div ref={ref} className="relative w-full min-w-0 max-w-md flex-1">
       <Search
         size={16}
         className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-navy/40"
@@ -211,7 +211,7 @@ function AccountMenu() {
   );
 }
 
-export function Topbar({ onLock }: { onLock: () => void }) {
+export function Topbar({ onLock, onMenuClick }: { onLock: () => void; onMenuClick?: () => void }) {
   const school = useAppStore((s) => s.school);
   const schoolYear = useAppStore((s) => s.currentSchoolYear);
   const isOnline = useAppStore((s) => s.isOnline);
@@ -219,7 +219,14 @@ export function Topbar({ onLock }: { onLock: () => void }) {
   const helpRef = useClickOutside(() => setHelpOpen(false));
 
   return (
-    <header className="flex h-16 flex-shrink-0 items-center gap-4 border-b border-navy/5 bg-white px-5">
+    <header className="flex h-16 flex-shrink-0 items-center gap-2 border-b border-navy/5 bg-white px-3 sm:gap-4 sm:px-5">
+      <button
+        onClick={onMenuClick}
+        className="rounded-full p-2 text-navy/70 hover:bg-navy/5 md:hidden"
+        aria-label="Mở menu"
+      >
+        <Menu size={20} />
+      </button>
       <div className="hidden min-w-0 flex-col leading-tight lg:flex">
         <span className="truncate text-sm font-semibold text-navy">
           {school?.name ?? "MN360"}

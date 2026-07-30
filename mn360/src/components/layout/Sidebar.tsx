@@ -56,7 +56,7 @@ const SYSTEM_NAV: NavItem[] = [
   { to: "/sao-luu", label: "Sao lưu / Khôi phục", icon: DatabaseBackup, permission: "system.backup" },
 ];
 
-function NavList({ items }: { items: NavItem[] }) {
+function NavList({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => void }) {
   const hasPermission = useAuthStore((s) => s.hasPermission);
   const visible = items.filter((item) => hasPermission(item.permission));
   return (
@@ -66,6 +66,7 @@ function NavList({ items }: { items: NavItem[] }) {
           key={to}
           to={to}
           end={to === "/"}
+          onClick={onNavigate}
           className={({ isActive }) =>
             clsx(
               "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
@@ -83,21 +84,36 @@ function NavList({ items }: { items: NavItem[] }) {
   );
 }
 
-export function Sidebar() {
+export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: () => void }) {
   return (
-    <aside className="flex h-full w-64 flex-shrink-0 flex-col gap-1 overflow-y-auto bg-navy px-3 py-4">
-      <div className="mb-4 flex items-center gap-2 px-2">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand font-bold text-white">
-          M
+    <>
+      {open && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 md:hidden"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+      <aside
+        className={clsx(
+          "fixed inset-y-0 left-0 z-50 flex h-full w-64 flex-shrink-0 flex-col gap-1 overflow-y-auto bg-navy px-3 py-4 transition-transform duration-200 ease-in-out",
+          "md:static md:z-auto md:translate-x-0",
+          open ? "translate-x-0" : "-translate-x-full",
+        )}
+      >
+        <div className="mb-4 flex items-center gap-2 px-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand font-bold text-white">
+            M
+          </div>
+          <span className="text-lg font-bold text-white">MN360</span>
         </div>
-        <span className="text-lg font-bold text-white">MN360</span>
-      </div>
-      <nav className="flex flex-1 flex-col gap-1">
-        <NavList items={MAIN_NAV} />
-      </nav>
-      <div className="mt-4 flex flex-col gap-1 border-t border-white/10 pt-3">
-        <NavList items={SYSTEM_NAV} />
-      </div>
-    </aside>
+        <nav className="flex flex-1 flex-col gap-1">
+          <NavList items={MAIN_NAV} onNavigate={onClose} />
+        </nav>
+        <div className="mt-4 flex flex-col gap-1 border-t border-white/10 pt-3">
+          <NavList items={SYSTEM_NAV} onNavigate={onClose} />
+        </div>
+      </aside>
+    </>
   );
 }

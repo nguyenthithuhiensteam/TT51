@@ -398,6 +398,30 @@ cho trường công lập).
   chỉ còn lại đúng nội dung phiếu.
 - ✅ `tsc --noEmit`, ESLint (0 warning), Vitest (43 test), `cargo check`, `vite build` chạy sạch.
 
+### Giao diện — Sidebar responsive trên màn hình hẹp (điện thoại/máy tính bảng) — ✅ Hoàn thành
+
+Người dùng phản hồi "chỗ lập phiếu thu chi tôi thấy chưa sử dụng được". Kiểm thử ở độ rộng máy
+tính (1440–1500px) không tái hiện được lỗi — form và bản in hoạt động đúng. Kiểm thử độc lập ở độ
+rộng điện thoại (390px) phát hiện nguyên nhân thật: `Sidebar` dùng `w-64` cố định 256px, luôn hiển
+thị, không có điểm ngắt responsive hay nút thu gọn — trên màn hình 390px chỉ còn ~134px cho nội
+dung, khiến mọi form nhiều trường (kể cả phiếu thu/chi) bị bóp méo không dùng được. Đây là lỗi có
+sẵn toàn ứng dụng, không riêng phần phiếu thu/chi.
+
+- ✅ `Sidebar.tsx`: nhận `open`/`onClose`; dưới điểm ngắt `md` hiển thị dạng ngăn kéo trượt
+  (`fixed` + `-translate-x-full` khi đóng, `translate-x-0` khi mở) với lớp phủ nền mờ; từ `md` trở
+  lên giữ nguyên hành vi cũ (`md:static md:translate-x-0`, luôn hiển thị, không cần nút mở). Bấm
+  vào một mục điều hướng sẽ tự đóng ngăn kéo trên di động.
+- ✅ `Topbar.tsx`: thêm nút hamburger (`md:hidden`) để mở/đóng ngăn kéo; ô tìm kiếm co giãn đúng
+  (`min-w-0 flex-1`) thay vì tràn ngang trên màn hình hẹp.
+- ✅ `AppLayout.tsx`: quản lý state đóng/mở sidebar, truyền xuống `Sidebar`/`Topbar`; giảm padding
+  nội dung chính trên di động (`p-3` thay vì `p-6`, giữ `sm:p-6` cho màn hình rộng hơn).
+- ✅ Kiểm thử qua Playwright ở độ rộng 390×844: sau đăng nhập, sidebar nằm ngoài màn hình
+  (`x: -256`) và Tổng quan hiển thị toàn chiều rộng; bấm hamburger mở đúng ngăn kéo (`x: 0`); vào
+  Tài chính – Tài sản → Phiếu thu xác nhận toàn bộ form (Trẻ, Khoản thu, Số tiền, Ngày, Họ tên/Địa
+  chỉ/Lý do người nộp, Số chứng từ) hiển thị đầy đủ, không còn bị bóp méo. Kiểm thử lại ở 1440px
+  xác nhận sidebar vẫn tĩnh, luôn hiển thị, không có nút hamburger — hành vi máy tính không đổi.
+- ✅ `tsc --noEmit`, ESLint (0 warning), Vitest (43 test), `cargo check`, `vite build` chạy sạch.
+
 ## Hướng dẫn chạy thử Giai đoạn 1-6 (PowerShell trên Windows)
 
 Xem chi tiết đầy đủ trong `mn360/README.md`, tóm tắt:
