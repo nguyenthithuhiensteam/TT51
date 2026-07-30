@@ -3,6 +3,7 @@
 // giao diện mà không kiểm tra quyền sở hữu trước.
 import { dbExecute, dbSelect, nowIso } from "./client";
 import { newId } from "../utils/id";
+import { generateWithAi } from "../ai/gateway";
 import type { AttendanceStatus, LeaveRequestStatus } from "./types";
 
 async function getGuardianIdForUser(userId: string): Promise<string | null> {
@@ -193,5 +194,61 @@ export async function sendMessageAsParent(userId: string, childId: string, conte
   await dbExecute(
     "INSERT INTO parent_messages (id, child_id, guardian_id, sender_role, sender_user_id, content, is_read, created_at) VALUES (?, ?, ?, 'parent', ?, ?, 0, ?)",
     [newId(), childId, guardianId, userId, content, nowIso()],
+  );
+}
+
+// ===================== TRỢ LÝ AI TƯ VẤN NUÔI DẠY TRẺ =====================
+// Chỉ trả lời bằng kiến thức nuôi dạy trẻ mầm non CHUNG — không nhận/gửi dữ liệu riêng của
+// một trẻ cụ thể (tên, ngày sinh, tình trạng sức khỏe...) ra AI. Mọi câu hỏi/trả lời được lưu
+// lại để nhà trường xem lại khi cần.
+
+const PARENT_AI_SYSTEM_PROMPT = `Bạn là trợ lý tư vấn kiến thức nuôi dạy trẻ mầm non (3-6 tuổi) dành cho phụ huynh, trong phần mềm quản lý trường mầm non MN360.
+Chỉ trả lời bằng kiến thức nuôi dạy trẻ CHUNG phù hợp lứa tuổi mầm non: dinh dưỡng, giấc ngủ, tâm lý - hành vi, phát triển kỹ năng, thói quen sinh hoạt, an toàn.
+KHÔNG được chẩn đoán bệnh, kê đơn thuốc, hoặc kết luận y tế/tâm lý cho một trường hợp cụ thể.
+Nếu câu hỏi có dấu hiệu cần khám hoặc tư vấn chuyên môn (sốt cao, chấn thương, chậm phát triển nghiêm trọng, nghi ngờ bị bạo hành...), phải khuyên phụ huynh liên hệ ngay giáo viên chủ nhiệm/nhân viên y tế của trường hoặc cơ sở y tế, không tự đưa ra kết luận thay.
+Trả lời ngắn gọn, dễ hiểu, bằng tiếng Việt.`;
+
+export interface AiConsultationRow {
+  id: string;
+  question: string;
+  answer: string;
+  created_at: string;
+}
+
+export async function listMyAiConsultations(userId: string): Promise<AiConsultationRow[]> {
+  const guardianId = await getGuardianIdForUser(userId);
+  if (!guardianId) return [];
+  return dbSelect<AiConsultationRow>(
+    "SELECT id, question, answer, created_at FROM parent_ai_consultations WHERE guardian_id = ? ORDER BY created_at DESC",
+    [guardianId],
+  );
+}
+
+export async function askAiParentingQuestion(userId: string, question: string): Promise<string> {
+  const guardianId = await getGuardianIdForUser(userId);
+  if (!guardianId) throw new Error("Tài khoản chưa được liên kết với hồ sơ phụ huynh");
+  const trimmed = question.trim();
+  if (!trimmed) throw new Error("Vui lòng nhập câu hỏi");
+
+  const result = await generateWithAi(PARENT_AI_SYSTEM_PROMPT, trimmed);
+
+  await dbExecute(
+    "INSERT INTO parent_ai_consultations (id, guardian_id, question, answer, created_at) VALUES (?, ?, ?, ?, ?)",
+    [newId(), guardianId, trimmed, result.content, nowIso()],
+  );
+  return result.content;
+}
+
+export interface AiConsultationReviewRow extends AiConsultationRow {
+  guardian_name: string;
+}
+
+/** Dành cho nhà trường (Hiệu trưởng/Quản trị hệ thống) xem lại lịch sử hỏi Trợ lý AI của phụ huynh. */
+export async function listAllAiConsultationsForReview(): Promise<AiConsultationReviewRow[]> {
+  return dbSelect<AiConsultationReviewRow>(
+    `SELECT c.id, c.question, c.answer, c.created_at, g.full_name AS guardian_name
+     FROM parent_ai_consultations c
+     JOIN guardians g ON g.id = c.guardian_id
+     ORDER BY c.created_at DESC`,
   );
 }

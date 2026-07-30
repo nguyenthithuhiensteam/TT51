@@ -422,6 +422,39 @@ sẵn toàn ứng dụng, không riêng phần phiếu thu/chi.
   xác nhận sidebar vẫn tĩnh, luôn hiển thị, không có nút hamburger — hành vi máy tính không đổi.
 - ✅ `tsc --noEmit`, ESLint (0 warning), Vitest (43 test), `cargo check`, `vite build` chạy sạch.
 
+### Phụ huynh — Trợ lý AI tư vấn nuôi dạy trẻ — ✅ Hoàn thành
+
+Người dùng yêu cầu thêm trợ lý AI tư vấn cho phụ huynh. Đã hỏi rõ phạm vi trước khi làm — người
+dùng chọn: (1) chỉ trả lời kiến thức nuôi dạy trẻ mầm non CHUNG, không dùng dữ liệu riêng của một
+trẻ cụ thể (an toàn nhất, không cần ẩn danh vì không có gì để lộ); (2) lưu lại lịch sử hỏi-đáp để
+nhà trường xem lại khi cần.
+
+- ✅ Migration 027: bảng `parent_ai_consultations` (guardian_id, question, answer, created_at) +
+  quyền mới `parent.ai_consult` (chỉ cấp cho vai trò `parent`).
+- ✅ `parentRepo.ts`: `askAiParentingQuestion` (suy `guardian_id` từ tài khoản đăng nhập — không
+  nhận trực tiếp từ client, đúng nguyên tắc đã áp dụng cho toàn phân hệ Phụ huynh; gọi
+  `generateWithAi` với system prompt giới hạn nghiêm ngặt — chỉ kiến thức chung, KHÔNG chẩn đoán
+  bệnh/kê đơn, phải khuyên liên hệ giáo viên/y tế trường nếu có dấu hiệu đáng lo ngại; lưu lại kết
+  quả), `listMyAiConsultations` (lịch sử của chính phụ huynh), `listAllAiConsultationsForReview`
+  (toàn bộ lịch sử, kèm tên phụ huynh, dành cho nhà trường xem lại).
+- ✅ `ParentPortalPage.tsx`: phụ huynh (vai trò `parent`) thấy thêm thẻ "Trợ lý AI tư vấn nuôi dạy
+  trẻ" — ô hỏi + lịch sử câu hỏi cũ, luôn kèm cảnh báo "không thay thế tư vấn y tế/chuyên môn".
+  Tài khoản có quyền `parent.view` nhưng KHÔNG phải vai trò phụ huynh (Hiệu trưởng/Quản trị hệ
+  thống — hai vai trò duy nhất đang có `parent.view`) khi vào cùng route sẽ thấy "Lịch sử hỏi Trợ
+  lý AI của phụ huynh" thay vì các chức năng tự phục vụ của phụ huynh (trước đây route này với
+  tài khoản không phải phụ huynh chỉ hiện các khối trống do không có hồ sơ `guardian`). Chưa cấp
+  `parent.view` cho vai trò `teacher` vì không được yêu cầu — việc mở rộng thêm vai trò xem cần
+  quyết định RBAC riêng.
+- ✅ Tái sử dụng nguyên trạng AI Gateway đã có (Cài đặt → cấu hình nhà cung cấp/khóa API) — không
+  tạo cổng AI riêng; nếu trường chưa cấu hình AI, phụ huynh nhận đúng thông báo "AI đang tắt hoặc
+  chưa cấu hình khóa API" thay vì trợ lý âm thầm không phản hồi.
+- ✅ Kiểm thử qua Playwright: đăng nhập `phuhuynh1`, xác nhận thẻ Trợ lý AI hiển thị đúng, nhập câu
+  hỏi và bấm "Hỏi Trợ lý AI" nhận đúng thông báo cấu hình AI (bản xem trước trình duyệt/trường demo
+  chưa bật AI — đúng hành vi mong đợi, giống tính năng AI soạn thảo văn bản đã có); đăng nhập
+  `hieutruong`, xác nhận vào `/phu-huynh` thấy đúng bảng xem lại lịch sử (rỗng), không thấy các
+  form tự phục vụ của phụ huynh (Xin nghỉ, Trao đổi với giáo viên...).
+- ✅ `tsc --noEmit`, ESLint (0 warning), Vitest (43 test), `cargo check`, `vite build` chạy sạch.
+
 ## Hướng dẫn chạy thử Giai đoạn 1-6 (PowerShell trên Windows)
 
 Xem chi tiết đầy đủ trong `mn360/README.md`, tóm tắt:

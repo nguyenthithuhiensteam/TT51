@@ -4,14 +4,19 @@ import { Button } from "../../components/ui/Button";
 import { Input, Select, Textarea } from "../../components/ui/Input";
 import { useAuthStore } from "../../store/authStore";
 import {
+  askAiParentingQuestion,
   createLeaveRequest,
   getMyChildAttendance,
   getMyChildRevenues,
   getTodayMenuForChild,
+  listAllAiConsultationsForReview,
+  listMyAiConsultations,
   listMyChildren,
   listMyLeaveRequests,
   listMyMessages,
   sendMessageAsParent,
+  type AiConsultationReviewRow,
+  type AiConsultationRow,
   type MyAttendanceRow,
   type MyChildRow,
   type MyLeaveRequestRow,
@@ -21,8 +26,106 @@ import {
 } from "../../lib/db/parentRepo";
 import { ATTENDANCE_LABELS, LEAVE_REQUEST_STATUS_LABELS, MEAL_SLOT_LABELS } from "../../lib/db/types";
 
+function ParentAiAssistant({ userId }: { userId: string }) {
+  const [question, setQuestion] = useState("");
+  const [history, setHistory] = useState<AiConsultationRow[]>([]);
+  const [asking, setAsking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function refresh() {
+    setHistory(await listMyAiConsultations(userId));
+  }
+
+  useEffect(() => {
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+  async function ask() {
+    if (!question.trim() || asking) return;
+    setAsking(true);
+    setError(null);
+    try {
+      await askAiParentingQuestion(userId, question.trim());
+      setQuestion("");
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Không thể hỏi Trợ lý AI lúc này");
+    } finally {
+      setAsking(false);
+    }
+  }
+
+  return (
+    <Card>
+      <h3 className="mb-1 text-sm font-semibold text-navy">Trợ lý AI tư vấn nuôi dạy trẻ</h3>
+      <p className="mb-2 text-xs text-navy/50">
+        Hỏi đáp kiến thức nuôi dạy trẻ mầm non chung (dinh dưỡng, giấc ngủ, tâm lý, thói quen...).
+        Không dùng để chẩn đoán bệnh hay thay thế tư vấn của giáo viên/bác sĩ — với dấu hiệu đáng lo
+        ngại, vui lòng liên hệ trực tiếp giáo viên chủ nhiệm hoặc nhân viên y tế của trường.
+      </p>
+      <div className="flex gap-2">
+        <Textarea
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          placeholder="Ví dụ: Con 4 tuổi biếng ăn rau, nên làm thế nào?"
+          className="min-h-[60px]"
+        />
+      </div>
+      {error && <p className="mt-2 text-sm text-danger">{error}</p>}
+      <div className="mt-2 flex justify-end">
+        <Button size="sm" disabled={!question.trim() || asking} onClick={ask}>
+          {asking ? "Đang hỏi..." : "Hỏi Trợ lý AI"}
+        </Button>
+      </div>
+      <div className="mt-4 max-h-72 space-y-3 overflow-y-auto">
+        {history.map((h) => (
+          <div key={h.id} className="rounded-lg border border-navy/10 p-2">
+            <p className="text-sm font-medium text-navy">Hỏi: {h.question}</p>
+            <p className="mt-1 whitespace-pre-wrap text-sm text-navy/80">{h.answer}</p>
+            <p className="mt-1 text-xs text-mint">Nội dung do AI hỗ trợ · {new Date(h.created_at).toLocaleString("vi-VN")}</p>
+          </div>
+        ))}
+        {history.length === 0 && <p className="text-sm text-navy/50">Chưa có câu hỏi nào.</p>}
+      </div>
+    </Card>
+  );
+}
+
+function ParentAiReviewPanel() {
+  const [rows, setRows] = useState<AiConsultationReviewRow[]>([]);
+
+  useEffect(() => {
+    listAllAiConsultationsForReview().then(setRows);
+  }, []);
+
+  return (
+    <Card>
+      <h3 className="mb-1 text-sm font-semibold text-navy">Lịch sử hỏi Trợ lý AI của phụ huynh</h3>
+      <p className="mb-3 text-xs text-navy/50">
+        Chỉ hiển thị với Hiệu trưởng/Quản trị hệ thống — dùng để theo dõi và kịp thời hỗ trợ nếu phụ
+        huynh hỏi điều đáng lo ngại.
+      </p>
+      <div className="max-h-[32rem] space-y-3 overflow-y-auto">
+        {rows.map((r) => (
+          <div key={r.id} className="rounded-lg border border-navy/10 p-2">
+            <p className="text-xs font-semibold text-navy/60">
+              {r.guardian_name} · {new Date(r.created_at).toLocaleString("vi-VN")}
+            </p>
+            <p className="mt-1 text-sm font-medium text-navy">Hỏi: {r.question}</p>
+            <p className="mt-1 whitespace-pre-wrap text-sm text-navy/80">{r.answer}</p>
+          </div>
+        ))}
+        {rows.length === 0 && <p className="text-sm text-navy/50">Chưa có câu hỏi nào từ phụ huynh.</p>}
+      </div>
+    </Card>
+  );
+}
+
 export function ParentPortalPage() {
   const user = useAuthStore((s) => s.user);
+  const roles = useAuthStore((s) => s.roles);
+  const isParent = roles.includes("parent");
   const [children, setChildren] = useState<MyChildRow[]>([]);
   const [childId, setChildId] = useState("");
   const [attendance, setAttendance] = useState<MyAttendanceRow[]>([]);
@@ -35,13 +138,13 @@ export function ParentPortalPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !isParent) return;
     listMyChildren(user.id).then((rows) => {
       setChildren(rows);
       if (rows[0]) setChildId(rows[0].id);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+  }, [user?.id, isParent]);
 
   async function refresh() {
     if (!user || !childId) return;
@@ -62,6 +165,18 @@ export function ParentPortalPage() {
   const child = children.find((c) => c.id === childId);
 
   if (!user) return null;
+
+  if (!isParent) {
+    return (
+      <div className="mx-auto max-w-3xl space-y-4">
+        <div>
+          <h1 className="text-xl font-semibold text-navy">Phân hệ Phụ huynh</h1>
+          <p className="text-sm text-navy/60">Chế độ xem của nhà trường — dữ liệu theo dõi từng con thuộc về tài khoản phụ huynh.</p>
+        </div>
+        <ParentAiReviewPanel />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
@@ -213,6 +328,8 @@ export function ParentPortalPage() {
           </Button>
         </div>
       </Card>
+
+      <ParentAiAssistant userId={user.id} />
     </div>
   );
 }
