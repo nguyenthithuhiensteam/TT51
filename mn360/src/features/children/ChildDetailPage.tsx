@@ -18,6 +18,7 @@ import {
   listLeaveRequestsForChild,
   listMessagesForChild,
   replyAsTeacher,
+  updateChildDemographics,
   type ChildStatusHistoryRow,
   type ChildWithClass,
   type ClassWithTeacher,
@@ -33,8 +34,13 @@ import {
   type ChildAssessmentRow,
   type ObservationRow,
 } from "../../lib/db/curriculumRepo";
-import { CHILD_STATUS_LABELS, ASSESSMENT_DOMAIN_LABELS, LEAVE_REQUEST_STATUS_LABELS } from "../../lib/db/types";
-import type { AssessmentDomain, ChildStatus } from "../../lib/db/types";
+import {
+  CHILD_STATUS_LABELS,
+  ASSESSMENT_DOMAIN_LABELS,
+  LEAVE_REQUEST_STATUS_LABELS,
+  POLICY_TYPE_LABELS,
+} from "../../lib/db/types";
+import type { AssessmentDomain, ChildStatus, PolicyType } from "../../lib/db/types";
 
 export function ChildDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -58,6 +64,10 @@ export function ChildDetailPage() {
 
   const [guardianModalOpen, setGuardianModalOpen] = useState(false);
   const [guardianForm, setGuardianForm] = useState({ fullName: "", relationship: "", phone: "" });
+
+  const [demographicsModalOpen, setDemographicsModalOpen] = useState(false);
+  const [ethnicityInput, setEthnicityInput] = useState("");
+  const [policyTypeInput, setPolicyTypeInput] = useState<PolicyType>("khong");
 
   const [obsContent, setObsContent] = useState("");
   const [assessForm, setAssessForm] = useState({ period: "", domain: "the_chat" as AssessmentDomain, result: "", note: "" });
@@ -93,6 +103,25 @@ export function ChildDetailPage() {
       await changeChildStatus(child.id, newStatus, user.id, sessionId, statusNote, newClassId || undefined);
       setStatusModalOpen(false);
       setStatusNote("");
+      refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function openDemographicsModal() {
+    if (!child) return;
+    setEthnicityInput(child.ethnicity ?? "");
+    setPolicyTypeInput(child.policy_type);
+    setDemographicsModalOpen(true);
+  }
+
+  async function submitDemographics() {
+    if (!user || !child) return;
+    setBusy(true);
+    try {
+      await updateChildDemographics(child.id, ethnicityInput.trim() || null, policyTypeInput, user.id, sessionId);
+      setDemographicsModalOpen(false);
       refresh();
     } finally {
       setBusy(false);
@@ -175,14 +204,21 @@ export function ChildDetailPage() {
           <Info label="Giới tính" value={child.gender === "male" ? "Nam" : "Nữ"} />
           <Info label="Lớp" value={child.class_name ?? "Chưa xếp lớp"} />
           <Info label="Ngày tiếp nhận" value={child.enrollment_date} />
+          <Info label="Dân tộc" value={child.ethnicity ?? "Chưa ghi nhận"} />
+          <Info label="Diện chính sách" value={POLICY_TYPE_LABELS[child.policy_type]} />
         </div>
-        {hasPermission("children.approve") && (
-          <div className="mt-3">
+        <div className="mt-3 flex flex-wrap gap-2">
+          {hasPermission("children.approve") && (
             <Button size="sm" variant="secondary" onClick={() => setStatusModalOpen(true)}>
               Chuyển lớp / Bảo lưu / Chuyển trường / Thôi học / Hoàn thành
             </Button>
-          </div>
-        )}
+          )}
+          {hasPermission("children.edit") && (
+            <Button size="sm" variant="secondary" onClick={openDemographicsModal}>
+              Sửa dân tộc / diện chính sách
+            </Button>
+          )}
+        </div>
       </Card>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -444,6 +480,39 @@ export function ChildDetailPage() {
             </Button>
             <Button disabled={busy} onClick={submitStatusChange}>
               Xác nhận
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={demographicsModalOpen}
+        onClose={() => setDemographicsModalOpen(false)}
+        title="Sửa dân tộc / diện chính sách"
+      >
+        <div className="space-y-3">
+          <Field label="Dân tộc">
+            <Input
+              placeholder="VD: Kinh, Tày, Dao..."
+              value={ethnicityInput}
+              onChange={(e) => setEthnicityInput(e.target.value)}
+            />
+          </Field>
+          <Field label="Diện chính sách">
+            <Select value={policyTypeInput} onChange={(e) => setPolicyTypeInput(e.target.value as PolicyType)}>
+              {Object.entries(POLICY_TYPE_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setDemographicsModalOpen(false)}>
+              Hủy
+            </Button>
+            <Button disabled={busy} onClick={submitDemographics}>
+              Lưu
             </Button>
           </div>
         </div>

@@ -146,3 +146,12 @@ sách định hướng ở mục 3 (dùng tên `ingredients`), tên bảng thự
   lại thủ công, giữ đúng nguyên tắc "một dữ liệu — một nguồn gốc chịu trách nhiệm".
 - Định mức tiền ăn mặc định lưu trong `system_settings` (key `meal_fee_rate_per_child_per_day`),
   cấu hình tại Cài đặt.
+
+## 7. Bổ sung đã triển khai: Dân tộc / diện chính sách của trẻ (Giai đoạn 7 — Phase B)
+
+Migration 022-023. `children.ethnicity` (TEXT, NULL = chưa ghi nhận; "Kinh" hoặc NULL không
+tính vào cột "Dân tộc" của báo cáo tổng hợp — theo quy ước Kinh là dân tộc đa số) và
+`children.policy_type` (TEXT CHECK IN `khong`/`con_chinh_sach`/`ngheo_can_ngheo`/`khuyet_tat`,
+mặc định `khong` — một phân loại chính, theo đúng cấu trúc 3 cột riêng biệt của biểu mẫu
+"Tổng hợp số lượng học sinh từng thời điểm" trường đang dùng). Không tách bảng riêng vì đây là
+thuộc tính tĩnh 1-1 với hồ sơ trẻ, không có lịch sử thay đổi cần theo dõi.

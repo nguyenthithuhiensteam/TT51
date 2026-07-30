@@ -298,7 +298,29 @@ Không cần đổi CSDL — suy trực tiếp từ bảng `attendance` đã có
   Xác nhận `page.emulateMedia({media:"print"})` chỉ còn lại đúng nội dung biểu mẫu.
 - ✅ `tsc --noEmit`, ESLint (0 warning), Vitest (30 test) chạy sạch.
 
-### Phase B — Tổng hợp số lượng học sinh theo thời điểm — ⬜ Chưa bắt đầu
+### Phase B — Tổng hợp số lượng học sinh theo thời điểm — ✅ Hoàn thành
+
+- ✅ Migration 022: thêm `children.ethnicity` (tên dân tộc cụ thể, NULL/"Kinh" = không tính vào
+  cột "Dân tộc" của báo cáo — theo quy ước thống kê phổ biến) và `children.policy_type`
+  (`khong`/`con_chinh_sach`/`ngheo_can_ngheo`/`khuyet_tat` — một phân loại chính theo đúng cấu
+  trúc 3 cột riêng biệt của biểu mẫu gốc).
+- ✅ Migration 023: seed demo dân tộc/diện chính sách cho vài trẻ để có số liệu khác 0 khi thử.
+- ✅ `childRepo.ts`: `updateChildDemographics`; `getStudentCountByTimePoints(classId, start, end)`
+  — snapshot sĩ số tại 3 thời điểm (đầu năm = tháng đầu năm học, giữa năm = tháng 12 cuối Học
+  Kỳ I, cuối năm = tháng cuối năm học), suy từ bản ghi điểm danh của tháng đó (cùng kỹ thuật với
+  Phase A) để phản ánh đúng sĩ số thời điểm, không lấy theo trạng thái hiện tại của trẻ. Tuổi
+  suy từ ngày sinh so với tháng chụp nhanh; "Dân tộc" = có ghi dân tộc và khác "Kinh".
+- ✅ UI: nút "Sửa dân tộc / diện chính sách" trên hồ sơ trẻ; tab con thứ 3 "Số lượng học sinh"
+  trong "Báo cáo tổng hợp" (đổi tên từ "Báo cáo chuyên cần" vì nay bao quát hơn), in đúng khuôn
+  "TỔNG HỢP SỐ LƯỢNG HỌC SINH TỪNG THỜI ĐIỂM" + xuất Excel.
+- ✅ Kiểm thử: chạy 23 migration liên tiếp bằng `sqlite3` trực tiếp — không lỗi; đối chiếu tay
+  bằng Python truy vấn thô khớp chính xác với dữ liệu demo lớp Nhà trẻ C (4 trẻ, 1 dân tộc Dao,
+  1 nghèo cận nghèo, 1 khuyết tật). Kiểm thử UI bằng Playwright: hồ sơ trẻ hiển thị đúng dân
+  tộc/diện chính sách, form sửa hoạt động, bảng tổng hợp hiển thị đúng cấu trúc (không lỗi khi
+  ngoài phạm vi năm học cấu hình — hiển thị 0 thay vì crash, giống hạn chế đã ghi nhận ở Phase A
+  do dữ liệu demo chuyên cần nằm ngoài `school_years.end_date`).
+- ✅ `tsc --noEmit`, ESLint (0 warning), Vitest (30 test), `cargo check` chạy sạch.
+
 ### Phase C — Khám sức khỏe toàn diện — ⬜ Chưa bắt đầu
 ### Phase D — Đánh giá phát triển qua biểu đồ (SD) + tổng hợp lớp/trường — ⬜ Chưa bắt đầu
 

@@ -174,6 +174,15 @@ export const CHILD_STATUS_LABELS: Record<ChildStatus, string> = {
   completed: "Hoàn thành chương trình",
 };
 
+export type PolicyType = "khong" | "con_chinh_sach" | "ngheo_can_ngheo" | "khuyet_tat";
+
+export const POLICY_TYPE_LABELS: Record<PolicyType, string> = {
+  khong: "Không thuộc diện chính sách",
+  con_chinh_sach: "Con chính sách",
+  ngheo_can_ngheo: "Hộ nghèo/cận nghèo",
+  khuyet_tat: "Khuyết tật",
+};
+
 export interface Child {
   id: string;
   code: string;
@@ -184,6 +193,8 @@ export interface Child {
   gender: "male" | "female";
   enrollment_date: string;
   status: ChildStatus;
+  ethnicity: string | null;
+  policy_type: PolicyType;
   note: string | null;
   version: number;
   created_by: string;

@@ -8,6 +8,7 @@ import type {
   ChildStatus,
   Guardian,
   LeaveRequestStatus,
+  PolicyType,
   SchoolClass,
 } from "./types";
 
@@ -218,6 +219,28 @@ export async function updateChild(id: string, input: UpdateChildInput): Promise<
     afterJson: input,
     userId: input.updatedBy,
     sessionId: input.sessionId,
+  });
+}
+
+export async function updateChildDemographics(
+  id: string,
+  ethnicity: string | null,
+  policyType: PolicyType,
+  updatedBy: string,
+  sessionId: string | null,
+): Promise<void> {
+  await dbExecute(
+    `UPDATE children SET ethnicity = ?, policy_type = ?, version = version + 1, updated_by = ?, updated_at = ?
+     WHERE id = ?`,
+    [ethnicity || null, policyType, updatedBy, nowIso(), id],
+  );
+  await logAudit({
+    entityTable: "children",
+    entityId: id,
+    action: "update_demographics",
+    afterJson: { ethnicity, policyType },
+    userId: updatedBy,
+    sessionId,
   });
 }
 
@@ -585,6 +608,107 @@ export async function getYearlyAttendanceSummary(
   const semester2 = meanRow("Học Kỳ II", hk2.length ? hk2 : months);
   const fullYear = meanRow("Cả năm", [semester1, semester2]);
   return { months, semester1, semester2, fullYear };
+}
+
+// ===================== TỔNG HỢP SỐ LƯỢNG HỌC SINH THEO THỜI ĐIỂM =====================
+
+export interface StudentCountSnapshot {
+  label: string;
+  total: number;
+  male: number;
+  female: number;
+  ethnicMinority: number;
+  femaleEthnicMinority: number;
+  policyChildren: number;
+  poorHousehold: number;
+  disabled: number;
+  age3to4: number;
+  age4to5: number;
+  age5to6: number;
+}
+
+/**
+ * Chụp nhanh số lượng trẻ của một lớp tại một tháng cụ thể — dùng bản ghi điểm danh của tháng
+ * đó (giống cách xác định "đăng ký" ở báo cáo chuyên cần) để phản ánh đúng sĩ số thời điểm đó,
+ * không lấy theo trạng thái hiện tại của trẻ (có thể đã chuyển lớp/thôi học sau đó).
+ */
+async function getStudentCountSnapshot(classId: string, yearMonth: string, label: string): Promise<StudentCountSnapshot> {
+  const from = `${yearMonth}-01`;
+  const to = `${yearMonth}-31`;
+  const rows = await dbSelect<{
+    child_id: string;
+    gender: "male" | "female";
+    dob: string;
+    ethnicity: string | null;
+    policy_type: PolicyType;
+  }>(
+    `SELECT DISTINCT ch.id AS child_id, ch.gender AS gender, ch.dob AS dob,
+       ch.ethnicity AS ethnicity, ch.policy_type AS policy_type
+     FROM attendance a
+     JOIN children ch ON ch.id = a.child_id
+     WHERE a.class_id = ? AND a.attendance_date BETWEEN ? AND ?`,
+    [classId, from, to],
+  );
+
+  const [refYear, refMonth] = yearMonth.split("-").map(Number);
+  const snap: StudentCountSnapshot = {
+    label,
+    total: rows.length,
+    male: 0,
+    female: 0,
+    ethnicMinority: 0,
+    femaleEthnicMinority: 0,
+    policyChildren: 0,
+    poorHousehold: 0,
+    disabled: 0,
+    age3to4: 0,
+    age4to5: 0,
+    age5to6: 0,
+  };
+  for (const r of rows) {
+    if (r.gender === "male") snap.male += 1;
+    else snap.female += 1;
+
+    const isMinority = !!r.ethnicity && r.ethnicity !== "Kinh";
+    if (isMinority) {
+      snap.ethnicMinority += 1;
+      if (r.gender === "female") snap.femaleEthnicMinority += 1;
+    }
+    if (r.policy_type === "con_chinh_sach") snap.policyChildren += 1;
+    if (r.policy_type === "ngheo_can_ngheo") snap.poorHousehold += 1;
+    if (r.policy_type === "khuyet_tat") snap.disabled += 1;
+
+    const [birthYear, birthMonth] = r.dob.split("-").map(Number);
+    let age = refYear - birthYear;
+    if (refMonth < birthMonth) age -= 1;
+    if (age <= 3) snap.age3to4 += 1;
+    else if (age === 4) snap.age4to5 += 1;
+    else snap.age5to6 += 1;
+  }
+  return snap;
+}
+
+/**
+ * "Tổng hợp số lượng học sinh từng thời điểm" — đầu năm (tháng đầu năm học), giữa năm (cuối
+ * Học Kỳ I, thường là tháng 12) và cuối năm (tháng cuối năm học), theo đúng cấu trúc biểu mẫu
+ * gốc của trường.
+ */
+export async function getStudentCountByTimePoints(
+  classId: string,
+  schoolYearStart: string,
+  schoolYearEnd: string,
+): Promise<StudentCountSnapshot[]> {
+  const months = monthsInRange(schoolYearStart, schoolYearEnd);
+  if (!months.length) return [];
+  const startMonth = months[0];
+  const decMonth = months.find((m) => m.slice(5, 7) === "12") ?? months[Math.floor(months.length / 2)];
+  const endMonth = months[months.length - 1];
+  const points: [string, string][] = [
+    [startMonth, "Đầu năm"],
+    [decMonth, "Giữa năm"],
+    [endMonth, "Cuối năm"],
+  ];
+  return Promise.all(points.map(([ym, label]) => getStudentCountSnapshot(classId, ym, label)));
 }
 
 // ===================== ĐƠN XIN NGHỈ & TRAO ĐỔI VỚI PHỤ HUYNH (PHÍA GIÁO VIÊN) =====================

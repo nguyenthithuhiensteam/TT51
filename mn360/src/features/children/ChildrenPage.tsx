@@ -58,7 +58,7 @@ export function ChildrenPage() {
             ["classes", "Nhóm, lớp"],
             ["children", "Hồ sơ trẻ"],
             ["attendance", "Điểm danh"],
-            ["attendanceReports", "Báo cáo chuyên cần"],
+            ["attendanceReports", "Báo cáo tổng hợp"],
           ] as [Tab, string][]
         ).map(([key, label]) => (
           <button
