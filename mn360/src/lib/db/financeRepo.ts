@@ -34,6 +34,9 @@ export interface RevenueRow {
   amount: number;
   revenue_date: string;
   payer_name: string | null;
+  payer_address: string | null;
+  reason: string | null;
+  attachment_count: number | null;
   note: string | null;
   status: RecordStatus;
   prepared_by_name: string;
@@ -46,7 +49,7 @@ export async function listRevenues(status?: RecordStatus | "all"): Promise<Reven
   const args = status && status !== "all" ? [status] : [];
   return dbSelect<RevenueRow>(
     `SELECT r.id, r.code, ch.full_name AS child_name, fi.name AS fee_item_name, r.amount,
-       r.revenue_date, r.payer_name, r.note, r.status,
+       r.revenue_date, r.payer_name, r.payer_address, r.reason, r.attachment_count, r.note, r.status,
        pu.full_name AS prepared_by_name, cu.full_name AS checked_by_name, au.full_name AS approved_by_name
      FROM revenues r
      LEFT JOIN children ch ON ch.id = r.child_id
@@ -72,6 +75,9 @@ export async function createRevenue(input: {
   amount: number;
   revenueDate: string;
   payerName?: string;
+  payerAddress?: string;
+  reason?: string;
+  attachmentCount?: number;
   note?: string;
   preparedBy: string;
 }): Promise<void> {
@@ -81,8 +87,9 @@ export async function createRevenue(input: {
   const ts = nowIso();
   await dbExecute(
     `INSERT INTO revenues (id, code, school_year_id, child_id, fee_item_id, amount, revenue_date,
-      payer_name, note, status, prepared_by, version, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, 1, ?, ?)`,
+      payer_name, payer_address, reason, attachment_count, note, status, prepared_by, version,
+      created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, 1, ?, ?)`,
     [
       newId(),
       code,
@@ -92,6 +99,9 @@ export async function createRevenue(input: {
       input.amount,
       input.revenueDate,
       input.payerName ?? null,
+      input.payerAddress ?? null,
+      input.reason ?? null,
+      input.attachmentCount ?? null,
       input.note ?? null,
       input.preparedBy,
       ts,
@@ -138,6 +148,9 @@ export interface ExpenseRow {
   amount: number;
   expense_date: string;
   payee_name: string | null;
+  payee_address: string | null;
+  reason: string | null;
+  attachment_count: number | null;
   note: string | null;
   status: RecordStatus;
   prepared_by_name: string;
@@ -149,7 +162,8 @@ export async function listExpenses(status?: RecordStatus | "all"): Promise<Expen
   const where = status && status !== "all" ? "WHERE e.status = ?" : "";
   const args = status && status !== "all" ? [status] : [];
   return dbSelect<ExpenseRow>(
-    `SELECT e.id, e.code, e.category, e.amount, e.expense_date, e.payee_name, e.note, e.status,
+    `SELECT e.id, e.code, e.category, e.amount, e.expense_date, e.payee_name, e.payee_address,
+       e.reason, e.attachment_count, e.note, e.status,
        pu.full_name AS prepared_by_name, cu.full_name AS checked_by_name, au.full_name AS approved_by_name
      FROM expenses e
      JOIN users pu ON pu.id = e.prepared_by
@@ -172,6 +186,9 @@ export async function createExpense(input: {
   amount: number;
   expenseDate: string;
   payeeName?: string;
+  payeeAddress?: string;
+  reason?: string;
+  attachmentCount?: number;
   note?: string;
   preparedBy: string;
 }): Promise<void> {
@@ -181,8 +198,8 @@ export async function createExpense(input: {
   const ts = nowIso();
   await dbExecute(
     `INSERT INTO expenses (id, code, school_year_id, category, amount, expense_date, payee_name,
-      note, status, prepared_by, version, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, 1, ?, ?)`,
+      payee_address, reason, attachment_count, note, status, prepared_by, version, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, 1, ?, ?)`,
     [
       newId(),
       code,
@@ -191,6 +208,9 @@ export async function createExpense(input: {
       input.amount,
       input.expenseDate,
       input.payeeName ?? null,
+      input.payeeAddress ?? null,
+      input.reason ?? null,
+      input.attachmentCount ?? null,
       input.note ?? null,
       input.preparedBy,
       ts,

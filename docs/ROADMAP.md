@@ -374,12 +374,29 @@ có nơi nào tạo được tài khoản đăng nhập mới — nghĩa là kh�
   Kiểm định/Công tác Đảng/Phụ huynh) — đúng RBAC.
 - ✅ `tsc --noEmit`, ESLint (0 warning), Vitest (30 test), `cargo check`, `vite build` chạy sạch.
 
-### Tài chính — Phiếu thu/Phiếu chi đúng mẫu C40-BB/C41-BB (TT 107/2017/TT-BTC) — 🚧 Đang làm
+### Tài chính — Phiếu thu/Phiếu chi đúng mẫu C40-BB/C41-BB (TT 107/2017/TT-BTC) — ✅ Hoàn thành
 
 Người dùng phản hồi mẫu phiếu thu/chi hiện tại (chỉ ghi số tiền/ngày/người nộp nội bộ) cần đúng
 quy định tài chính. Đã hỏi rõ mẫu áp dụng — người dùng xác nhận dùng mẫu số C40-BB (Phiếu thu)/
 C41-BB (Phiếu chi) theo Thông tư 107/2017/TT-BTC (chế độ kế toán hành chính sự nghiệp, áp dụng
 cho trường công lập).
+
+- ✅ Migration 026: thêm `payer_address`/`reason`/`attachment_count` (revenues) và
+  `payee_address`/`reason`/`attachment_count` (expenses) — các trường bắt buộc trên mẫu gốc mà
+  bản ghi nội bộ trước đó chưa có.
+- ✅ `src/lib/utils/vietnameseNumber.ts`: đọc số tiền bằng chữ tiếng Việt (thuật toán tính toán
+  thuần túy, không phải dữ liệu cần tra cứu — đã viết 13 unit test kiểm tra từng trường hợp đặc
+  biệt: "linh", "mốt", "lăm", chèn "không trăm" ở nhóm giữa, bỏ qua nhóm giữa toàn số 0).
+- ✅ `VoucherPrint.tsx`: in đúng khuôn mẫu C40-BB/C41-BB — trích dẫn đúng số Thông tư, Họ tên +
+  địa chỉ người nộp/nhận, lý do, số tiền bằng số và bằng chữ, số chứng từ gốc kèm theo, khối 5
+  chữ ký (Thủ trưởng đơn vị/Kế toán trưởng/Người lập phiếu/Thủ quỹ/Người nộp-nhận tiền), dòng
+  "Đã nhận đủ số tiền bằng chữ". Ô "Nợ"/"Có" (số hiệu tài khoản kế toán) để trống cho kế toán ghi
+  tay — MN360 không hạch toán sổ kép nên không tự điền số hiệu tài khoản (tránh bịa dữ liệu).
+- ✅ Kiểm thử qua Playwright: lập phiếu thu 1.234.567đ, xác nhận bản in hiển thị đúng "Một triệu
+  hai trăm ba mươi bốn nghìn năm trăm sáu mươi bảy đồng chẵn." (khớp unit test); lập phiếu chi
+  530.000đ, xác nhận "Năm trăm ba mươi nghìn đồng chẵn."; xác nhận `emulateMedia({media:"print"})`
+  chỉ còn lại đúng nội dung phiếu.
+- ✅ `tsc --noEmit`, ESLint (0 warning), Vitest (43 test), `cargo check`, `vite build` chạy sạch.
 
 ## Hướng dẫn chạy thử Giai đoạn 1-6 (PowerShell trên Windows)
 

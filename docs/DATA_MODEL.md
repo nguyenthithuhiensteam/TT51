@@ -167,3 +167,13 @@ dù trẻ chuyển lớp sau này. `UNIQUE(child_id, exam_no)` — mỗi trẻ c
 khám, cập nhật (upsert) nếu nhập lại. Đây là dữ liệu tách biệt khỏi `health_records` (hồ sơ tĩnh
 nhóm máu/dị ứng/bệnh nền) vì bản chất là các đợt khám định kỳ có ngày riêng, không phải hồ sơ
 một-lần cập nhật.
+
+## 9. Bổ sung đã triển khai: Chứng từ Phiếu thu/Phiếu chi đúng mẫu (Giai đoạn 7)
+
+Migration 026. Thêm vào `revenues`: `payer_address`, `reason`, `attachment_count`; thêm vào
+`expenses`: `payee_address`, `reason`, `attachment_count` — các trường bắt buộc trên mẫu số
+C40-BB (Phiếu thu)/C41-BB (Phiếu chi) theo Thông tư 107/2017/TT-BTC mà bản ghi nội bộ trước đó
+chưa có. Số tiền bằng chữ tính runtime qua `src/lib/utils/vietnameseNumber.ts` (không lưu vào
+CSDL vì là giá trị suy ra được từ `amount`, tránh dữ liệu trùng lặp có thể lệch nhau). Cột
+"Nợ"/"Có" (số hiệu tài khoản kế toán) không có trong CSDL — MN360 không hạch toán sổ kép, để
+trống trên bản in cho kế toán ghi tay.

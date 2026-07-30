@@ -27,6 +27,7 @@ import {
 import { ASSET_STATUS_LABELS } from "../../lib/db/types";
 import type { FeeItem } from "../../lib/db/types";
 import { exportFinanceReportToExcel } from "../../lib/export/excel";
+import { VoucherPrint } from "./VoucherPrint";
 
 type Tab = "revenues" | "expenses" | "fees" | "assets";
 
@@ -85,8 +86,18 @@ function RevenuesTab() {
   const [revenues, setRevenues] = useState<RevenueRow[]>([]);
   const [children, setChildren] = useState<ChildWithClass[]>([]);
   const [feeItems, setFeeItems] = useState<FeeItem[]>([]);
-  const [form, setForm] = useState({ childId: "", feeItemId: "", amount: "", date: new Date().toISOString().slice(0, 10), payer: "" });
+  const [form, setForm] = useState({
+    childId: "",
+    feeItemId: "",
+    amount: "",
+    date: new Date().toISOString().slice(0, 10),
+    payer: "",
+    payerAddress: "",
+    reason: "",
+    attachmentCount: "",
+  });
   const [busy, setBusy] = useState(false);
+  const [printing, setPrinting] = useState<RevenueRow | null>(null);
 
   const refresh = () => listRevenues().then(setRevenues);
   useEffect(() => {
@@ -128,7 +139,10 @@ function RevenuesTab() {
           </Select>
           <Input placeholder="Số tiền" type="number" value={form.amount} onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))} />
           <Input type="date" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} />
-          <Input placeholder="Người nộp" value={form.payer} onChange={(e) => setForm((p) => ({ ...p, payer: e.target.value }))} />
+          <Input placeholder="Họ tên người nộp tiền" value={form.payer} onChange={(e) => setForm((p) => ({ ...p, payer: e.target.value }))} />
+          <Input placeholder="Địa chỉ người nộp" value={form.payerAddress} onChange={(e) => setForm((p) => ({ ...p, payerAddress: e.target.value }))} />
+          <Input className="sm:col-span-2" placeholder="Lý do nộp" value={form.reason} onChange={(e) => setForm((p) => ({ ...p, reason: e.target.value }))} />
+          <Input placeholder="Số chứng từ gốc kèm theo" type="number" value={form.attachmentCount} onChange={(e) => setForm((p) => ({ ...p, attachmentCount: e.target.value }))} />
           <Button
             size="sm"
             disabled={!form.amount || busy}
@@ -143,9 +157,21 @@ function RevenuesTab() {
                   amount: Number(form.amount),
                   revenueDate: form.date,
                   payerName: form.payer || undefined,
+                  payerAddress: form.payerAddress || undefined,
+                  reason: form.reason || undefined,
+                  attachmentCount: form.attachmentCount ? Number(form.attachmentCount) : undefined,
                   preparedBy: user.id,
                 });
-                setForm({ childId: "", feeItemId: "", amount: "", date: new Date().toISOString().slice(0, 10), payer: "" });
+                setForm({
+                  childId: "",
+                  feeItemId: "",
+                  amount: "",
+                  date: new Date().toISOString().slice(0, 10),
+                  payer: "",
+                  payerAddress: "",
+                  reason: "",
+                  attachmentCount: "",
+                });
                 refresh();
               } finally {
                 setBusy(false);
@@ -195,6 +221,11 @@ function RevenuesTab() {
                     Phê duyệt
                   </Button>
                 )}
+                {hasPermission("finance.export") && (
+                  <button className="ml-2 text-xs text-brand hover:underline" onClick={() => setPrinting(r)}>
+                    In phiếu
+                  </button>
+                )}
               </td>
             </tr>
           ))}
@@ -205,6 +236,20 @@ function RevenuesTab() {
           )}
         </tbody>
       </table>
+
+      {printing && (
+        <div className="mt-4">
+          <div className="mb-2 flex justify-end gap-2 print:hidden">
+            <Button size="sm" variant="secondary" onClick={() => setPrinting(null)}>
+              Đóng
+            </Button>
+            <Button size="sm" onClick={() => window.print()}>
+              In / Lưu PDF
+            </Button>
+          </div>
+          <VoucherPrint kind="thu" record={printing} />
+        </div>
+      )}
     </Card>
   );
 }
@@ -215,8 +260,18 @@ function ExpensesTab() {
   const hasPermission = useAuthStore((s) => s.hasPermission);
   const schoolYear = useAppStore((s) => s.currentSchoolYear);
   const [expenses, setExpenses] = useState<ExpenseRow[]>([]);
-  const [form, setForm] = useState({ category: "", amount: "", date: new Date().toISOString().slice(0, 10), payee: "", note: "" });
+  const [form, setForm] = useState({
+    category: "",
+    amount: "",
+    date: new Date().toISOString().slice(0, 10),
+    payee: "",
+    payeeAddress: "",
+    reason: "",
+    attachmentCount: "",
+    note: "",
+  });
   const [busy, setBusy] = useState(false);
+  const [printing, setPrinting] = useState<ExpenseRow | null>(null);
 
   const refresh = () => listExpenses().then(setExpenses);
   useEffect(() => {
@@ -230,8 +285,11 @@ function ExpensesTab() {
           <Input placeholder="Khoản mục" value={form.category} onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))} />
           <Input placeholder="Số tiền" type="number" value={form.amount} onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))} />
           <Input type="date" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} />
-          <Input placeholder="Người/đơn vị nhận" value={form.payee} onChange={(e) => setForm((p) => ({ ...p, payee: e.target.value }))} />
-          <Input className="sm:col-span-2" placeholder="Nội dung chi" value={form.note} onChange={(e) => setForm((p) => ({ ...p, note: e.target.value }))} />
+          <Input placeholder="Họ tên người nhận tiền" value={form.payee} onChange={(e) => setForm((p) => ({ ...p, payee: e.target.value }))} />
+          <Input placeholder="Địa chỉ người nhận" value={form.payeeAddress} onChange={(e) => setForm((p) => ({ ...p, payeeAddress: e.target.value }))} />
+          <Input className="sm:col-span-2" placeholder="Lý do chi" value={form.reason} onChange={(e) => setForm((p) => ({ ...p, reason: e.target.value }))} />
+          <Input placeholder="Số chứng từ gốc kèm theo" type="number" value={form.attachmentCount} onChange={(e) => setForm((p) => ({ ...p, attachmentCount: e.target.value }))} />
+          <Input className="sm:col-span-2" placeholder="Ghi chú nội bộ (không in trên phiếu)" value={form.note} onChange={(e) => setForm((p) => ({ ...p, note: e.target.value }))} />
           <Button
             size="sm"
             disabled={!form.category.trim() || !form.amount || busy}
@@ -245,10 +303,22 @@ function ExpensesTab() {
                   amount: Number(form.amount),
                   expenseDate: form.date,
                   payeeName: form.payee || undefined,
+                  payeeAddress: form.payeeAddress || undefined,
+                  reason: form.reason || undefined,
+                  attachmentCount: form.attachmentCount ? Number(form.attachmentCount) : undefined,
                   note: form.note || undefined,
                   preparedBy: user.id,
                 });
-                setForm({ category: "", amount: "", date: new Date().toISOString().slice(0, 10), payee: "", note: "" });
+                setForm({
+                  category: "",
+                  amount: "",
+                  date: new Date().toISOString().slice(0, 10),
+                  payee: "",
+                  payeeAddress: "",
+                  reason: "",
+                  attachmentCount: "",
+                  note: "",
+                });
                 refresh();
               } finally {
                 setBusy(false);
@@ -298,6 +368,11 @@ function ExpensesTab() {
                     Phê duyệt
                   </Button>
                 )}
+                {hasPermission("finance.export") && (
+                  <button className="ml-2 text-xs text-brand hover:underline" onClick={() => setPrinting(e)}>
+                    In phiếu
+                  </button>
+                )}
               </td>
             </tr>
           ))}
@@ -308,6 +383,20 @@ function ExpensesTab() {
           )}
         </tbody>
       </table>
+
+      {printing && (
+        <div className="mt-4">
+          <div className="mb-2 flex justify-end gap-2 print:hidden">
+            <Button size="sm" variant="secondary" onClick={() => setPrinting(null)}>
+              Đóng
+            </Button>
+            <Button size="sm" onClick={() => window.print()}>
+              In / Lưu PDF
+            </Button>
+          </div>
+          <VoucherPrint kind="chi" record={printing} />
+        </div>
+      )}
     </Card>
   );
 }
