@@ -19,6 +19,7 @@ import { useAuthStore } from "../../store/authStore";
 import { useAppStore } from "../../store/appStore";
 import { Button } from "../../components/ui/Button";
 import { Field, Input } from "../../components/ui/Input";
+import { WebPreviewBanner } from "../../components/layout/WebPreviewBanner";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -95,7 +96,10 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-navy px-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-navy px-4">
+      <div className="fixed inset-x-0 top-0">
+        <WebPreviewBanner />
+      </div>
       <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-card">
         <div className="mb-6 text-center">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-brand text-xl font-bold text-white">

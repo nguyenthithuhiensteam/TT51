@@ -6,6 +6,9 @@ const host = process.env.TAURI_DEV_HOST;
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  define: {
+    __IS_WEB_PREVIEW__: "false",
+  },
   resolve: {
     alias: {
       "@": "/src",

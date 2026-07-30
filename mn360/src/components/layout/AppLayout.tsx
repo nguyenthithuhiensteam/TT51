@@ -4,6 +4,7 @@ import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { LockScreen } from "./LockScreen";
 import { FloatingAiAssistant } from "./FloatingAiAssistant";
+import { WebPreviewBanner } from "./WebPreviewBanner";
 import { useAuthStore } from "../../store/authStore";
 import { useIdleLock } from "../../lib/utils/useIdleLock";
 
@@ -21,6 +22,7 @@ export function AppLayout() {
     <div className="flex h-screen w-screen overflow-hidden">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex min-w-0 flex-1 flex-col">
+        <WebPreviewBanner />
         <Topbar onLock={lock} onMenuClick={() => setSidebarOpen((v) => !v)} />
         <main className="flex-1 overflow-y-auto bg-cream p-3 sm:p-6">
           <Outlet />

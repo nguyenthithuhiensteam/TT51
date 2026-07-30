@@ -57,6 +57,23 @@ bản web preview thông thường, bản này **không có tính năng xuất W
 lượng khi nhúng) — mọi tính năng khác giữ nguyên. Có thể mở trực tiếp bằng cách chèn nội dung
 tệp vào một trang HTML có `<div id="root"></div>`, hoặc lưu trữ như một trang tĩnh.
 
+### Xuất bản bản xem trước lên Firebase Hosting
+
+Đã cấu hình sẵn `firebase.json`/`.firebaserc` (dự án mặc định: `quantritruongmamnon`) để xuất bản
+bản **web preview đầy đủ** (`dist-web` — có Xuất Word/Excel, khác bản một-tệp-HTML ở trên) lên
+Firebase Hosting. Lưu ý đây vẫn là **bản xem trước** (dữ liệu `sql.js` lưu tạm trong trình duyệt
+người xem, mất khi tải lại trang, không phải hệ thống chính thức) — ứng dụng tự hiện một dải
+thông báo màu vàng ở đầu trang nhắc điều này khi chạy ở chế độ web.
+
+```powershell
+cd mn360
+npm install
+npx firebase-tools login          # đăng nhập bằng tài khoản Google có quyền trên dự án Firebase
+npm run deploy:firebase           # build dist-web rồi "firebase deploy --only hosting"
+```
+
+Nếu dùng dự án Firebase khác, sửa `"default"` trong `mn360/.firebaserc` thành đúng Project ID.
+
 ## Tài khoản demo (Trường Mầm non Tràng Đà)
 
 Mật khẩu demo cho **tất cả** tài khoản: `MN360@2026` (bắt buộc đổi mật khẩu lần đăng nhập đầu).

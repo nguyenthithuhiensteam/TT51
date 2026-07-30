@@ -93,13 +93,15 @@ export function FloatingAiAssistant() {
           </div>
         </div>
       )}
-      <button
-        onClick={() => setOpen((v) => !v)}
-        aria-label="Mở trợ lý AI"
-        className="fixed bottom-4 right-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-brand text-white shadow-card transition-colors hover:bg-brand-dark"
-      >
-        <Sparkles size={20} />
-      </button>
+      {!open && (
+        <button
+          onClick={() => setOpen(true)}
+          aria-label="Mở trợ lý AI"
+          className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full bg-brand px-4 py-3 text-sm font-semibold text-white shadow-card transition-colors hover:bg-brand-dark"
+        >
+          <Sparkles size={18} /> Trợ lý AI
+        </button>
+      )}
     </>
   );
 }

@@ -20,6 +20,7 @@ export default defineConfig({
   base: "./",
   define: {
     __SQL_WASM_BASE64__: JSON.stringify(wasmBase64),
+    __IS_WEB_PREVIEW__: "true",
   },
   resolve: {
     alias: {

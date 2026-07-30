@@ -517,6 +517,31 @@ nút AI nổi (floating), hiển thị trên mọi trang trong ứng dụng.
   tắt hoặc chưa cấu hình khóa API" (trường demo/bản xem trước chưa bật AI — đúng hành vi mong đợi).
 - ✅ `tsc --noEmit`, ESLint (0 warning), Vitest (43 test), `cargo check`, `vite build` chạy sạch.
 
+### Làm rõ nút Trợ lý AI + dải cảnh báo bản xem trước + xuất bản Firebase Hosting — ✅ Hoàn thành
+
+Người dùng phản hồi "không có nút AI" dù đã thêm ở bước trước, và muốn xuất bản được lên Firebase.
+Không thể truy cập trực tiếp link Artifact đã xuất bản để chẩn đoán từ môi trường này (mạng sandbox
+chặn — chỉ kiểm thử lại được bản build cục bộ giống hệt mã nguồn đã xuất bản), nên xử lý theo hướng
+vừa làm nút AI khó bỏ sót hơn, vừa làm rõ ràng bản xem trước để tránh hiểu nhầm:
+
+- ✅ `FloatingAiAssistant.tsx`: nút tròn chỉ icon trước đây đổi thành nút bo tròn có **chữ "Trợ lý
+  AI"** cạnh icon Sparkles — dễ nhận ra hơn nút tròn nhỏ ở góc màn hình.
+- ✅ `WebPreviewBanner.tsx` (mới): dải cảnh báo màu vàng cố định đầu trang — "Đây là bản xem trước
+  trên web — dữ liệu chỉ lưu tạm trong trình duyệt, không phải hệ thống chính thức của trường" —
+  hiện ở cả màn hình đăng nhập lẫn sau khi đăng nhập, có nút đóng. Dùng hằng số biên dịch
+  `__IS_WEB_PREVIEW__` (định nghĩa `true` trong `vite.web.config.ts`/`vite.artifact.config.ts`,
+  `false` trong `vite.config.ts` bản desktop Tauri thật) để trình đóng gói loại bỏ hẳn đoạn mã này
+  khỏi bản desktop — đã xác minh bằng cách `grep` chuỗi cảnh báo trong `dist/` (không có, đúng) và
+  `dist-web/` (có, đúng).
+- ✅ Xuất bản Firebase Hosting: `firebase.json` + `.firebaserc` (dự án `quantritruongmamnon`, theo
+  đúng dự án người dùng đã tạo), lệnh `npm run deploy:firebase` (build `dist-web` rồi
+  `firebase deploy --only hosting`). **Không tự đăng nhập/xuất bản thay được** — `firebase login`
+  cần xác thực Google trên trình duyệt của người dùng, môi trường này không có thông tin xác thực
+  Firebase/Google Cloud nào. Đã hướng dẫn chi tiết trong `README.md`.
+- ✅ Kiểm thử qua Playwright trên `dist-web`: dải cảnh báo hiện đúng ở màn hình đăng nhập và sau
+  đăng nhập, đóng được; nút "Trợ lý AI" có nhãn chữ hiện rõ ràng ở góc dưới bên phải.
+- ✅ `tsc --noEmit`, ESLint (0 warning), Vitest (43 test), `cargo check`, `vite build` chạy sạch.
+
 ## Hướng dẫn chạy thử Giai đoạn 1-6 (PowerShell trên Windows)
 
 Xem chi tiết đầy đủ trong `mn360/README.md`, tóm tắt:

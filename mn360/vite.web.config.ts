@@ -15,6 +15,9 @@ export default defineConfig({
   plugins: [react()],
   base: "./",
   publicDir: "public-web",
+  define: {
+    __IS_WEB_PREVIEW__: "true",
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
