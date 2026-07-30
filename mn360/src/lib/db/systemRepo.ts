@@ -1,6 +1,7 @@
 import { dbExecute, dbSelect, nowIso } from "./client";
 import { newId } from "../utils/id";
-import type { School, SchoolYear, User } from "./types";
+import { logAudit } from "./authRepo";
+import type { Role, School, SchoolYear, User } from "./types";
 
 export async function getSchool(): Promise<School | null> {
   const rows = await dbSelect<School>("SELECT * FROM schools LIMIT 1");
@@ -60,4 +61,55 @@ export async function listActiveUsers(): Promise<User[]> {
   return dbSelect<User>(
     "SELECT * FROM users WHERE deleted_at IS NULL AND is_active = 1 ORDER BY full_name ASC",
   );
+}
+
+// ===================== QUẢN LÝ TÀI KHOẢN (chỉ system.edit) =====================
+
+export async function listRoles(): Promise<Role[]> {
+  return dbSelect<Role>("SELECT * FROM roles ORDER BY name ASC");
+}
+
+export async function isUsernameTaken(username: string): Promise<boolean> {
+  const rows = await dbSelect<{ n: number }>("SELECT COUNT(*) AS n FROM users WHERE username = ?", [
+    username,
+  ]);
+  return (rows[0]?.n ?? 0) > 0;
+}
+
+export interface CreateUserAccountInput {
+  username: string;
+  fullName: string;
+  email?: string;
+  phone?: string;
+  roleId: string;
+  passwordHash: string;
+  createdBy: string;
+  sessionId: string | null;
+}
+
+/** Tạo tài khoản đăng nhập mới, gán 1 vai trò, bắt buộc đổi mật khẩu ở lần đăng nhập đầu. */
+export async function createUserAccount(input: CreateUserAccountInput): Promise<string> {
+  const id = newId();
+  const ts = nowIso();
+  await dbExecute(
+    `INSERT INTO users (id, username, full_name, email, phone, password_hash, password_algo,
+      must_change_password, failed_login_count, is_active, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, 'argon2id', 1, 0, 1, ?, ?)`,
+    [id, input.username, input.fullName, input.email ?? null, input.phone ?? null, input.passwordHash, ts, ts],
+  );
+  await dbExecute("INSERT INTO user_roles (id, user_id, role_id, created_at) VALUES (?, ?, ?, ?)", [
+    newId(),
+    id,
+    input.roleId,
+    ts,
+  ]);
+  await logAudit({
+    entityTable: "users",
+    entityId: id,
+    action: "create",
+    afterJson: { username: input.username, fullName: input.fullName, roleId: input.roleId },
+    userId: input.createdBy,
+    sessionId: input.sessionId,
+  });
+  return id;
 }

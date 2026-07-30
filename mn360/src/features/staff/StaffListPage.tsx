@@ -5,12 +5,14 @@ import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Pagination } from "../../components/ui/Pagination";
+import { invoke } from "@tauri-apps/api/core";
 import { useAuthStore } from "../../store/authStore";
 import { createStaff, listStaff, type StaffWithUser } from "../../lib/db/staffRepo";
-import { listActiveUsers } from "../../lib/db/systemRepo";
+import { createUserAccount, isUsernameTaken, listActiveUsers, listRoles } from "../../lib/db/systemRepo";
 import { EMPLOYMENT_TYPE_LABELS } from "../../lib/db/types";
-import type { User } from "../../lib/db/types";
+import type { Role, User } from "../../lib/db/types";
 import { StaffFormModal, type StaffFormValues } from "./StaffFormModal";
+import { CreateStaffAccountModal, type CreateStaffAccountValues } from "./CreateStaffAccountModal";
 
 const PAGE_SIZE = 15;
 
@@ -22,9 +24,14 @@ export function StaffListPage() {
   const [items, setItems] = useState<StaffWithUser[]>([]);
   const [total, setTotal] = useState(0);
   const [users, setUsers] = useState<User[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [accountModalOpen, setAccountModalOpen] = useState(false);
+  const [accountSubmitting, setAccountSubmitting] = useState(false);
+  const [accountError, setAccountError] = useState<string | null>(null);
+  const sessionId = useAuthStore((s) => s.sessionId);
 
   const refresh = () => {
     listStaff({ search, page, pageSize: PAGE_SIZE }).then((r) => {
@@ -40,6 +47,7 @@ export function StaffListPage() {
 
   useEffect(() => {
     listActiveUsers().then(setUsers);
+    listRoles().then(setRoles);
   }, []);
 
   async function handleCreate(data: StaffFormValues) {
@@ -66,6 +74,46 @@ export function StaffListPage() {
     }
   }
 
+  async function handleCreateAccount(data: CreateStaffAccountValues) {
+    if (!user) return;
+    setAccountSubmitting(true);
+    setAccountError(null);
+    try {
+      if (await isUsernameTaken(data.username)) {
+        setAccountError("Tên đăng nhập đã tồn tại, vui lòng chọn tên khác");
+        return;
+      }
+      const passwordHash = await invoke<string>("hash_password", { password: data.tempPassword });
+      const newUserId = await createUserAccount({
+        username: data.username,
+        fullName: data.fullName,
+        email: data.email || undefined,
+        phone: data.phone || undefined,
+        roleId: data.roleId,
+        passwordHash,
+        createdBy: user.id,
+        sessionId,
+      });
+      await createStaff({
+        userId: newUserId,
+        employeeCode: data.employeeCode,
+        position: data.position,
+        employmentType: data.employmentType,
+        degree: data.degree || undefined,
+        startDate: data.startDate || undefined,
+        createdBy: user.id,
+      });
+      setAccountModalOpen(false);
+      setPage(1);
+      refresh();
+      listActiveUsers().then(setUsers);
+    } catch (err) {
+      setAccountError(err instanceof Error ? err.message : "Không thể tạo tài khoản (mã viên chức có thể đã tồn tại)");
+    } finally {
+      setAccountSubmitting(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -73,11 +121,18 @@ export function StaffListPage() {
           <h1 className="text-xl font-semibold text-navy">Đội ngũ</h1>
           <p className="text-sm text-navy/60">Hồ sơ cán bộ, giáo viên, nhân viên nhà trường.</p>
         </div>
-        {hasPermission("staff.create") && (
-          <Button onClick={() => setModalOpen(true)}>
-            <Plus size={16} /> Tạo hồ sơ cán bộ
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {hasPermission("system.edit") && (
+            <Button variant="secondary" onClick={() => setAccountModalOpen(true)}>
+              <Plus size={16} /> Thêm cán bộ mới (tài khoản mới)
+            </Button>
+          )}
+          {hasPermission("staff.create") && (
+            <Button onClick={() => setModalOpen(true)}>
+              <Plus size={16} /> Tạo hồ sơ cán bộ
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card>
@@ -136,6 +191,15 @@ export function StaffListPage() {
         users={users}
         submitting={submitting}
         error={error}
+      />
+
+      <CreateStaffAccountModal
+        open={accountModalOpen}
+        onClose={() => setAccountModalOpen(false)}
+        onSubmit={handleCreateAccount}
+        roles={roles}
+        submitting={accountSubmitting}
+        error={accountError}
       />
     </div>
   );

@@ -343,7 +343,43 @@ Không cần đổi CSDL — suy trực tiếp từ bảng `attendance` đã có
   văn bản riêng cho chế độ in.
 - ✅ `tsc --noEmit`, ESLint (0 warning), Vitest (30 test), `cargo check`, `vite build` chạy sạch.
 
-### Phase D — Đánh giá phát triển qua biểu đồ (SD) + tổng hợp lớp/trường — ⬜ Chưa bắt đầu
+### Phase D — Đánh giá phát triển qua biểu đồ (SD) + tổng hợp lớp/trường — ⏸️ Tạm dừng chờ dữ liệu
+
+Cần bảng chuẩn WHO (LMS theo tháng tuổi/giới tính cho cân nặng, chiều cao, cân nặng/chiều cao,
+BMI) để phân loại đúng -2SD/-3SD/+2SD/+3SD. Đã thử tải từ who.int và CDC nhưng bị chặn (403);
+nguồn duy nhất truy cập được (kho GitHub chính thức của WHO) đi qua công cụ tóm tắt nội dung
+bằng mô hình trung gian nên không đủ tin cậy để chép hàng trăm số liệu y tế chính xác đến 4 chữ
+số thập phân. Đã xin ý kiến người dùng — sẽ gửi kèm bảng chuẩn trường đang dùng để nhập đúng,
+không đoán. Chờ file trước khi làm tiếp.
+
+## Bổ sung ngoài 4 phase — theo phản hồi trực tiếp của người dùng khi dùng thử bản xem trước
+
+### Đội ngũ — tạo tài khoản đăng nhập mới cùng hồ sơ cán bộ — ✅ Hoàn thành
+
+Người dùng phản hồi "chưa có cài đặt để bổ sung... cán bộ quản lý". Rà soát phát hiện đây là lỗ
+hổng thật: màn hình "Tạo hồ sơ cán bộ" trước đó chỉ cho **chọn** một tài khoản đã có sẵn, không
+có nơi nào tạo được tài khoản đăng nhập mới — nghĩa là không thể đưa cán bộ mới vào hệ thống.
+
+- ✅ `systemRepo.ts`: `listRoles`, `isUsernameTaken`, `createUserAccount` (tạo user + gán 1 vai
+  trò qua `user_roles`, `must_change_password = 1` bắt buộc đổi mật khẩu lần đăng nhập đầu, ghi
+  `audit_logs`). Không cần migration mới — dùng đúng bảng `users`/`roles`/`user_roles` sẵn có.
+- ✅ Nút "Thêm cán bộ mới (tài khoản mới)" trong Đội ngũ (chỉ hiện với quyền `system.edit`, tách
+  biệt với nút "Tạo hồ sơ cán bộ" cũ dùng để gắn tài khoản đã có sẵn) — nhập họ tên/tên đăng
+  nhập/vai trò/mật khẩu tạm/email/điện thoại + thông tin hồ sơ cán bộ trong cùng một form, tạo
+  tài khoản và hồ sơ cán bộ trong một lần lưu (băm mật khẩu qua lệnh Rust `hash_password` có sẵn,
+  đã hoạt động sẵn trong bản xem trước trình duyệt).
+- ✅ Kiểm thử end-to-end bằng Playwright: tạo tài khoản mới `giaovien_login_test`, đăng xuất tài
+  khoản hiệu trưởng, đăng nhập bằng tài khoản vừa tạo — xác nhận bắt buộc đổi mật khẩu ở lần đăng
+  nhập đầu, và sidebar chỉ hiện đúng các mục theo quyền vai trò Giáo viên (không thấy Tài chính/
+  Kiểm định/Công tác Đảng/Phụ huynh) — đúng RBAC.
+- ✅ `tsc --noEmit`, ESLint (0 warning), Vitest (30 test), `cargo check`, `vite build` chạy sạch.
+
+### Tài chính — Phiếu thu/Phiếu chi đúng mẫu C40-BB/C41-BB (TT 107/2017/TT-BTC) — 🚧 Đang làm
+
+Người dùng phản hồi mẫu phiếu thu/chi hiện tại (chỉ ghi số tiền/ngày/người nộp nội bộ) cần đúng
+quy định tài chính. Đã hỏi rõ mẫu áp dụng — người dùng xác nhận dùng mẫu số C40-BB (Phiếu thu)/
+C41-BB (Phiếu chi) theo Thông tư 107/2017/TT-BTC (chế độ kế toán hành chính sự nghiệp, áp dụng
+cho trường công lập).
 
 ## Hướng dẫn chạy thử Giai đoạn 1-6 (PowerShell trên Windows)
 
