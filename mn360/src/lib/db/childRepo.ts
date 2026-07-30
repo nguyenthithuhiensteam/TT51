@@ -412,6 +412,181 @@ export async function getChildrenAttendanceSummary(
   );
 }
 
+// ===================== BÁO CÁO CHUYÊN CẦN THEO THÁNG/HỌC KỲ/NĂM =====================
+
+export type AttendanceMark = "x" | "N";
+
+export interface MonthlyAttendanceGridChild {
+  childId: string;
+  code: string;
+  fullName: string;
+  cells: Record<string, AttendanceMark>;
+  totalDays: number;
+}
+
+export interface MonthlyAttendanceGrid {
+  yearMonth: string;
+  schoolDays: string[];
+  children: MonthlyAttendanceGridChild[];
+  dailyTotals: Record<string, number>;
+  avgPerDay: number;
+  rate: number;
+}
+
+/**
+ * Lưới điểm danh cả tháng cho một lớp (x = có mặt/đi muộn, N = nghỉ) — dùng cho biểu in
+ * "Chuyên cần Tháng N". Chỉ tính những trẻ và những ngày có bản ghi điểm danh thật trong tháng
+ * (không suy diễn từ trạng thái hiện tại của trẻ) để đúng với lịch sử thực tế của tháng đó.
+ */
+export async function getMonthlyAttendanceGrid(classId: string, yearMonth: string): Promise<MonthlyAttendanceGrid> {
+  const from = `${yearMonth}-01`;
+  const to = `${yearMonth}-31`;
+  const rows = await dbSelect<{
+    child_id: string;
+    code: string;
+    full_name: string;
+    attendance_date: string;
+    status: AttendanceStatus;
+  }>(
+    `SELECT a.child_id AS child_id, ch.code AS code, ch.full_name AS full_name,
+       a.attendance_date AS attendance_date, a.status AS status
+     FROM attendance a
+     JOIN children ch ON ch.id = a.child_id
+     WHERE a.class_id = ? AND a.attendance_date BETWEEN ? AND ?
+     ORDER BY ch.full_name ASC, a.attendance_date ASC`,
+    [classId, from, to],
+  );
+
+  const dayset = new Set<string>();
+  const byChild = new Map<string, MonthlyAttendanceGridChild>();
+  for (const r of rows) {
+    dayset.add(r.attendance_date);
+    if (!byChild.has(r.child_id)) {
+      byChild.set(r.child_id, { childId: r.child_id, code: r.code, fullName: r.full_name, cells: {}, totalDays: 0 });
+    }
+    const mark: AttendanceMark = r.status === "present" || r.status === "late" ? "x" : "N";
+    byChild.get(r.child_id)!.cells[r.attendance_date] = mark;
+  }
+
+  const schoolDays = [...dayset].sort();
+  const children = [...byChild.values()].sort((a, b) => a.fullName.localeCompare(b.fullName, "vi"));
+  for (const c of children) {
+    c.totalDays = schoolDays.filter((d) => c.cells[d] === "x").length;
+  }
+
+  const dailyTotals: Record<string, number> = {};
+  for (const d of schoolDays) {
+    dailyTotals[d] = children.filter((c) => c.cells[d] === "x").length;
+  }
+  const totalPresentDays = Object.values(dailyTotals).reduce((s, n) => s + n, 0);
+  const attended = children.filter((c) => c.totalDays > 0).length;
+
+  return {
+    yearMonth,
+    schoolDays,
+    children,
+    dailyTotals,
+    avgPerDay: schoolDays.length ? Math.round(totalPresentDays / schoolDays.length) : 0,
+    rate: schoolDays.length && attended ? Math.round((totalPresentDays / (schoolDays.length * attended)) * 1000) / 10 : 0,
+  };
+}
+
+export interface MonthlyAttendanceStatsRow {
+  label: string;
+  registered: number;
+  attended: number;
+  schoolDays: number;
+  totalPresentDays: number;
+  avgPerDay: number;
+  rate: number;
+}
+
+async function getMonthAttendanceStats(classId: string, yearMonth: string): Promise<MonthlyAttendanceStatsRow> {
+  const from = `${yearMonth}-01`;
+  const to = `${yearMonth}-31`;
+  const rows = await dbSelect<{ child_id: string; attendance_date: string; status: AttendanceStatus }>(
+    "SELECT child_id, attendance_date, status FROM attendance WHERE class_id = ? AND attendance_date BETWEEN ? AND ?",
+    [classId, from, to],
+  );
+  const dayset = new Set<string>();
+  const registeredSet = new Set<string>();
+  const attendedSet = new Set<string>();
+  let totalPresentDays = 0;
+  for (const r of rows) {
+    dayset.add(r.attendance_date);
+    registeredSet.add(r.child_id);
+    if (r.status === "present" || r.status === "late") {
+      totalPresentDays += 1;
+      attendedSet.add(r.child_id);
+    }
+  }
+  const schoolDays = dayset.size;
+  const attended = attendedSet.size;
+  return {
+    label: yearMonth,
+    registered: registeredSet.size,
+    attended,
+    schoolDays,
+    totalPresentDays,
+    avgPerDay: schoolDays ? Math.round(totalPresentDays / schoolDays) : 0,
+    rate: schoolDays && attended ? Math.round((totalPresentDays / (schoolDays * attended)) * 1000) / 10 : 0,
+  };
+}
+
+function meanRow(label: string, rowsIn: MonthlyAttendanceStatsRow[]): MonthlyAttendanceStatsRow {
+  const n = rowsIn.length || 1;
+  const round1 = (v: number) => Math.round(v * 10) / 10;
+  return {
+    label,
+    registered: round1(rowsIn.reduce((s, r) => s + r.registered, 0) / n),
+    attended: round1(rowsIn.reduce((s, r) => s + r.attended, 0) / n),
+    schoolDays: round1(rowsIn.reduce((s, r) => s + r.schoolDays, 0) / n),
+    totalPresentDays: round1(rowsIn.reduce((s, r) => s + r.totalPresentDays, 0) / n),
+    avgPerDay: round1(rowsIn.reduce((s, r) => s + r.avgPerDay, 0) / n),
+    rate: round1(rowsIn.reduce((s, r) => s + r.rate, 0) / n),
+  };
+}
+
+function monthsInRange(startDate: string, endDate: string): string[] {
+  const start = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+  const months: string[] = [];
+  const cur = new Date(start.getFullYear(), start.getMonth(), 1);
+  const last = new Date(end.getFullYear(), end.getMonth(), 1);
+  while (cur <= last) {
+    months.push(`${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, "0")}`);
+    cur.setMonth(cur.getMonth() + 1);
+  }
+  return months;
+}
+
+export interface YearlyAttendanceSummary {
+  months: MonthlyAttendanceStatsRow[];
+  semester1: MonthlyAttendanceStatsRow;
+  semester2: MonthlyAttendanceStatsRow;
+  fullYear: MonthlyAttendanceStatsRow;
+}
+
+/**
+ * Tổng hợp chuyên cần theo từng tháng của năm học + trung bình Học kỳ I (9-12), Học kỳ II
+ * (1-5, hoặc các tháng còn lại) và cả năm — theo đúng công thức "TỔNG HỢP CHUYÊN CẦN HÀNG THÁNG"
+ * nhà trường đang dùng.
+ */
+export async function getYearlyAttendanceSummary(
+  classId: string,
+  schoolYearStart: string,
+  schoolYearEnd: string,
+): Promise<YearlyAttendanceSummary> {
+  const yearMonths = monthsInRange(schoolYearStart, schoolYearEnd);
+  const months = await Promise.all(yearMonths.map((ym) => getMonthAttendanceStats(classId, ym)));
+  const hk1 = months.filter((m) => ["09", "10", "11", "12"].includes(m.label.slice(5, 7)));
+  const hk2 = months.filter((m) => !["09", "10", "11", "12"].includes(m.label.slice(5, 7)));
+  const semester1 = meanRow("Học Kỳ I", hk1.length ? hk1 : months);
+  const semester2 = meanRow("Học Kỳ II", hk2.length ? hk2 : months);
+  const fullYear = meanRow("Cả năm", [semester1, semester2]);
+  return { months, semester1, semester2, fullYear };
+}
+
 // ===================== ĐƠN XIN NGHỈ & TRAO ĐỔI VỚI PHỤ HUYNH (PHÍA GIÁO VIÊN) =====================
 
 export interface StaffLeaveRequestRow {

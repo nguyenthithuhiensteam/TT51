@@ -26,10 +26,11 @@ import { CHILD_STATUS_LABELS, ATTENDANCE_LABELS } from "../../lib/db/types";
 import type { AttendanceStatus, ChildStatus, User } from "../../lib/db/types";
 import { ClassFormModal, type ClassFormValues } from "./ClassFormModal";
 import { ChildFormModal, type ChildFormValues } from "./ChildFormModal";
+import { AttendanceReportsTab } from "./AttendanceReportsTab";
 import { exportAttendanceReportToExcel, exportChildrenToExcel } from "../../lib/export/excel";
 
 const PAGE_SIZE = 10;
-type Tab = "classes" | "children" | "attendance";
+type Tab = "classes" | "children" | "attendance" | "attendanceReports";
 
 export function ChildrenPage() {
   const [tab, setTab] = useState<Tab>("children");
@@ -57,6 +58,7 @@ export function ChildrenPage() {
             ["classes", "Nhóm, lớp"],
             ["children", "Hồ sơ trẻ"],
             ["attendance", "Điểm danh"],
+            ["attendanceReports", "Báo cáo chuyên cần"],
           ] as [Tab, string][]
         ).map(([key, label]) => (
           <button
@@ -77,6 +79,7 @@ export function ChildrenPage() {
       {tab === "classes" && <ClassesTab classes={classes} onChanged={refreshClasses} />}
       {tab === "children" && <ChildrenTab classes={classes} />}
       {tab === "attendance" && <AttendanceTab classes={classes} />}
+      {tab === "attendanceReports" && <AttendanceReportsTab classes={classes} />}
     </div>
   );
 }

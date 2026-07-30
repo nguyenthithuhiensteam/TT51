@@ -265,6 +265,43 @@ tới phân hệ nào khác):
   `page.emulateMedia({ media: "print" })` rằng khi in chỉ còn lại đúng nội dung biểu mẫu (sidebar/
   topbar/nút điều khiển đều ẩn).
 
+## Giai đoạn 7 — Tích hợp biểu mẫu báo cáo thật (Trẻ em) — 🚧 Đang làm
+
+Theo yêu cầu người dùng, gửi kèm 5 biểu mẫu PDF báo cáo thật đang dùng ở trường: Chuyên cần
+tháng (lưới ngày×trẻ), Khám sức khỏe toàn diện, Tổng hợp đánh giá phát triển qua biểu đồ,
+Tổng hợp sức khỏe qua biểu đồ theo lớp/tháng, và Tổng hợp (số lượng học sinh theo thời điểm +
+chuyên cần hàng tháng/học kỳ/năm). Triển khai theo 4 phần (Phase A-D) do mức sẵn sàng dữ liệu
+khác nhau — người dùng đã xác nhận muốn làm cả 4 phần và cần xuất/in đúng khuôn biểu mẫu gốc.
+
+### Phase A — Chuyên cần lưới tháng + tổng hợp tháng/học kỳ/năm — ✅ Hoàn thành
+
+Không cần đổi CSDL — suy trực tiếp từ bảng `attendance` đã có (một dòng/trẻ/ngày).
+
+- ✅ `childRepo.ts`: `getMonthlyAttendanceGrid(classId, yearMonth)` — lưới điểm danh cả tháng
+  (x = có mặt/đi muộn, N = nghỉ có phép/không phép), chỉ tính những ngày/trẻ có bản ghi thật
+  trong tháng đó (không suy diễn từ trạng thái hiện tại của trẻ, để đúng lịch sử ngay cả khi
+  trẻ đã chuyển lớp/nghỉ học sau đó).
+- ✅ `getYearlyAttendanceSummary(classId, start, end)`: tổng hợp từng tháng của năm học + trung
+  bình Học Kỳ I (tháng 9-12) / Học Kỳ II (các tháng còn lại) / cả năm — công thức suy ngược
+  chính xác từ 2 biểu mẫu gốc: **Số trẻ đăng ký** = số trẻ có bản ghi điểm danh trong tháng,
+  **Số trẻ đi học** = số trẻ có ít nhất 1 ngày có mặt/đi muộn, **Số ngày học** = số ngày có bản
+  ghi điểm danh, **Tổng số ngày trẻ đi học** = tổng số lượt có mặt/đi muộn, **Bình quân** =
+  làm tròn(tổng ngày trẻ đi học ÷ số ngày học), **Tỷ lệ chuyên cần** = làm tròn 1 chữ số thập
+  phân của (tổng ngày trẻ đi học ÷ (số ngày học × số trẻ đi học) × 100) — đã đối chiếu công thức
+  này khớp chính xác với nhiều tháng trong file "Tổng hợp" gốc (tháng 9: 98,1%; tháng 10: 98,0%;
+  tháng 12: 98,2%; tháng 2: 98,6%). Học Kỳ/Cả năm = trung bình cộng các tháng thành phần.
+- ✅ Tab mới "Báo cáo chuyên cần" trong Trẻ em, 2 tab con: "Lưới điểm danh tháng" (in đúng khuôn
+  "Chuyên cần Tháng N" — có `@page` khổ ngang, ẩn toàn bộ giao diện khi in) và "Tổng hợp năm học"
+  (in + xuất Excel, đúng khuôn "TỔNG HỢP CHUYÊN CẦN HÀNG THÁNG").
+- ✅ Kiểm thử bằng Playwright/Chromium trên bản xem trước: đối chiếu tay với dữ liệu demo lớp
+  Mẫu giáo lớn A tháng 7/2026 (2 ngày điểm danh, 4 trẻ) — khớp chính xác Bình quân 3 trẻ = 75%.
+  Xác nhận `page.emulateMedia({media:"print"})` chỉ còn lại đúng nội dung biểu mẫu.
+- ✅ `tsc --noEmit`, ESLint (0 warning), Vitest (30 test) chạy sạch.
+
+### Phase B — Tổng hợp số lượng học sinh theo thời điểm — ⬜ Chưa bắt đầu
+### Phase C — Khám sức khỏe toàn diện — ⬜ Chưa bắt đầu
+### Phase D — Đánh giá phát triển qua biểu đồ (SD) + tổng hợp lớp/trường — ⬜ Chưa bắt đầu
+
 ## Hướng dẫn chạy thử Giai đoạn 1-6 (PowerShell trên Windows)
 
 Xem chi tiết đầy đủ trong `mn360/README.md`, tóm tắt:
