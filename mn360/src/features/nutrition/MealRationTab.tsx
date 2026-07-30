@@ -12,17 +12,31 @@ import {
   computeItemCost,
   computeNutritionTotals,
   createFood,
+  getCombinedDailyReport,
   getDefaultMealFeeRate,
   getHeadcountForGroup,
   getNutritionNorms,
   getOrCreateDailyRation,
+  getPolicyChecklistState,
+  getWeeklyRationSummary,
   listFoods,
   listRationItems,
   removeRationItem,
+  setPolicyChecklistItem,
   statusForNutrient,
   updateRationItem,
+  type CombinedDailyReport,
   type RationItemRow,
+  type WeeklyRationDay,
 } from "../../lib/db/rationRepo";
+import {
+  BENEFICIARY_GROUPS,
+  COOK_SUPPORT_TEXT,
+  LEGAL_REFERENCES,
+  PAYMENT_SCHEDULE,
+  POLICY_CHECKLIST_ITEMS,
+  SUPPORT_AMOUNT_TEXT,
+} from "./mealPolicyContent";
 import {
   NUTRIENT_LABELS,
   NUTRITION_GROUP_LABELS,
@@ -81,7 +95,43 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   over: { label: "Cao", className: "bg-danger/15 text-danger" },
 };
 
+type MealRationSubTab = "entry" | "weekly" | "policy" | "print";
+
+const SUB_TABS: [MealRationSubTab, string][] = [
+  ["entry", "Nhập liệu & dinh dưỡng"],
+  ["weekly", "Tổng hợp tuần"],
+  ["policy", "Chính sách"],
+  ["print", "In biểu mẫu"],
+];
+
 export function MealRationTab() {
+  const [subTab, setSubTab] = useState<MealRationSubTab>("entry");
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-1 border-b border-navy/10">
+        {SUB_TABS.map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setSubTab(key)}
+            className={
+              "px-4 py-2 text-sm font-medium " +
+              (subTab === key ? "border-b-2 border-brand text-brand" : "text-navy/50 hover:text-navy")
+            }
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {subTab === "entry" && <MealRationEntrySection />}
+      {subTab === "weekly" && <WeeklyRationSummarySection />}
+      {subTab === "policy" && <MealPolicySection />}
+      {subTab === "print" && <MealRationPrintSection />}
+    </div>
+  );
+}
+
+function MealRationEntrySection() {
   const user = useAuthStore((s) => s.user);
   const sessionId = useAuthStore((s) => s.sessionId);
   const hasPermission = useAuthStore((s) => s.hasPermission);
@@ -229,7 +279,7 @@ export function MealRationTab() {
           </span>
           {ration && <StatusBadge status={ration.status} />}
           <div className="ml-auto flex gap-2">
-            {ration && items.length > 0 && (
+            {ration && items.length > 0 && hasPermission("nutrition.export") && (
               <Button
                 variant="secondary"
                 size="sm"
@@ -468,6 +518,390 @@ export function MealRationTab() {
           setNewFoodModal(false);
         }}
       />
+    </div>
+  );
+}
+
+// ===================== TỔNG HỢP TUẦN =====================
+
+const WEEKDAY_LABELS = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7"];
+
+function mondayOf(dateStr: string): string {
+  const d = new Date(`${dateStr}T00:00:00`);
+  const offset = (d.getDay() + 6) % 7; // 0 = Thứ 2
+  d.setDate(d.getDate() - offset);
+  return d.toISOString().slice(0, 10);
+}
+
+function formatDdMm(dateStr: string): string {
+  const d = new Date(`${dateStr}T00:00:00`);
+  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function WeeklyRationSummarySection() {
+  const hasPermission = useAuthStore((s) => s.hasPermission);
+  const schoolYear = useAppStore((s) => s.currentSchoolYear);
+  const [weekStart, setWeekStart] = useState(mondayOf(new Date().toISOString().slice(0, 10)));
+  const [days, setDays] = useState<WeeklyRationDay[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!schoolYear) return;
+    setLoading(true);
+    getWeeklyRationSummary(schoolYear.id, weekStart)
+      .then(setDays)
+      .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schoolYear?.id, weekStart]);
+
+  const totalHeadcount = days.reduce((s, d) => s + d.nhaTre.headcount + d.mauGiao.headcount, 0);
+  const totalCost = days.reduce((s, d) => s + d.nhaTre.cost + d.mauGiao.cost, 0);
+
+  return (
+    <Card>
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <h3 className="text-sm font-semibold text-navy">Tổng hợp tuần — từ {formatDdMm(weekStart)}</h3>
+        <Input
+          type="date"
+          className="w-48"
+          value={weekStart}
+          onChange={(e) => setWeekStart(mondayOf(e.target.value))}
+        />
+        {hasPermission("nutrition.export") && days.length > 0 && (
+          <Button
+            variant="secondary"
+            size="sm"
+            className="ml-auto"
+            onClick={() =>
+              exportFinanceReportToExcel(
+                `Tong-hop-tuan-${weekStart}`,
+                [
+                  ...days.map((d) => [
+                    formatDdMm(d.date),
+                    d.nhaTre.headcount,
+                    d.nhaTre.cost,
+                    d.mauGiao.headcount,
+                    d.mauGiao.cost,
+                    d.nhaTre.headcount + d.mauGiao.headcount,
+                    d.nhaTre.cost + d.mauGiao.cost,
+                  ]),
+                  ["Cộng tuần", "", "", "", "", totalHeadcount, totalCost],
+                ],
+                ["Ngày", "SL trẻ NT", "Chi phí NT", "SL trẻ MG", "Chi phí MG", "Tổng SL trẻ", "Tổng chi phí"],
+              )
+            }
+          >
+            Xuất Excel
+          </Button>
+        )}
+      </div>
+
+      {loading ? (
+        <p className="text-sm text-navy/50">Đang tải...</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-navy/10 text-navy/50">
+                <th className="pb-2 pr-3 font-medium">Chỉ tiêu</th>
+                {days.map((d, i) => (
+                  <th key={d.date} className="pb-2 pr-3 text-center font-medium">
+                    {WEEKDAY_LABELS[i]}
+                    <br />
+                    <span className="font-normal">{formatDdMm(d.date)}</span>
+                  </th>
+                ))}
+                <th className="pb-2 text-center font-medium">Cộng tuần</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-b border-navy/5">
+                <td className="py-2 pr-3 text-navy/70">Số trẻ — Nhà trẻ</td>
+                {days.map((d) => (
+                  <td key={d.date} className="py-2 pr-3 text-center">
+                    {d.nhaTre.headcount || "—"}
+                  </td>
+                ))}
+                <td className="py-2 text-center font-medium">
+                  {days.reduce((s, d) => s + d.nhaTre.headcount, 0)}
+                </td>
+              </tr>
+              <tr className="border-b border-navy/5">
+                <td className="py-2 pr-3 text-navy/70">Số trẻ — Mẫu giáo</td>
+                {days.map((d) => (
+                  <td key={d.date} className="py-2 pr-3 text-center">
+                    {d.mauGiao.headcount || "—"}
+                  </td>
+                ))}
+                <td className="py-2 text-center font-medium">
+                  {days.reduce((s, d) => s + d.mauGiao.headcount, 0)}
+                </td>
+              </tr>
+              <tr className="border-b border-navy/5 font-medium">
+                <td className="py-2 pr-3 text-navy">Tổng số trẻ</td>
+                {days.map((d) => (
+                  <td key={d.date} className="py-2 pr-3 text-center">
+                    {d.nhaTre.headcount + d.mauGiao.headcount || "—"}
+                  </td>
+                ))}
+                <td className="py-2 text-center">{totalHeadcount}</td>
+              </tr>
+              <tr className="border-b border-navy/5">
+                <td className="py-2 pr-3 text-navy/70">Chi phí đã nhập</td>
+                {days.map((d) => {
+                  const cost = d.nhaTre.cost + d.mauGiao.cost;
+                  const hasData = d.nhaTre.hasData || d.mauGiao.hasData;
+                  return (
+                    <td key={d.date} className="py-2 pr-3 text-center">
+                      {hasData ? formatVnd(cost) : <span className="text-navy/30">Chưa nhập</span>}
+                    </td>
+                  );
+                })}
+                <td className="py-2 text-center font-semibold text-brand">{formatVnd(totalCost)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+// ===================== CHÍNH SÁCH =====================
+
+function MealPolicySection() {
+  const user = useAuthStore((s) => s.user);
+  const hasPermission = useAuthStore((s) => s.hasPermission);
+  const [checks, setChecks] = useState<Record<number, boolean>>({});
+
+  useEffect(() => {
+    getPolicyChecklistState().then(setChecks);
+  }, []);
+
+  async function toggle(index: number) {
+    if (!user || !hasPermission("nutrition.edit")) return;
+    const next = !checks[index];
+    setChecks((prev) => ({ ...prev, [index]: next }));
+    await setPolicyChecklistItem(index, next, user.id);
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <h3 className="mb-3 text-sm font-semibold text-navy">Căn cứ pháp lý bữa ăn bán trú mầm non</h3>
+        <div className="space-y-2">
+          {LEGAL_REFERENCES.map((ref) => (
+            <div key={ref.code} className="rounded-lg bg-navy/5 p-3">
+              <p className="text-xs font-bold text-brand">Số: {ref.code}</p>
+              <p className="mt-1 text-sm text-navy/80">{ref.title}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 rounded-lg bg-mint/10 p-3">
+          <p className="text-sm font-semibold text-mint">Mức hỗ trợ</p>
+          <p className="mt-1 text-sm text-navy/70">{SUPPORT_AMOUNT_TEXT}</p>
+        </div>
+        <p className="mt-4 mb-2 text-sm font-semibold text-navy">Đối tượng hưởng hỗ trợ</p>
+        <div className="divide-y divide-navy/5">
+          {BENEFICIARY_GROUPS.map((g, i) => (
+            <div key={i} className="flex items-start gap-3 py-2">
+              <span className="text-lg">{g.icon}</span>
+              <span className="text-sm text-navy/80">{g.text}</span>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <Card>
+        <h3 className="mb-3 text-sm font-semibold text-navy">Lịch chi trả — 2 lần/năm học</h3>
+        <div className="grid grid-cols-2 gap-3">
+          {PAYMENT_SCHEDULE.map((p) => (
+            <div key={p.label} className="rounded-lg bg-warn/10 p-3 text-center">
+              <div className="text-2xl">{p.icon}</div>
+              <p className="font-semibold text-warn">{p.label}</p>
+              <p className="text-xs text-navy/50">{p.note}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 rounded-lg bg-brand/10 p-3 text-sm text-brand">{COOK_SUPPORT_TEXT}</div>
+      </Card>
+
+      <Card>
+        <h3 className="mb-3 text-sm font-semibold text-navy">Checklist việc cần làm</h3>
+        {!hasPermission("nutrition.edit") && (
+          <p className="mb-2 text-xs text-navy/40">Chỉ người có quyền sửa Nuôi dưỡng mới đánh dấu được checklist.</p>
+        )}
+        <div className="divide-y divide-navy/5">
+          {POLICY_CHECKLIST_ITEMS.map((item, i) => (
+            <label
+              key={i}
+              className={`flex items-start gap-3 py-2 ${hasPermission("nutrition.edit") ? "cursor-pointer" : ""}`}
+            >
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={!!checks[i]}
+                disabled={!hasPermission("nutrition.edit")}
+                onChange={() => toggle(i)}
+              />
+              <span className={`text-sm ${checks[i] ? "text-navy/40 line-through" : "text-navy/80"}`}>{item}</span>
+            </label>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+// ===================== IN BIỂU MẪU =====================
+
+function MealRationPrintSection() {
+  const hasPermission = useAuthStore((s) => s.hasPermission);
+  const school = useAppStore((s) => s.school);
+  const schoolYear = useAppStore((s) => s.currentSchoolYear);
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [report, setReport] = useState<CombinedDailyReport | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!schoolYear) return;
+    setLoading(true);
+    getCombinedDailyReport(schoolYear.id, date)
+      .then(setReport)
+      .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schoolYear?.id, date]);
+
+  const dateLabel = (() => {
+    const d = new Date(`${date}T00:00:00`);
+    const weekday = ["Chủ nhật", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7"][d.getDay()];
+    return `${weekday}, ngày ${d.getDate()} tháng ${d.getMonth() + 1} năm ${d.getFullYear()}`;
+  })();
+
+  const hasData = !!report && report.rows.length > 0;
+
+  return (
+    <div>
+      <style>{`
+        @media print {
+          body * { visibility: hidden; }
+          #meal-ration-print-area, #meal-ration-print-area * { visibility: visible; }
+          #meal-ration-print-area { position: absolute; left: 0; top: 0; width: 100%; }
+          @page { size: A4 landscape; margin: 10mm; }
+        }
+      `}</style>
+      <Card className="print:hidden">
+        <div className="mb-3 flex flex-wrap items-center gap-3">
+          <h3 className="text-sm font-semibold text-navy">In biểu — Bảng tính ăn hàng ngày</h3>
+          <Input type="date" className="w-48" value={date} onChange={(e) => setDate(e.target.value)} />
+          {hasPermission("nutrition.export") && (
+            <Button size="sm" className="ml-auto" disabled={!hasData} onClick={() => window.print()}>
+              In / Lưu PDF
+            </Button>
+          )}
+        </div>
+        {!hasData && !loading && (
+          <p className="text-sm text-navy/50">Ngày này chưa có dữ liệu khẩu phần ở tab Nhập liệu.</p>
+        )}
+      </Card>
+
+      {hasData && report && (
+        <div id="meal-ration-print-area" className="mt-4 rounded-xl border border-navy/10 bg-white p-4 text-sm">
+          <div className="mb-3 text-center">
+            <p className="font-bold">{school?.name ?? ""}</p>
+            <p className="text-base font-bold">BẢNG TÍNH ĂN HÀNG NGÀY</p>
+            <p>{dateLabel}</p>
+          </div>
+          <table className="w-full border-collapse text-xs">
+            <thead>
+              <tr>
+                <th rowSpan={2} className="border border-navy/30 p-1">TT</th>
+                <th rowSpan={2} className="border border-navy/30 p-1">Thực phẩm</th>
+                <th rowSpan={2} className="border border-navy/30 p-1">ĐVT</th>
+                <th colSpan={3} className="border border-navy/30 bg-blue-50 p-1">
+                  NHÀ TRẺ ({report.headcountNT} trẻ)
+                </th>
+                <th colSpan={3} className="border border-navy/30 bg-green-50 p-1">
+                  MẪU GIÁO ({report.headcountMG} trẻ)
+                </th>
+              </tr>
+              <tr>
+                <th className="border border-navy/30 bg-blue-50 p-1">ĐM/trẻ</th>
+                <th className="border border-navy/30 bg-blue-50 p-1">Đơn giá</th>
+                <th className="border border-navy/30 bg-blue-50 p-1">Thành tiền</th>
+                <th className="border border-navy/30 bg-green-50 p-1">ĐM/trẻ</th>
+                <th className="border border-navy/30 bg-green-50 p-1">Đơn giá</th>
+                <th className="border border-navy/30 bg-green-50 p-1">Thành tiền</th>
+              </tr>
+            </thead>
+            <tbody>
+              {report.rows.map((row, i) => (
+                <tr key={row.foodId}>
+                  <td className="border border-navy/30 p-1 text-center">{i + 1}</td>
+                  <td className="border border-navy/30 p-1">{row.foodName}</td>
+                  <td className="border border-navy/30 p-1 text-center">{FOOD_UNIT_LABELS[row.unit]}</td>
+                  <td className="border border-navy/30 p-1 text-right">
+                    {row.nt ? row.nt.amountPerChild : ""}
+                  </td>
+                  <td className="border border-navy/30 p-1 text-right">{row.nt ? row.nt.unitPrice.toLocaleString("vi-VN") : ""}</td>
+                  <td className="border border-navy/30 p-1 text-right">{row.nt ? row.nt.cost.toLocaleString("vi-VN") : ""}</td>
+                  <td className="border border-navy/30 p-1 text-right">
+                    {row.mg ? row.mg.amountPerChild : ""}
+                  </td>
+                  <td className="border border-navy/30 p-1 text-right">{row.mg ? row.mg.unitPrice.toLocaleString("vi-VN") : ""}</td>
+                  <td className="border border-navy/30 p-1 text-right">{row.mg ? row.mg.cost.toLocaleString("vi-VN") : ""}</td>
+                </tr>
+              ))}
+              <tr className="bg-warn/10 font-bold">
+                <td colSpan={5} className="border border-navy/30 p-1 text-center">Tổng cộng</td>
+                <td className="border border-navy/30 p-1 text-right">{report.totalCostNT.toLocaleString("vi-VN")}</td>
+                <td colSpan={2} className="border border-navy/30 p-1"></td>
+                <td className="border border-navy/30 p-1 text-right">{report.totalCostMG.toLocaleString("vi-VN")}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <table className="mt-4 w-full text-xs">
+            <tbody>
+              <tr>
+                <td className="w-1/2 align-top">
+                  <p>Tiêu chuẩn được chi (NT): {formatVnd(report.budgetNT)}</p>
+                  <p>Tiêu chuẩn được chi (MG): {formatVnd(report.budgetMG)}</p>
+                </td>
+                <td className="w-1/2 align-top">
+                  <p>Đã chi (NT): {formatVnd(report.totalCostNT)}</p>
+                  <p>Đã chi (MG): {formatVnd(report.totalCostMG)}</p>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <table className="mt-8 w-full text-center text-xs">
+            <tbody>
+              <tr className="font-bold">
+                <td>NGƯỜI TỔNG HỢP</td>
+                <td>NGƯỜI DUYỆT</td>
+                <td>DUYỆT CHI</td>
+              </tr>
+              <tr className="italic text-navy/50">
+                <td>(Ký, ghi rõ họ tên)</td>
+                <td>(Ký, ghi rõ họ tên)</td>
+                <td>(Ký, ghi rõ họ tên, đóng dấu)</td>
+              </tr>
+              <tr>
+                <td className="h-16"></td>
+                <td className="h-16"></td>
+                <td className="h-16"></td>
+              </tr>
+              <tr className="font-semibold">
+                <td></td>
+                <td></td>
+                <td>{school?.principal_name ?? ""}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

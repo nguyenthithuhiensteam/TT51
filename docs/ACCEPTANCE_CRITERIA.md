@@ -115,3 +115,23 @@ cùng.
   (không thấy nút duyệt vì thiếu quyền `nutrition.approve`), khẩu phần đã duyệt hiển thị chỉ
   đọc, khẩu phần mới tự tạo bản nháp trống và chỉnh sửa được.
 - `tsc --noEmit`, ESLint, Vitest (30 test), `cargo check`, `vite build` chạy sạch.
+
+**Mở rộng — tích hợp đầy đủ nội dung app "Bữa ăn hạnh phúc" trong tab Khẩu phần dinh dưỡng:**
+
+- Tab con "Tổng hợp tuần" hiển thị đúng số trẻ ăn + chi phí theo từng ngày (Thứ 2 → Thứ 7) —
+  kiểm thử qua bản xem trước trình duyệt: ngày 28/07 (có dữ liệu) hiện đúng 3 trẻ Nhà trẻ/3 trẻ
+  Mẫu giáo, chi phí 62.382 đ (= 35.700 + 26.682, khớp số đã đối chiếu ở khẩu phần demo); ngày
+  27/07 (chỉ có điểm danh, chưa nhập khẩu phần) hiện đúng "Chưa nhập" thay vì 0đ gây hiểu nhầm.
+- Tab con "Chính sách" hiển thị đúng nội dung văn bản căn cứ + checklist; checklist đánh dấu
+  được và lưu bền vững (yêu cầu quyền `nutrition.edit`).
+- Tab con "In biểu mẫu" hiển thị đúng "Bảng tính ăn hàng ngày" gộp Nhà trẻ + Mẫu giáo theo từng
+  thực phẩm, tổng cộng khớp 100% với số liệu đã đối chiếu (35.700 đ / 26.682 đ); xác nhận bằng
+  `page.emulateMedia({ media: "print" })` rằng khi in chỉ còn nội dung biểu mẫu, ẩn toàn bộ
+  sidebar/topbar/nút điều khiển.
+- Nút "Xuất Excel" (tab Nhập liệu) và các nút xuất/in mới đều yêu cầu quyền `nutrition.export`.
+- Không triển khai "Nhập Excel" (đọc lại đúng định dạng file do app cũ xuất ra) — không phù hợp
+  vì MN360 đã có dữ liệu sẵn trong CSDL dùng chung, không cần vòng xuất-rồi-nhập-lại; xem lý do
+  chi tiết ở `docs/ROADMAP.md` mục Giai đoạn 6.
+- `tsc --noEmit`, ESLint (0 warning), Vitest (30 test), `vite build` chạy sạch sau khi bổ sung.
+- Rà soát diff commit xác nhận chỉ các tệp thuộc Nuôi dưỡng/tài liệu bị thay đổi — không phân hệ
+  nào khác của MN360 bị ảnh hưởng, đúng theo yêu cầu "giữ nguyên các phần còn lại".

@@ -80,7 +80,8 @@ kèm phụ huynh, 15 hồ sơ cán bộ (gắn với các tài khoản ở trên
 các trạng thái phê duyệt khác nhau để thử nghiệm quy trình, 8 món ăn với thực đơn mẫu (trẻ
 "Trần Thị Bình" dị ứng trứng để thử tính năng cảnh báo dị ứng), 25 thực phẩm kèm khẩu phần
 dinh dưỡng mẫu ngày 28/07/2026 cho cả hai nhóm Nhà trẻ/Mẫu giáo (một đã duyệt, một chờ duyệt —
-đăng nhập `nuoiduong` để thử tại Nuôi dưỡng → Khẩu phần dinh dưỡng), hồ sơ sức khỏe/tăng
+đăng nhập `nuoiduong` để thử tại Nuôi dưỡng → Khẩu phần dinh dưỡng, có thêm các tab con Tổng hợp
+tuần/Chính sách/In biểu mẫu), hồ sơ sức khỏe/tăng
 trưởng/tiêm chủng, một sự cố và một đợt kiểm tra an toàn mẫu, khoản thu/phiếu thu-chi/tài sản
 mẫu ở các bước quy trình khác nhau, tiêu chuẩn/tiêu chí kiểm định kèm minh chứng mẫu, đảng
 viên/sinh hoạt chi bộ mẫu (chỉ tài khoản `hieutruong` — cấp ủy — xem được), và tài khoản

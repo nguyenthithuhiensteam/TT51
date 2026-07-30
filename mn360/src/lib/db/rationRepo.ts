@@ -271,6 +271,163 @@ export function computeItemCost(
   return Math.round(((item.amount_per_child * headcount) / 1000) * item.unit_price);
 }
 
+// ===================== TỔNG HỢP TUẦN =====================
+
+export interface WeeklyRationGroupDay {
+  headcount: number;
+  cost: number;
+  hasData: boolean;
+}
+
+export interface WeeklyRationDay {
+  date: string;
+  nhaTre: WeeklyRationGroupDay;
+  mauGiao: WeeklyRationGroupDay;
+}
+
+/** Tổng hợp 6 ngày (Thứ 2 → Thứ 7) kể từ ngày bắt đầu tuần — dùng cho tab Tổng hợp tuần. */
+export async function getWeeklyRationSummary(
+  schoolYearId: string,
+  weekStartDate: string,
+): Promise<WeeklyRationDay[]> {
+  const days: WeeklyRationDay[] = [];
+  const start = new Date(`${weekStartDate}T00:00:00`);
+  for (let i = 0; i < 6; i++) {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    const date = d.toISOString().slice(0, 10);
+    const groupData: Record<NutritionGroup, WeeklyRationGroupDay> = {
+      nha_tre: { headcount: 0, cost: 0, hasData: false },
+      mau_giao: { headcount: 0, cost: 0, hasData: false },
+    };
+    for (const group of ["nha_tre", "mau_giao"] as NutritionGroup[]) {
+      const headcount = await getHeadcountForGroup(date, group);
+      const ration = await getDailyRation(schoolYearId, date, group);
+      let cost = 0;
+      let hasData = false;
+      if (ration) {
+        const items = await listRationItems(ration.id);
+        if (items.length > 0) {
+          hasData = true;
+          cost = items.reduce((sum, item) => sum + computeItemCost(item, headcount), 0);
+        }
+      }
+      groupData[group] = { headcount, cost, hasData };
+    }
+    days.push({ date, nhaTre: groupData.nha_tre, mauGiao: groupData.mau_giao });
+  }
+  return days;
+}
+
+// ===================== BIỂU IN "BẢNG TÍNH ĂN HÀNG NGÀY" =====================
+
+export interface CombinedRationRow {
+  foodId: string;
+  foodName: string;
+  foodGroup: string;
+  unit: FoodUnit;
+  nt: { amountPerChild: number; unitPrice: number; cost: number } | null;
+  mg: { amountPerChild: number; unitPrice: number; cost: number } | null;
+}
+
+export interface CombinedDailyReport {
+  date: string;
+  headcountNT: number;
+  headcountMG: number;
+  ntRation: DailyRation | null;
+  mgRation: DailyRation | null;
+  rows: CombinedRationRow[];
+  totalCostNT: number;
+  totalCostMG: number;
+  budgetNT: number;
+  budgetMG: number;
+}
+
+/** Gộp khẩu phần Nhà trẻ + Mẫu giáo của một ngày thành một bảng — dùng để in "Bảng tính ăn hàng ngày". */
+export async function getCombinedDailyReport(
+  schoolYearId: string,
+  date: string,
+): Promise<CombinedDailyReport> {
+  const headcountNT = await getHeadcountForGroup(date, "nha_tre");
+  const headcountMG = await getHeadcountForGroup(date, "mau_giao");
+  const ntRation = await getDailyRation(schoolYearId, date, "nha_tre");
+  const mgRation = await getDailyRation(schoolYearId, date, "mau_giao");
+  const ntItems = ntRation ? await listRationItems(ntRation.id) : [];
+  const mgItems = mgRation ? await listRationItems(mgRation.id) : [];
+
+  const rowMap = new Map<string, CombinedRationRow>();
+  function ensureRow(item: RationItemRow): CombinedRationRow {
+    let row = rowMap.get(item.food_id);
+    if (!row) {
+      row = {
+        foodId: item.food_id,
+        foodName: item.food_name,
+        foodGroup: item.food_group,
+        unit: item.unit,
+        nt: null,
+        mg: null,
+      };
+      rowMap.set(item.food_id, row);
+    }
+    return row;
+  }
+  ntItems.forEach((item) => {
+    ensureRow(item).nt = {
+      amountPerChild: item.amount_per_child,
+      unitPrice: item.unit_price,
+      cost: computeItemCost(item, headcountNT),
+    };
+  });
+  mgItems.forEach((item) => {
+    ensureRow(item).mg = {
+      amountPerChild: item.amount_per_child,
+      unitPrice: item.unit_price,
+      cost: computeItemCost(item, headcountMG),
+    };
+  });
+
+  return {
+    date,
+    headcountNT,
+    headcountMG,
+    ntRation,
+    mgRation,
+    rows: [...rowMap.values()],
+    totalCostNT: ntItems.reduce((sum, item) => sum + computeItemCost(item, headcountNT), 0),
+    totalCostMG: mgItems.reduce((sum, item) => sum + computeItemCost(item, headcountMG), 0),
+    budgetNT: headcountNT * (ntRation?.meal_fee_rate ?? 0),
+    budgetMG: headcountMG * (mgRation?.meal_fee_rate ?? 0),
+  };
+}
+
+// ===================== CHECKLIST CHÍNH SÁCH =====================
+
+const POLICY_CHECKLIST_SETTINGS_KEY = "nutrition_policy_checklist_state";
+
+export async function getPolicyChecklistState(): Promise<Record<number, boolean>> {
+  const rows = await dbSelect<{ value_json: string }>(
+    "SELECT value_json FROM system_settings WHERE key = ?",
+    [POLICY_CHECKLIST_SETTINGS_KEY],
+  );
+  if (!rows[0]) return {};
+  try {
+    return JSON.parse(rows[0].value_json) as Record<number, boolean>;
+  } catch {
+    return {};
+  }
+}
+
+export async function setPolicyChecklistItem(index: number, checked: boolean, userId: string): Promise<void> {
+  const current = await getPolicyChecklistState();
+  current[index] = checked;
+  await dbExecute(
+    `INSERT INTO system_settings (id, key, value_json, updated_by, updated_at)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_by = excluded.updated_by, updated_at = excluded.updated_at`,
+    [newId(), POLICY_CHECKLIST_SETTINGS_KEY, JSON.stringify(current), userId, nowIso()],
+  );
+}
+
 export async function changeRationStatus(
   rationId: string,
   toStatus: RecordStatus,

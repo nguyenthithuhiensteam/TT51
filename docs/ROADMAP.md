@@ -207,6 +207,42 @@ lớp như các phân hệ khác của MN360.
   từng khẩu phần khi lập).
 - ✅ `tsc --noEmit`, ESLint, Vitest (30 test), `cargo check`, `vite build` chạy sạch.
 
+### Mở rộng tab Khẩu phần dinh dưỡng — tích hợp đầy đủ nội dung app "Bữa ăn hạnh phúc"
+
+Sau khi bàn giao bản đầu, người dùng phản hồi: phần Nuôi dưỡng cần tích hợp **đầy đủ hơn** nội
+dung của app "Bữa ăn hạnh phúc" (không chỉ phần nhập liệu + đối chiếu dinh dưỡng), đồng thời xác
+nhận các phân hệ khác của MN360 giữ nguyên không thay đổi. Đã rà soát toàn bộ 7 tab của app gốc
+và bổ sung thêm 3 tab con trong "Khẩu phần dinh dưỡng" (chỉ trong phạm vi Nuôi dưỡng, không đụng
+tới phân hệ nào khác):
+
+- ✅ **Tổng hợp tuần** (tương đương `renderTongHop`): bảng số trẻ ăn + chi phí đã nhập theo từng
+  ngày trong tuần (Thứ 2 → Thứ 7) cho cả hai nhóm Nhà trẻ/Mẫu giáo, cộng dồn cả tuần, xuất Excel.
+  Hàm `getWeeklyRationSummary` trong `rationRepo.ts` — không cần bảng CSDL mới, tổng hợp trực
+  tiếp từ `daily_rations`/`ration_items`/điểm danh đã có.
+- ✅ **Chính sách** (tương đương `renderChinhSach`): trích dẫn văn bản căn cứ (01/VBHN-BGDĐT,
+  2195/QĐ-BGDĐT, 218/2025/QH15, 277/2025/NĐ-CP, 17/2025/NQ-HĐND — nội dung tĩnh ở
+  `mealPolicyContent.ts`, có ghi chú "đối chiếu văn bản địa phương" vì mức hỗ trợ khác nhau giữa
+  các tỉnh), đối tượng hưởng hỗ trợ, lịch chi trả, và checklist việc cần làm — checklist lưu bền
+  vững qua `system_settings` (key `nutrition_policy_checklist_state`), chỉ người có quyền
+  `nutrition.edit` mới đánh dấu được.
+- ✅ **In biểu mẫu** (tương đương `renderXuat`/`buildBieuHTML`): xem trước và in "Bảng tính ăn
+  hàng ngày" đúng khuôn giấy hành chính — gộp cột Nhà trẻ + Mẫu giáo cạnh nhau theo từng thực
+  phẩm, dòng tổng cộng, và khối chữ ký NGƯỜI TỔNG HỢP / NGƯỜI DUYỆT / DUYỆT CHI (in kèm tên hiệu
+  trưởng nhà trường). Dùng `window.print()` với CSS `@media print`/`@page` (giống cách Công việc
+  và Văn phòng số đã làm), không dùng cửa sổ popup như app gốc để tương thích tốt hơn với
+  WebView của Tauri. Hàm `getCombinedDailyReport` trong `rationRepo.ts` gộp khẩu phần của hai
+  nhóm cùng ngày thành một bảng theo đúng thực phẩm.
+- ✅ Sửa thiếu sót: nút "Xuất Excel" ở tab Nhập liệu trước đó chưa kiểm tra quyền — nay yêu cầu
+  `nutrition.export` giống các nút xuất/in mới.
+- ⏭️ **Không triển khai "Nhập Excel"** (tương đương `renderImport`/`importExcel` của app gốc):
+  tính năng này đọc lại đúng định dạng file Excel do chính app gốc xuất ra (dò theo vị trí ô cụ
+  thể của một mẫu bảng tính riêng), phục vụ mô hình một máy/một file cục bộ. Trong MN360, dữ liệu
+  đã có sẵn trong CSDL dùng chung của trường nên không cần "xuất ra Excel rồi nhập lại" — làm
+  tính năng này sẽ vừa giả (không có nguồn Excel ngoài nào thực sự cần nhập) vừa rất dễ vỡ khi
+  người dùng chỉnh sửa file. Có thể bổ sung sau nếu trường có nhu cầu nhập số liệu từ một mẫu
+  Excel cụ thể khác đang dùng thực tế.
+- ✅ `tsc --noEmit`, ESLint (0 warning), Vitest (30 test), `vite build` chạy sạch sau khi bổ sung.
+
 ### Ghi chú kiểm thử đã thực hiện — Giai đoạn 6
 
 - Chạy trực tiếp 21 migration bằng Python `sqlite3` trên CSDL trống — không lỗi; đối chiếu số
@@ -221,6 +257,13 @@ lớp như các phân hệ khác của MN360.
   không hiện nút duyệt (đúng vì tài khoản không có quyền `nutrition.approve`).
 - Phát hiện và sửa 1 lỗi hiển thị trong lúc kiểm thử: đơn vị "hộp" hiển thị nhầm thành mã nội
   bộ "hop" ở chế độ chỉ đọc thay vì nhãn tiếng Việt — đã sửa dùng `FOOD_UNIT_LABELS`.
+- Kiểm thử 3 tab con bổ sung (Tổng hợp tuần/Chính sách/In biểu mẫu) bằng bản xem trước trình
+  duyệt (`npm run build:web` + Playwright/Chromium), đăng nhập `nuoiduong`: Tổng hợp tuần hiển
+  thị đúng số trẻ + chi phí cho ngày có dữ liệu (28/07) và "Chưa nhập" cho ngày chỉ có điểm danh
+  mà chưa nhập khẩu phần; In biểu mẫu hiển thị đúng số liệu khớp với tab Nhập liệu (35.700 đ Nhà
+  trẻ, 26.682 đ Mẫu giáo — khớp số đã đối chiếu tay ở trên) và xác nhận bằng
+  `page.emulateMedia({ media: "print" })` rằng khi in chỉ còn lại đúng nội dung biểu mẫu (sidebar/
+  topbar/nút điều khiển đều ẩn).
 
 ## Hướng dẫn chạy thử Giai đoạn 1-6 (PowerShell trên Windows)
 
