@@ -455,6 +455,50 @@ nhà trường xem lại khi cần.
   form tự phục vụ của phụ huynh (Xin nghỉ, Trao đổi với giáo viên...).
 - ✅ `tsc --noEmit`, ESLint (0 warning), Vitest (43 test), `cargo check`, `vite build` chạy sạch.
 
+### Trẻ em / Đội ngũ — Nhập danh sách hàng loạt từ Excel + kết nối Google Drive — ✅ Hoàn thành
+
+Người dùng yêu cầu các nút cần cho phép "tải những dữ liệu có sẵn hoặc kết nối với Drive". Đã hỏi
+rõ phạm vi trước khi làm — người dùng chọn: nhập danh sách trẻ/cán bộ có sẵn từ Excel, và hỗ trợ
+cả hai nguồn chọn tệp (máy tính cục bộ + Google Drive thật, không chỉ chọn tệp trên máy).
+
+- ✅ `src/lib/import/excel.ts`: `parseWorkbookRows` (đọc trang tính đầu tiên của .xlsx thành mảng
+  bản ghi theo tiêu đề cột, tự chuẩn hóa ngày tháng về YYYY-MM-DD kể cả khi Excel lưu dưới dạng
+  Date), `downloadImportTemplate` (sinh tệp mẫu Excel có tiêu đề + 1 dòng ví dụ, tái dùng
+  `downloadBlob` sẵn có).
+- ✅ `src/lib/import/googleDrive.ts`: tích hợp Google Drive **thật** — không giả lập. Dùng Google
+  Identity Services (`initTokenClient`) xin quyền `drive.readonly` + Google Picker API để chọn
+  tệp, tải nội dung qua Drive API (`files.get?alt=media`, hoặc `files/{id}/export` cho Google
+  Sheets). Chỉ cần OAuth Client ID + API Key lưu trong `system_settings` (tái dùng đúng bảng/cách
+  lưu của AI Gateway) — **không lưu Client Secret phía client**, đúng khuyến nghị bảo mật của
+  Google cho ứng dụng chạy trên máy người dùng (Tauri CSP vốn đã `null`/không giới hạn nên không
+  cần sửa cấu hình để tải script Google). Chưa cấu hình → báo lỗi rõ ràng thay vì âm thầm thất
+  bại.
+- ✅ `ImportFileSourceBar.tsx`: 2 nút dùng chung — "Chọn tệp trên máy" (input `type=file` HTML
+  thuần, không cần plugin Tauri, hoạt động giống hệt trên desktop lẫn bản xem trước trình duyệt)
+  và "Chọn từ Google Drive".
+- ✅ `ImportChildrenModal.tsx` (Trẻ em → Hồ sơ trẻ → "Nhập từ Excel"): tải mẫu, đọc tệp, đối chiếu
+  cột "Lớp" với lớp có sẵn (khớp tên, không bắt buộc), validate từng dòng (thiếu tên/ngày sinh sai
+  định dạng/giới tính không hợp lệ), xem trước có đánh dấu lỗi trước khi nhập, nhập tuần tự (tránh
+  đụng độ khi sinh mã `TRE-...` tự tăng), báo cáo số dòng thành công/lỗi.
+- ✅ `ImportStaffModal.tsx` (Đội ngũ → "Nhập từ Excel"): mỗi dòng hợp lệ tạo cả tài khoản đăng nhập
+  mới (dùng chung 1 mật khẩu tạm nhập tại chỗ, bắt buộc đổi ở lần đăng nhập đầu) lẫn hồ sơ cán bộ
+  trong một lượt — đối chiếu cột "Vai trò"/"Loại hợp đồng" với nhãn tiếng Việt có sẵn; tên đăng
+  nhập có thể để trống để tự sinh từ họ tên (bỏ dấu, viết thường, thêm số nếu trùng) hoặc nhập tay.
+- ✅ `SettingsPage.tsx`: thẻ "Tích hợp Google Drive" mới (OAuth Client ID + API Key), theo đúng mẫu
+  giao diện của thẻ AI Gateway đã có.
+- ✅ Kiểm thử qua Playwright trên `dist-web` (nơi `exceljs` được nhúng thật, khác bản artifact rút
+  gọn): sinh tệp Excel thật bằng `exceljs`, dùng `setInputFiles` mô phỏng chọn tệp trên máy —
+  nhập 2 trẻ hợp lệ + 1 dòng lỗi (thiếu tên) bị loại đúng, trẻ nhập vào có gán đúng lớp; nhập 2
+  cán bộ hợp lệ + 1 dòng lỗi (vai trò không tồn tại) bị loại đúng, đăng xuất và đăng nhập lại bằng
+  tài khoản vừa tạo qua Excel xác nhận mật khẩu tạm hoạt động và bắt buộc đổi mật khẩu; lưu cấu
+  hình Google Drive, xác nhận lưu đúng và còn nguyên sau khi điều hướng lại trang Cài đặt; xóa cấu
+  hình rồi bấm "Chọn từ Google Drive" xác nhận hiện đúng thông báo "Chưa cấu hình Google Drive".
+  **Giới hạn kiểm thử đã biết**: môi trường chạy thử không có thông tin xác thực Google Cloud thật
+  và không thể hoàn tất luồng đăng nhập OAuth/Picker của Google (cần trình duyệt thật + tài khoản
+  Google) — phần này chỉ được xác minh đúng logic mã nguồn và đúng hành vi khi CHƯA cấu hình; đăng
+  nhập Google Drive thật cần được xác nhận lại khi trường thật cấu hình Client ID/API Key của họ.
+- ✅ `tsc --noEmit`, ESLint (0 warning), Vitest (43 test), `cargo check`, `vite build` chạy sạch.
+
 ## Hướng dẫn chạy thử Giai đoạn 1-6 (PowerShell trên Windows)
 
 Xem chi tiết đầy đủ trong `mn360/README.md`, tóm tắt:

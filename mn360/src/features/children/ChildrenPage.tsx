@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { FileDown, Plus, Search } from "lucide-react";
+import { FileDown, FileUp, Plus, Search } from "lucide-react";
 import clsx from "clsx";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -26,6 +26,7 @@ import { CHILD_STATUS_LABELS, ATTENDANCE_LABELS } from "../../lib/db/types";
 import type { AttendanceStatus, ChildStatus, User } from "../../lib/db/types";
 import { ClassFormModal, type ClassFormValues } from "./ClassFormModal";
 import { ChildFormModal, type ChildFormValues } from "./ChildFormModal";
+import { ImportChildrenModal } from "./ImportChildrenModal";
 import { AttendanceReportsTab } from "./AttendanceReportsTab";
 import { exportAttendanceReportToExcel, exportChildrenToExcel } from "../../lib/export/excel";
 
@@ -169,6 +170,7 @@ function ChildrenTab({ classes }: { classes: ClassWithTeacher[] }) {
   const [items, setItems] = useState<ChildWithClass[]>([]);
   const [total, setTotal] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const refresh = () => {
@@ -266,6 +268,11 @@ function ChildrenTab({ classes }: { classes: ClassWithTeacher[] }) {
             </Button>
           )}
           {hasPermission("children.create") && (
+            <Button size="sm" variant="secondary" onClick={() => setImportModalOpen(true)}>
+              <FileUp size={14} /> Nhập từ Excel
+            </Button>
+          )}
+          {hasPermission("children.create") && (
             <Button size="sm" onClick={() => setModalOpen(true)}>
               <Plus size={14} /> Tiếp nhận trẻ
             </Button>
@@ -316,6 +323,19 @@ function ChildrenTab({ classes }: { classes: ClassWithTeacher[] }) {
         onSubmit={handleCreate}
         classes={classes}
         submitting={submitting}
+      />
+
+      <ImportChildrenModal
+        open={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        classes={classes}
+        schoolYearId={schoolYear?.id}
+        createdBy={user?.id ?? ""}
+        sessionId={useAuthStore.getState().sessionId}
+        onImported={() => {
+          setPage(1);
+          refresh();
+        }}
       />
     </Card>
   );

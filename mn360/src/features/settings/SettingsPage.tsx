@@ -20,6 +20,7 @@ import type { School, SchoolYear } from "../../lib/db/types";
 import { defaultModelFor, loadAiConfig, saveAiConfig, type AiConfig, type AiProvider } from "../../lib/ai/gateway";
 import { Select } from "../../components/ui/Input";
 import { getDefaultMealFeeRate, setDefaultMealFeeRate } from "../../lib/db/rationRepo";
+import { loadGoogleDriveConfig, saveGoogleDriveConfig, type GoogleDriveConfig } from "../../lib/import/googleDrive";
 
 export function SettingsPage() {
   const user = useAuthStore((s) => s.user);
@@ -36,6 +37,9 @@ export function SettingsPage() {
   const [mealFeeRate, setMealFeeRateState] = useState("20000");
   const [mealFeeBusy, setMealFeeBusy] = useState(false);
   const [mealFeeMessage, setMealFeeMessage] = useState<string | null>(null);
+  const [driveConfig, setDriveConfig] = useState<GoogleDriveConfig>({ clientId: "", apiKey: "" });
+  const [driveBusy, setDriveBusy] = useState(false);
+  const [driveMessage, setDriveMessage] = useState<string | null>(null);
   const canEdit = hasPermission("system.edit");
 
   const schoolForm = useForm<SchoolFormInput>({ resolver: zodResolver(schoolSchema) });
@@ -56,6 +60,7 @@ export function SettingsPage() {
     setDataDirState(await getDataDir());
     setAiConfig(await loadAiConfig());
     setMealFeeRateState(String(await getDefaultMealFeeRate()));
+    setDriveConfig(await loadGoogleDriveConfig());
   }
 
   useEffect(() => {
@@ -274,6 +279,57 @@ export function SettingsPage() {
               Lưu cấu hình AI
             </Button>
             {aiMessage && <span className="ml-3 text-sm text-mint">{aiMessage}</span>}
+          </div>
+        )}
+      </Card>
+
+      <Card>
+        <h2 className="mb-2 text-sm font-semibold text-navy">Tích hợp Google Drive</h2>
+        <p className="mb-3 text-sm text-navy/60">
+          Dùng để chọn tệp Excel trực tiếp từ Google Drive khi nhập danh sách trẻ/cán bộ hàng loạt.
+          Cần Internet. Chỉ cần OAuth Client ID + API Key (tạo tại Google Cloud Console → APIs &
+          Services → Credentials, bật Google Picker API và Google Drive API) — MN360 không lưu
+          Client Secret, chỉ xin quyền đọc tệp (drive.readonly), không truy cập gì khác trên Drive
+          của bạn.
+        </p>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Field label="OAuth Client ID">
+            <Input
+              disabled={!canEdit}
+              value={driveConfig.clientId}
+              onChange={(e) => setDriveConfig((p) => ({ ...p, clientId: e.target.value }))}
+              placeholder="xxxxxxxx.apps.googleusercontent.com"
+            />
+          </Field>
+          <Field label="API Key">
+            <Input
+              disabled={!canEdit}
+              value={driveConfig.apiKey}
+              onChange={(e) => setDriveConfig((p) => ({ ...p, apiKey: e.target.value }))}
+              placeholder="Dán API Key tại đây"
+            />
+          </Field>
+        </div>
+        {canEdit && (
+          <div className="mt-3">
+            <Button
+              size="sm"
+              disabled={driveBusy}
+              onClick={async () => {
+                if (!user) return;
+                setDriveBusy(true);
+                setDriveMessage(null);
+                try {
+                  await saveGoogleDriveConfig(driveConfig, user.id);
+                  setDriveMessage("Đã lưu cấu hình Google Drive.");
+                } finally {
+                  setDriveBusy(false);
+                }
+              }}
+            >
+              Lưu cấu hình Google Drive
+            </Button>
+            {driveMessage && <span className="ml-3 text-sm text-mint">{driveMessage}</span>}
           </div>
         )}
       </Card>

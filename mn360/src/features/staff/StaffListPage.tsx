@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Search } from "lucide-react";
+import { FileUp, Plus, Search } from "lucide-react";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
@@ -13,6 +13,7 @@ import { EMPLOYMENT_TYPE_LABELS } from "../../lib/db/types";
 import type { Role, User } from "../../lib/db/types";
 import { StaffFormModal, type StaffFormValues } from "./StaffFormModal";
 import { CreateStaffAccountModal, type CreateStaffAccountValues } from "./CreateStaffAccountModal";
+import { ImportStaffModal } from "./ImportStaffModal";
 
 const PAGE_SIZE = 15;
 
@@ -31,6 +32,7 @@ export function StaffListPage() {
   const [accountModalOpen, setAccountModalOpen] = useState(false);
   const [accountSubmitting, setAccountSubmitting] = useState(false);
   const [accountError, setAccountError] = useState<string | null>(null);
+  const [importModalOpen, setImportModalOpen] = useState(false);
   const sessionId = useAuthStore((s) => s.sessionId);
 
   const refresh = () => {
@@ -123,6 +125,11 @@ export function StaffListPage() {
         </div>
         <div className="flex gap-2">
           {hasPermission("system.edit") && (
+            <Button variant="secondary" onClick={() => setImportModalOpen(true)}>
+              <FileUp size={16} /> Nhập từ Excel
+            </Button>
+          )}
+          {hasPermission("system.edit") && (
             <Button variant="secondary" onClick={() => setAccountModalOpen(true)}>
               <Plus size={16} /> Thêm cán bộ mới (tài khoản mới)
             </Button>
@@ -200,6 +207,19 @@ export function StaffListPage() {
         roles={roles}
         submitting={accountSubmitting}
         error={accountError}
+      />
+
+      <ImportStaffModal
+        open={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        roles={roles}
+        createdBy={user?.id ?? ""}
+        sessionId={sessionId}
+        onImported={() => {
+          setPage(1);
+          refresh();
+          listActiveUsers().then(setUsers);
+        }}
       />
     </div>
   );
