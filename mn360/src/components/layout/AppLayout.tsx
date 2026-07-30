@@ -3,6 +3,7 @@ import { Outlet } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { LockScreen } from "./LockScreen";
+import { FloatingAiAssistant } from "./FloatingAiAssistant";
 import { useAuthStore } from "../../store/authStore";
 import { useIdleLock } from "../../lib/utils/useIdleLock";
 
@@ -25,6 +26,7 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
+      {!isLocked && <FloatingAiAssistant />}
       {isLocked && <LockScreen />}
     </div>
   );

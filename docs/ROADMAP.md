@@ -499,6 +499,24 @@ cả hai nguồn chọn tệp (máy tính cục bộ + Google Drive thật, khô
   nhập Google Drive thật cần được xác nhận lại khi trường thật cấu hình Client ID/API Key của họ.
 - ✅ `tsc --noEmit`, ESLint (0 warning), Vitest (43 test), `cargo check`, `vite build` chạy sạch.
 
+### Nút Trợ lý AI nổi trên mọi trang — ✅ Hoàn thành
+
+Người dùng yêu cầu bổ sung "nút AI". Đã hỏi rõ vị trí/chức năng trước khi làm — người dùng chọn
+nút AI nổi (floating), hiển thị trên mọi trang trong ứng dụng.
+
+- ✅ `FloatingAiAssistant.tsx`: nút tròn góc dưới bên phải (biểu tượng Sparkles), bấm mở khung
+  hỏi-đáp nhỏ; dùng lại đúng `generateWithAi` (AI Gateway đã cấu hình tại Cài đặt) — không tạo
+  cổng AI riêng. Luôn có dòng nhắc "Không nhập tên, ngày sinh, thông tin sức khỏe của trẻ/phụ
+  huynh vào đây" ở đầu khung chat. Lịch sử hội thoại chỉ lưu trong phiên làm việc (không ghi CSDL)
+  vì đây là trợ lý hỏi-đáp nhanh dùng chung, khác với Trợ lý AI tư vấn phụ huynh (có lưu lịch sử
+  để nhà trường xem lại).
+- ✅ Gắn vào `AppLayout.tsx` nên chỉ hiển thị sau khi đăng nhập (không có ở màn hình đăng nhập),
+  ẩn khi màn hình đang khóa (`isLocked`) để tránh dùng AI khi chưa xác thực lại.
+- ✅ Kiểm thử qua Playwright: xác nhận nút KHÔNG hiện ở màn hình đăng nhập, HIỆN sau khi đăng nhập
+  và giữ nguyên khi chuyển trang (Tổng quan → Trẻ em); gửi câu hỏi nhận đúng thông báo "AI đang
+  tắt hoặc chưa cấu hình khóa API" (trường demo/bản xem trước chưa bật AI — đúng hành vi mong đợi).
+- ✅ `tsc --noEmit`, ESLint (0 warning), Vitest (43 test), `cargo check`, `vite build` chạy sạch.
+
 ## Hướng dẫn chạy thử Giai đoạn 1-6 (PowerShell trên Windows)
 
 Xem chi tiết đầy đủ trong `mn360/README.md`, tóm tắt:
