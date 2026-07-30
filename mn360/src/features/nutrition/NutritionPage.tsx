@@ -37,7 +37,9 @@ import {
   type RecordStatus,
 } from "../../lib/db/types";
 
-type Tab = "menu" | "dishes" | "delivery";
+import { MealRationTab } from "./MealRationTab";
+
+type Tab = "menu" | "ration" | "dishes" | "delivery";
 
 interface MenuAction {
   label: string;
@@ -84,6 +86,7 @@ export function NutritionPage() {
         {(
           [
             ["menu", "Thực đơn"],
+            ["ration", "Khẩu phần dinh dưỡng"],
             ["dishes", "Ngân hàng món ăn"],
             ["delivery", "Giao nhận thực phẩm"],
           ] as [Tab, string][]
@@ -101,6 +104,7 @@ export function NutritionPage() {
         ))}
       </div>
       {tab === "menu" && <MenuTab classes={classes} />}
+      {tab === "ration" && <MealRationTab />}
       {tab === "dishes" && <DishesTab />}
       {tab === "delivery" && <DeliveryTab />}
     </div>

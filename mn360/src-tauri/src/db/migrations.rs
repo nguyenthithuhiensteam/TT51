@@ -118,5 +118,17 @@ pub fn get_migrations() -> Vec<Migration> {
             sql: include_str!("./sql/019_perf_indexes.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 20,
+            description: "meal_ration_schema",
+            sql: include_str!("./sql/020_meal_ration.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 21,
+            description: "seed_demo_meal_ration",
+            sql: include_str!("./sql/021_seed_meal_ration.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }

@@ -1,6 +1,6 @@
 # MN360 — Tiêu chí nghiệm thu
 
-Trạng thái áp dụng cho **bản Giai đoạn 1-5**. Bộ cài Windows chính thức (`.msi`/`.exe`) chưa
+Trạng thái áp dụng cho **bản Giai đoạn 1-6**. Bộ cài Windows chính thức (`.msi`/`.exe`) chưa
 được tạo ra trong môi trường phát triển (Linux headless) — cấu hình đóng gói đã hoàn thiện,
 cần chạy `npm run tauri build` trên máy Windows theo `mn360/README.md` để có tệp cài đặt cuối
 cùng.
@@ -18,8 +18,8 @@ cùng.
 | 9 | Quy trình gửi duyệt và phê duyệt hoạt động | ✅ Công việc, Văn phòng số, Kế hoạch giáo dục, Nghỉ phép, Đánh giá viên chức, Thực đơn, Kiểm tra an toàn, Phiếu thu/chi, Tiêu chí kiểm định, Nghị quyết Đảng, Đơn xin nghỉ của phụ huynh |
 | 10 | Có lịch sử chỉnh sửa | ✅ `task_status_history`, `child_status_history`, `asset_status_history`, `approvals`, `audit_logs` |
 | 11 | Có cảnh báo nhiệm vụ quá hạn | ✅ Tính theo `due_date`, chống trùng bằng `notifications.dedup_key` |
-| 12 | Điểm danh tự động cập nhật số suất ăn | ✅ Thực đơn lấy số trẻ ăn trực tiếp từ bảng `attendance`, không nhập lại |
-| 13 | Có thể xuất Word, Excel, PDF | 🚧 Đã có Word (kế hoạch giáo dục) và Excel (công việc, trẻ em, chuyên cần, tài chính); PDF vẫn chưa triển khai — dời sang phạm vi mở rộng sau |
+| 12 | Điểm danh tự động cập nhật số suất ăn | ✅ Thực đơn và Khẩu phần dinh dưỡng đều lấy số trẻ ăn trực tiếp từ bảng `attendance`, không nhập lại |
+| 13 | Có thể xuất Word, Excel, PDF | 🚧 Đã có Word (kế hoạch giáo dục) và Excel (công việc, trẻ em, chuyên cần, tài chính, khẩu phần dinh dưỡng); PDF vẫn chưa triển khai — dời sang phạm vi mở rộng sau |
 | 14 | Sao lưu và khôi phục thành công | ✅ Có lệnh sao lưu thủ công + khôi phục, kiểm thử bằng script |
 | 15 | Không tạo dữ liệu trùng khi thao tác/đồng bộ lại | ✅ Ràng buộc `UNIQUE` trên các cặp khóa nghiệp vụ (mã hồ sơ, ngày điểm danh, bước kiểm thực, kỳ đảng phí...); `SyncQueue` cho giai đoạn có máy chủ |
 | 16 | Không có lỗi nghiêm trọng trên giao diện | ✅ Đã kiểm thử thủ công các luồng chính GĐ1-4 |
@@ -103,3 +103,15 @@ cùng.
   biên dịch thành công, không panic trong log.
 - Icon đóng gói (`32x32.png`, `128x128.png`, `128x128@2x.png`, `icon.ico`, `icon.icns`) đã kiểm
   tra định dạng bằng `file` — hợp lệ cho cả WiX (MSI) và NSIS.
+
+### Giai đoạn 6 — Khẩu phần dinh dưỡng
+
+- Migration 020-021 (21 migration liên tiếp) đã chạy thử trực tiếp trên SQLite thật, không lỗi;
+  đối chiếu đúng 25 thực phẩm, 16 định mức dinh dưỡng, 2 khẩu phần demo, 10 dòng thực phẩm.
+- Tính tay bằng Python theo đúng công thức tổng dinh dưỡng, đối chiếu khớp 100% với số hiển
+  thị trên giao diện thật (Mẫu giáo 447.7 kcal/trẻ, chi phí 26.682 đ; Nhà trẻ 327.9 kcal/trẻ,
+  chi phí 35.700 đ) khi chạy thử qua Xvfb + WebKitGTK.
+- Đăng nhập bằng tài khoản `nuoiduong`, xác nhận sidebar/quyền đúng vai trò `nutrition_staff`
+  (không thấy nút duyệt vì thiếu quyền `nutrition.approve`), khẩu phần đã duyệt hiển thị chỉ
+  đọc, khẩu phần mới tự tạo bản nháp trống và chỉnh sửa được.
+- `tsc --noEmit`, ESLint, Vitest (30 test), `cargo check`, `vite build` chạy sạch.

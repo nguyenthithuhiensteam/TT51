@@ -19,6 +19,7 @@ import { useAuthStore } from "../../store/authStore";
 import type { School, SchoolYear } from "../../lib/db/types";
 import { defaultModelFor, loadAiConfig, saveAiConfig, type AiConfig, type AiProvider } from "../../lib/ai/gateway";
 import { Select } from "../../components/ui/Input";
+import { getDefaultMealFeeRate, setDefaultMealFeeRate } from "../../lib/db/rationRepo";
 
 export function SettingsPage() {
   const user = useAuthStore((s) => s.user);
@@ -32,6 +33,9 @@ export function SettingsPage() {
   const [aiConfig, setAiConfig] = useState<AiConfig>({ provider: "off", apiKey: "", model: "" });
   const [aiBusy, setAiBusy] = useState(false);
   const [aiMessage, setAiMessage] = useState<string | null>(null);
+  const [mealFeeRate, setMealFeeRateState] = useState("20000");
+  const [mealFeeBusy, setMealFeeBusy] = useState(false);
+  const [mealFeeMessage, setMealFeeMessage] = useState<string | null>(null);
   const canEdit = hasPermission("system.edit");
 
   const schoolForm = useForm<SchoolFormInput>({ resolver: zodResolver(schoolSchema) });
@@ -51,6 +55,7 @@ export function SettingsPage() {
     }
     setDataDirState(await getDataDir());
     setAiConfig(await loadAiConfig());
+    setMealFeeRateState(String(await getDefaultMealFeeRate()));
   }
 
   useEffect(() => {
@@ -269,6 +274,48 @@ export function SettingsPage() {
               Lưu cấu hình AI
             </Button>
             {aiMessage && <span className="ml-3 text-sm text-mint">{aiMessage}</span>}
+          </div>
+        )}
+      </Card>
+
+      <Card>
+        <h2 className="mb-2 text-sm font-semibold text-navy">Định mức tiền ăn</h2>
+        <p className="mb-3 text-sm text-navy/60">
+          Áp dụng làm mặc định khi lập khẩu phần ngày mới (Nuôi dưỡng → Khẩu phần dinh dưỡng).
+          Đổi định mức ở đây không ảnh hưởng các khẩu phần đã lập trước đó.
+        </p>
+        <div className="max-w-xs">
+          <Field label="Định mức tiền ăn/trẻ/ngày (đ)">
+            <Input
+              type="number"
+              min="0"
+              step="1000"
+              disabled={!canEdit}
+              value={mealFeeRate}
+              onChange={(e) => setMealFeeRateState(e.target.value)}
+            />
+          </Field>
+        </div>
+        {canEdit && (
+          <div className="mt-3">
+            <Button
+              size="sm"
+              disabled={mealFeeBusy}
+              onClick={async () => {
+                if (!user) return;
+                setMealFeeBusy(true);
+                setMealFeeMessage(null);
+                try {
+                  await setDefaultMealFeeRate(parseFloat(mealFeeRate) || 0, user.id);
+                  setMealFeeMessage("Đã lưu định mức tiền ăn.");
+                } finally {
+                  setMealFeeBusy(false);
+                }
+              }}
+            >
+              Lưu định mức
+            </Button>
+            {mealFeeMessage && <span className="ml-3 text-sm text-mint">{mealFeeMessage}</span>}
           </div>
         )}
       </Card>

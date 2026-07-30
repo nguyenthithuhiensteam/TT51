@@ -352,6 +352,91 @@ export const INSPECTION_STEP_LABELS: Record<InspectionStep, string> = {
   sample_storage: "Lưu mẫu",
 };
 
+// ===================== KHẨU PHẦN ĂN (dinh dưỡng + chi phí) =====================
+
+export type NutritionGroup = "nha_tre" | "mau_giao";
+
+export const NUTRITION_GROUP_LABELS: Record<NutritionGroup, string> = {
+  nha_tre: "Nhà trẻ",
+  mau_giao: "Mẫu giáo",
+};
+
+export type FoodUnit = "gam" | "ml" | "hop";
+
+export const FOOD_UNIT_LABELS: Record<FoodUnit, string> = {
+  gam: "gam",
+  ml: "ml",
+  hop: "hộp",
+};
+
+export interface Food {
+  id: string;
+  code: string;
+  name: string;
+  food_group: string;
+  unit: FoodUnit;
+  protein_per_100: number;
+  fat_per_100: number;
+  carb_per_100: number;
+  kcal_per_100: number;
+  calcium_per_100: number;
+  iron_per_100: number;
+  vitamin_a_per_100: number;
+  vitamin_c_per_100: number;
+  status: "active" | "inactive";
+}
+
+export type NutrientKey =
+  | "kcal"
+  | "protein"
+  | "fat"
+  | "carb"
+  | "calcium"
+  | "iron"
+  | "vitamin_a"
+  | "vitamin_c";
+
+export const NUTRIENT_LABELS: Record<NutrientKey, { label: string; unit: string }> = {
+  kcal: { label: "Năng lượng", unit: "kcal" },
+  protein: { label: "Protein (P)", unit: "g" },
+  fat: { label: "Lipit (L)", unit: "g" },
+  carb: { label: "Gluxit (G)", unit: "g" },
+  calcium: { label: "Canxi", unit: "mg" },
+  iron: { label: "Sắt", unit: "mg" },
+  vitamin_a: { label: "Vitamin A", unit: "mcg" },
+  vitamin_c: { label: "Vitamin C", unit: "mg" },
+};
+
+export interface NutritionNorm {
+  nutrition_group: NutritionGroup;
+  nutrient_key: NutrientKey;
+  min_value: number | null;
+  max_value: number | null;
+}
+
+export interface DailyRation {
+  id: string;
+  code: string;
+  school_year_id: string;
+  ration_date: string;
+  nutrition_group: NutritionGroup;
+  meal_fee_rate: number;
+  status: RecordStatus;
+  version: number;
+  created_by: string;
+  created_at: string;
+  updated_by: string | null;
+  updated_at: string;
+}
+
+export interface RationItem {
+  id: string;
+  ration_id: string;
+  food_id: string;
+  amount_per_child: number;
+  unit_price: number;
+}
+
 // ===================== GIAI ĐOẠN 3: SỨC KHỎE – AN TOÀN =====================
 
 export type IncidentSeverity = "low" | "medium" | "high";

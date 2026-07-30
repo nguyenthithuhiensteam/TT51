@@ -15,11 +15,11 @@ chạy local-first trên Windows (Tauri 2 + React + TypeScript + SQLite).
 
 Xem hướng dẫn cài đặt, chạy thử và tài khoản demo trong [`mn360/README.md`](./mn360/README.md).
 
-Trạng thái hiện tại: **Giai đoạn 0-5 đã hoàn thành** — nền tảng (cơ sở dữ liệu, đăng nhập,
+Trạng thái hiện tại: **Giai đoạn 0-6 đã hoàn thành** — nền tảng (cơ sở dữ liệu, đăng nhập,
 phân quyền, cấu hình trường/năm học, giao diện chính, Tổng quan, Công việc, Văn phòng số, sao
 lưu/khôi phục), nghiệp vụ cốt lõi (Trẻ em, Đội ngũ, Chuyên môn), chăm sóc/vận hành (Nuôi
-dưỡng, Sức khỏe – An toàn, Tài chính – Tài sản), chất lượng/kết nối (Kiểm định, Công tác
-Đảng, Phụ huynh, AI Gateway), và hoàn thiện (tối ưu hiệu năng, chuẩn hóa cấu hình đóng gói
-Windows, tài liệu sử dụng/bàn giao). Đồng bộ mạng LAN/đám mây, thông báo đa kênh (cần hạ tầng
-máy chủ/dịch vụ ngoài) và bộ cài `.msi`/`.exe` thật (cần build trên máy Windows) vẫn còn lại —
-chi tiết ở `docs/ROADMAP.md`.
+dưỡng — gồm tính khẩu phần dinh dưỡng và chi phí, Sức khỏe – An toàn, Tài chính – Tài sản),
+chất lượng/kết nối (Kiểm định, Công tác Đảng, Phụ huynh, AI Gateway), và hoàn thiện (tối ưu
+hiệu năng, chuẩn hóa cấu hình đóng gói Windows, tài liệu sử dụng/bàn giao). Đồng bộ mạng LAN/
+đám mây, thông báo đa kênh (cần hạ tầng máy chủ/dịch vụ ngoài) và bộ cài `.msi`/`.exe` thật
+(cần build trên máy Windows) vẫn còn lại — chi tiết ở `docs/ROADMAP.md`.

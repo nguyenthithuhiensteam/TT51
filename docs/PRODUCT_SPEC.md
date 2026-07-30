@@ -88,6 +88,10 @@ Xem chi tiết trong `docs/ROADMAP.md`. Giai đoạn 0–5 (đã triển khai):
 - Giai đoạn 5: tối ưu hiệu năng (code-splitting theo route, tách vendor chunk cho thư viện xuất
   tệp, bổ sung 15 chỉ mục CSDL còn thiếu), chuẩn hóa cấu hình đóng gói Windows (WiX/NSIS, ngôn
   ngữ tiếng Việt, icon), tài liệu hướng dẫn sử dụng theo phân hệ và tài liệu bàn giao/vận hành.
+- Giai đoạn 6: tích hợp tính khẩu phần ăn vào Nuôi dưỡng — cơ sở dữ liệu thành phần dinh dưỡng
+  thực phẩm, đối chiếu định mức dinh dưỡng theo nhóm tuổi (Nhà trẻ/Mẫu giáo, toàn trường theo
+  đúng cách nhà trường vận hành), tính chi phí và đối chiếu tiền ăn với số trẻ lấy tự động từ
+  điểm danh.
 
 Chưa triển khai (dời sang phạm vi mở rộng sau): xuất PDF, bộ cài `.msi`/`.exe` thật (cấu hình
 đã sẵn sàng nhưng cần build trên máy Windows), đồng bộ mạng LAN/đám mây (cần hạ tầng máy chủ),
@@ -104,7 +108,7 @@ Nhân viên y tế, Nhân viên nuôi dưỡng, Cấp ủy, Phụ huynh, Quản 
 → Đã khóa → Đã lưu trữ / Đã hủy`. Mọi thay đổi trạng thái ghi vào `Approvals`/`AuditLogs`
 kèm người thực hiện, thời điểm, trạng thái trước/sau, lý do, phiên đăng nhập.
 
-## 8. Giới hạn đã biết ở bản Giai đoạn 1-5
+## 8. Giới hạn đã biết ở bản Giai đoạn 1-6
 
 - Chưa đóng gói bộ cài `.msi`/`.exe` Windows cuối cùng (cần máy Windows có Visual Studio
   Build Tools; môi trường xây dựng hiện tại là Linux headless, chỉ kiểm tra biên dịch

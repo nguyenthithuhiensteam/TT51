@@ -124,3 +124,25 @@ yêu cầu gốc:
 `src/lib/db/*` định nghĩa interface `Repository<T>` (list/find/create/update/softDelete) và
 một implementation `SqliteRepository` dùng `tauri-plugin-sql`. Khi triển khai máy chủ nhiều
 người dùng, chỉ cần viết `PostgresRepository` cùng interface mà không đổi tầng nghiệp vụ/UI.
+
+## 6. Bổ sung đã triển khai: Khẩu phần ăn (dinh dưỡng + chi phí)
+
+Migration 020-021 (`src-tauri/src/db/sql/`), DAL `src/lib/db/rationRepo.ts`. Khác với danh
+sách định hướng ở mục 3 (dùng tên `ingredients`), tên bảng thực tế đã triển khai:
+
+- `classes.nutrition_group` (`nha_tre`/`mau_giao`) — cột bổ sung, suy ra tự động từ
+  `age_group` hiện có, có thể chỉnh tay nếu suy luận sai.
+- `foods` — thành phần dinh dưỡng (đạm/béo/đường/kcal/canxi/sắt/vitamin A/vitamin C) trên
+  100 đơn vị (100g/100ml, hoặc 1 đơn vị nếu `unit = 'hop'`); seed sẵn 25 thực phẩm thường
+  dùng, có thể thêm thực phẩm ngoài danh mục ngay trên giao diện.
+- `nutrition_norms` — định mức đối chiếu theo nhóm tuổi (nguồn: NKN người Việt Nam 2016).
+- `daily_rations` — khẩu phần một ngày của một nhóm tuổi **toàn trường** (không tách theo
+  từng lớp, theo đúng cách nhà trường đang vận hành); `meal_fee_rate` lưu snapshot định mức
+  tiền ăn/trẻ/ngày tại thời điểm lập để không ảnh hưởng báo cáo cũ khi đổi định mức sau này;
+  dùng chung `RecordStatus` (draft→...→approved) và bảng `approvals`/`audit_logs` như các
+  hồ sơ khác.
+- `ration_items` — từng dòng thực phẩm trong khẩu phần (định mức/trẻ, đơn giá).
+- Số trẻ mỗi nhóm lấy tự động từ `attendance` JOIN `classes.nutrition_group` — không nhập
+  lại thủ công, giữ đúng nguyên tắc "một dữ liệu — một nguồn gốc chịu trách nhiệm".
+- Định mức tiền ăn mặc định lưu trong `system_settings` (key `meal_fee_rate_per_child_per_day`),
+  cấu hình tại Cài đặt.

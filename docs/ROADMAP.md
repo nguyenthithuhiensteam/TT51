@@ -176,7 +176,53 @@ Chú thích trạng thái: `✅ Hoàn thành` · `🚧 Đang làm` · `⬜ Chưa
   Windows) và thêm migration 019 — xác nhận Tauri tự rebuild khi phát hiện đổi cấu hình, biên
   dịch thành công, cửa sổ chạy ổn định, không panic trong toàn bộ log.
 
-## Hướng dẫn chạy thử Giai đoạn 1-5 (PowerShell trên Windows)
+## Giai đoạn 6 — Tích hợp tính khẩu phần ăn (Nuôi dưỡng) — ✅ Hoàn thành
+
+Theo yêu cầu của nhà trường (dựa trên công cụ tính khẩu phần sẵn có "Bữa ăn hạnh phúc" của
+Trường Mầm non Hương Sen): tích hợp tính dinh dưỡng và chi phí khẩu phần vào phân hệ Nuôi
+dưỡng. Đã thống nhất với người dùng: khẩu phần tính gộp theo 2 nhóm tuổi **toàn trường** (Nhà
+trẻ/Mẫu giáo) mỗi ngày — giữ đúng cách nhà trường đang vận hành, không tách riêng theo từng
+lớp như các phân hệ khác của MN360.
+
+- ✅ Migration 020: thêm cột `classes.nutrition_group` (suy tự động từ `age_group` hiện có,
+  sửa tay được nếu suy luận sai), bảng `foods` (thành phần dinh dưỡng P/L/G/kcal/Ca/Fe/VitA/
+  VitC trên 100 đơn vị), `nutrition_norms` (định mức theo nhóm tuổi, nguồn NKN người Việt Nam
+  2016), `daily_rations` (khẩu phần một ngày của một nhóm — dùng chung `RecordStatus` và
+  `approvals`/`audit_logs` như các hồ sơ khác, snapshot `meal_fee_rate` để không ảnh hưởng báo
+  cáo cũ khi đổi định mức sau), `ration_items` (từng dòng thực phẩm).
+- ✅ Migration 021: seed 25 thực phẩm thường dùng + 16 dòng định mức dinh dưỡng (2 nhóm × 8
+  chất) + dữ liệu demo (khẩu phần mẫu ngày 2026-07-28 cho cả hai nhóm, một đã duyệt một đang
+  chờ duyệt) + bổ sung điểm danh cho lớp Nhà trẻ C để có số liệu demo đầy đủ cho cả hai nhóm.
+- ✅ `rationRepo.ts`: tính tổng dinh dưỡng/trẻ, tính chi phí (phân biệt đơn vị gam/ml theo
+  đơn giá/kg và đơn vị hộp theo đơn giá/hộp), đối chiếu định mức (đạt/thiếu/cao), đối chiếu
+  tiền ăn (tiêu chuẩn được chi theo số trẻ thực tế × định mức, đã chi, thừa/thiếu). **Số trẻ
+  mỗi nhóm lấy tự động từ điểm danh** (JOIN `classes.nutrition_group`) — không nhập lại thủ
+  công, đúng nguyên tắc "một dữ liệu — một nguồn gốc chịu trách nhiệm" đã áp dụng cho Thực đơn.
+- ✅ Tab "Khẩu phần dinh dưỡng" mới trong Nuôi dưỡng: chọn ngày + nhóm tuổi, thêm/sửa/xóa dòng
+  thực phẩm (kèm thêm thực phẩm ngoài danh mục), bảng đối chiếu dinh dưỡng theo 8 chất (giá
+  trị/chuẩn/% đạt/nhãn trạng thái), bảng đối chiếu tiền ăn, quy trình gửi duyệt/duyệt/yêu cầu
+  điều chỉnh dùng chung cơ chế với Thực đơn (người duyệt phải khác người lập), xuất Excel.
+  Chỉ chỉnh sửa được khi hồ sơ ở trạng thái `draft`/`needs_revision`; đã duyệt thì chỉ xem.
+- ✅ Cài đặt định mức tiền ăn/trẻ/ngày mặc định (lưu trong `system_settings`, snapshot vào
+  từng khẩu phần khi lập).
+- ✅ `tsc --noEmit`, ESLint, Vitest (30 test), `cargo check`, `vite build` chạy sạch.
+
+### Ghi chú kiểm thử đã thực hiện — Giai đoạn 6
+
+- Chạy trực tiếp 21 migration bằng Python `sqlite3` trên CSDL trống — không lỗi; đối chiếu số
+  dòng seed đúng thiết kế (25 thực phẩm, 16 định mức, 2 khẩu phần demo, 10 dòng thực phẩm).
+- Tính tay bằng Python lại đúng công thức `Σ(dinh_dưỡng_100g × định_mức/trẻ ÷ 100)` cho cả hai
+  khẩu phần demo, đối chiếu khớp 100% với số hiển thị trên giao diện khi chạy thử ứng dụng
+  thật (Xvfb + WebKitGTK): Mẫu giáo 447.7 kcal/trẻ, chi phí 26.682 đ; Nhà trẻ 327.9 kcal/trẻ,
+  chi phí 35.700 đ.
+- Đăng nhập bằng tài khoản `nuoiduong` (Nhân viên nuôi dưỡng), xác nhận: sidebar chỉ hiện đúng
+  3 mục theo phân quyền vai trò; khẩu phần ngày mới tự tạo bản nháp trống, chỉnh sửa được;
+  khẩu phần đã duyệt hiển thị chỉ đọc (không có ô nhập, không có nút xóa); khẩu phần chờ duyệt
+  không hiện nút duyệt (đúng vì tài khoản không có quyền `nutrition.approve`).
+- Phát hiện và sửa 1 lỗi hiển thị trong lúc kiểm thử: đơn vị "hộp" hiển thị nhầm thành mã nội
+  bộ "hop" ở chế độ chỉ đọc thay vì nhãn tiếng Việt — đã sửa dùng `FOOD_UNIT_LABELS`.
+
+## Hướng dẫn chạy thử Giai đoạn 1-6 (PowerShell trên Windows)
 
 Xem chi tiết đầy đủ trong `mn360/README.md`, tóm tắt:
 
@@ -188,10 +234,12 @@ npm run tauri dev
 
 Tài khoản demo: `hieutruong` / `MN360@2026` (bắt buộc đổi mật khẩu lần đăng nhập đầu).
 Để thử Phụ huynh, đăng nhập `phuhuynh1` / `MN360@2026` (đã liên kết sẵn với trẻ "Nguyễn Văn An").
+Để thử Khẩu phần dinh dưỡng, đăng nhập `nuoiduong` / `MN360@2026`, vào Nuôi dưỡng → Khẩu phần
+dinh dưỡng, xem ngày 28/07/2026.
 
 Nếu đã chạy ứng dụng từ trước, CSDL SQLite hiện có sẽ tự động áp dụng thêm các migration mới
-(004-008 Giai đoạn 2, 009-013 Giai đoạn 3, 014-018 Giai đoạn 4, 019 Giai đoạn 5) khi mở lại
-ứng dụng — không cần xóa dữ liệu cũ.
+(004-008 Giai đoạn 2, 009-013 Giai đoạn 3, 014-018 Giai đoạn 4, 019 Giai đoạn 5, 020-021
+Giai đoạn 6) khi mở lại ứng dụng — không cần xóa dữ liệu cũ.
 
 Để đóng gói bộ cài `.msi`/`.exe` chính thức, chạy `npm run tauri build` trên máy Windows có đầy
 đủ Visual Studio Build Tools — xem `mn360/README.md` mục "Đóng gói bộ cài Windows".
