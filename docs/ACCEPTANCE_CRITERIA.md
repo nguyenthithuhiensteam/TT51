@@ -1,13 +1,14 @@
 # MN360 — Tiêu chí nghiệm thu
 
-Trạng thái áp dụng cho **bản Giai đoạn 1-6**. Bộ cài Windows chính thức (`.msi`/`.exe`) chưa
-được tạo ra trong môi trường phát triển (Linux headless) — cấu hình đóng gói đã hoàn thiện,
-cần chạy `npm run tauri build` trên máy Windows theo `mn360/README.md` để có tệp cài đặt cuối
-cùng.
+Trạng thái áp dụng cho **bản Giai đoạn 1-6**. Bộ cài Windows chính thức (`.exe`, NSIS) đã được
+build thành công qua GitHub Actions (`.github/workflows/build-windows.yml`, chạy trên máy
+Windows thật trên mây, tải kết quả ở tab Actions → Artifacts). Bản `.msi` (WiX) bị lỗi hệ thống
+trên môi trường CI đó nên đã tắt, chỉ giữ NSIS; muốn có `.msi` cần tự build trên máy Windows
+thật theo `mn360/README.md`.
 
 | # | Tiêu chí (theo mục XII yêu cầu gốc) | Trạng thái |
 |---|---|---|
-| 1 | Cài được trên Windows | 🚧 Cấu hình đóng gói (WiX/NSIS, ngôn ngữ, icon) đã hoàn thiện; chưa build MSI/EXE thật — cần chạy trên máy Windows |
+| 1 | Cài được trên Windows | ✅ Bộ cài `.exe` (NSIS) build thành công qua GitHub Actions, tải trực tiếp từ tab Actions |
 | 2 | Chạy được khi không có Internet | ✅ Toàn bộ nghiệp vụ nội bộ dùng SQLite cục bộ; chỉ AI Gateway cần mạng |
 | 3 | Dữ liệu được lưu sau khi đóng ứng dụng | ✅ SQLite file trên đĩa, không lưu bộ nhớ tạm |
 | 4 | Không tự lưu vào OneDrive | ✅ Thư mục dữ liệu do người dùng chọn, mặc định ngoài OneDrive |
@@ -26,7 +27,7 @@ cùng.
 | 17 | Không có lỗi TypeScript, lint hoặc test | ✅ `tsc --noEmit`, ESLint, Vitest (30 test) chạy sạch |
 | 18 | Có bộ dữ liệu demo | ✅ Trường Mầm non Tràng Đà: đầy đủ 12 phân hệ có dữ liệu mẫu, kể cả đảng viên/kiểm định/liên kết phụ huynh |
 | 19 | Có tài liệu cài đặt, sử dụng, bàn giao | ✅ `mn360/README.md` (cài đặt/chạy thử/đóng gói), `docs/HUONG_DAN_SU_DUNG.md` (sử dụng theo phân hệ), `docs/BAN_GIAO.md` (bàn giao và vận hành) |
-| 20 | Có bộ cài Windows cuối cùng | 🚧 Cấu hình đóng gói hoàn thiện; tệp `.msi`/`.exe` cần build trên máy Windows thật (không build được từ Linux headless) |
+| 20 | Có bộ cài Windows cuối cùng | ✅ `MN360_0.1.0_x64-setup.exe` (NSIS) build thành công qua GitHub Actions, sẵn sàng tải về cài đặt |
 
 ## Ghi chú kiểm thử đã thực hiện
 

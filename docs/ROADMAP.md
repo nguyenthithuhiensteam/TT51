@@ -149,11 +149,16 @@ Chú thích trạng thái: `✅ Hoàn thành` · `🚧 Đang làm` · `⬜ Chưa
   `vite build` chạy sạch sau toàn bộ thay đổi Giai đoạn 5; khởi động lại ứng dụng đầy đủ qua
   Xvfb+WebKitGTK, xác nhận biên dịch/khởi tạo 19 migration không panic/lỗi.
 - ✅ **Chuẩn hóa cấu hình đóng gói Windows**: hoàn thiện `src-tauri/tauri.conf.json` với tên
-  nhà xuất bản, mô tả ngắn/dài, ngôn ngữ cài đặt tiếng Việt (WiX `vi-VN`, NSIS `Vietnamese`),
-  chế độ cài `perMachine`; xác nhận bộ icon đầy đủ và hợp lệ (`32x32`, `128x128`, `128x128@2x`,
-  `.ico` 6 kích thước, `.icns`). Bộ cài `.msi`/`.exe` thật **chưa được tạo ra** trong lần này vì
-  môi trường phát triển là Linux headless — hướng dẫn build đầy đủ trên máy Windows đã có ở
-  `mn360/README.md` mục "Đóng gói bộ cài Windows".
+  nhà xuất bản, mô tả ngắn/dài, ngôn ngữ cài đặt tiếng Việt (NSIS `Vietnamese`), chế độ cài
+  `perMachine`; xác nhận bộ icon đầy đủ và hợp lệ (`32x32`, `128x128`, `128x128@2x`, `.ico`
+  6 kích thước, `.icns`).
+- ✅ **Bộ cài Windows thật đã build được** qua GitHub Actions (`.github/workflows/build-windows.yml`,
+  chạy thủ công trên `windows-latest`, tải kết quả ở tab Actions → mục Artifacts). Ban đầu cấu
+  hình cả `msi` (WiX) và `nsis`; bản WiX lỗi hệ thống trên runner GitHub Actions (`failed to run
+  ... light.exe` — vấn đề đã biết của WiX v3 trên môi trường CI đó), nên đã chuyển hẳn sang chỉ
+  đóng gói **NSIS** (`.exe`) — vẫn là bộ cài Windows đầy đủ, ổn định hơn trong CI. Xây trên máy
+  Windows thật (không qua CI) vẫn theo hướng dẫn ở `mn360/README.md` mục "Đóng gói bộ cài
+  Windows" nếu cần bản `.msi`.
 - ✅ **Tài liệu sử dụng và bàn giao**: `docs/HUONG_DAN_SU_DUNG.md` (hướng dẫn theo từng phân hệ,
   vòng đời hồ sơ, sao lưu/khôi phục, AI Gateway, xử lý sự cố thường gặp cho người dùng cuối) và
   `docs/BAN_GIAO.md` (checklist cài đặt lần đầu tại trường, vận hành định kỳ, quản trị tài
