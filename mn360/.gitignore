@@ -6,6 +6,9 @@ artifact-dist
 public-web/*.wasm
 *.local
 
+# Firebase CLI local cache (không phải mã nguồn)
+.firebase
+
 # Tauri
 src-tauri/target
 src-tauri/gen
