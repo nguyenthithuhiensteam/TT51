@@ -1,0 +1,19 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function myRole() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isApproved() {
+      return request.auth != null && myRole() in ['staff', 'approver', 'admin'];
+    }
+
+    match /evidence/{criteriaId}/{fileName} {
+      allow read: if isApproved();
+      allow write: if isApproved() && request.resource.size < 20 * 1024 * 1024;
+      allow delete: if false;
+    }
+  }
+}

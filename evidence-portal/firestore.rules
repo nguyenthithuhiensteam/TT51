@@ -1,0 +1,68 @@
+rules_version = '2';
+
+// Cổng minh chứng kiểm định — mọi quyền đều bắt buộc đăng nhập Google. Vai trò 'pending' (mặc
+// định khi đăng nhập lần đầu) không được đọc/ghi gì ngoài hồ sơ của chính mình, cho đến khi
+// quản trị viên duyệt và gán vai trò staff/approver/admin.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Email quản trị khởi tạo — TRÙNG với VITE_BOOTSTRAP_ADMIN_EMAIL. Chỉ dùng để tự cấp quyền
+    // admin ở lần tạo hồ sơ user ĐẦU TIÊN của chính email này; không cấp quyền gì khác.
+    function isBootstrapAdminEmail() {
+      return request.auth.token.email == 'hiennguyen307@gmail.com';
+    }
+
+    function myRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isApproved() {
+      return isSignedIn() && myRole() in ['staff', 'approver', 'admin'];
+    }
+
+    function isApprover() {
+      return isSignedIn() && myRole() in ['approver', 'admin'];
+    }
+
+    function isAdmin() {
+      return isSignedIn() && myRole() == 'admin';
+    }
+
+    match /users/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if isSignedIn() && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.role == (isBootstrapAdminEmail() ? 'admin' : 'pending');
+      // Chỉ admin được đổi vai trò của người khác sau khi đã tạo.
+      allow update: if isAdmin();
+    }
+
+    match /standards/{id} {
+      allow read: if isApproved();
+      allow write: if isAdmin();
+    }
+
+    match /criteria/{id} {
+      allow read: if isApproved();
+      allow write: if isAdmin();
+    }
+
+    match /evidence/{id} {
+      allow read: if isApproved();
+      allow create: if isApproved()
+        && request.resource.data.uploadedBy == request.auth.uid
+        && request.resource.data.status == 'pending_approval';
+      // Chỉ người có quyền duyệt được đổi trạng thái/ghi chú; không ai được sửa nội dung tệp
+      // đã tải lên (fileUrl/storagePath/uploadedBy bất biến sau khi tạo).
+      allow update: if isApprover()
+        && request.resource.data.uploadedBy == resource.data.uploadedBy
+        && request.resource.data.fileUrl == resource.data.fileUrl
+        && request.resource.data.storagePath == resource.data.storagePath;
+      allow delete: if false;
+    }
+  }
+}
