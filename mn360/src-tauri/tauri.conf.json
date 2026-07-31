@@ -25,7 +25,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["msi", "nsis"],
+    "targets": ["nsis"],
     "publisher": "Trường Mầm non Tràng Đà",
     "copyright": "© 2026 Trường Mầm non Tràng Đà",
     "shortDescription": "Hệ điều hành trường mầm non số",
