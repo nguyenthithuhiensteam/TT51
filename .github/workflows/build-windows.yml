@@ -1,0 +1,38 @@
+name: Đóng gói bộ cài Windows (MN360)
+
+# Chạy thủ công từ tab Actions trên GitHub — không tự động chạy khi push, để tránh tốn phút
+# CI ngoài ý muốn. Vào Actions → "Đóng gói bộ cài Windows (MN360)" → "Run workflow".
+on:
+  workflow_dispatch: {}
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: mn360
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Cài phụ thuộc Node
+        run: npm ci
+
+      - name: Build bộ cài Windows (.msi + .exe)
+        uses: tauri-apps/tauri-action@v0
+        with:
+          projectPath: mn360
+
+      - name: Tải lên bộ cài làm artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mn360-windows-installer
+          path: |
+            mn360/src-tauri/target/release/bundle/msi/*.msi
+            mn360/src-tauri/target/release/bundle/nsis/*.exe
+          if-no-files-found: error
