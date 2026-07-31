@@ -166,5 +166,17 @@ pub fn get_migrations() -> Vec<Migration> {
             sql: include_str!("./sql/027_parent_ai_consultations.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 28,
+            description: "growth_standards_schema",
+            sql: include_str!("./sql/028_growth_standards.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 29,
+            description: "seed_who_growth_standards",
+            sql: include_str!("./sql/029_seed_who_growth_standards.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }

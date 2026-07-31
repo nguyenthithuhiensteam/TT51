@@ -343,14 +343,39 @@ Không cần đổi CSDL — suy trực tiếp từ bảng `attendance` đã có
   văn bản riêng cho chế độ in.
 - ✅ `tsc --noEmit`, ESLint (0 warning), Vitest (30 test), `cargo check`, `vite build` chạy sạch.
 
-### Phase D — Đánh giá phát triển qua biểu đồ (SD) + tổng hợp lớp/trường — ⏸️ Tạm dừng chờ dữ liệu
+### Phase D — Đánh giá phát triển qua biểu đồ (SD) + tổng hợp lớp/trường — ✅ Hoàn thành
 
-Cần bảng chuẩn WHO (LMS theo tháng tuổi/giới tính cho cân nặng, chiều cao, cân nặng/chiều cao,
-BMI) để phân loại đúng -2SD/-3SD/+2SD/+3SD. Đã thử tải từ who.int và CDC nhưng bị chặn (403);
-nguồn duy nhất truy cập được (kho GitHub chính thức của WHO) đi qua công cụ tóm tắt nội dung
-bằng mô hình trung gian nên không đủ tin cậy để chép hàng trăm số liệu y tế chính xác đến 4 chữ
-số thập phân. Đã xin ý kiến người dùng — sẽ gửi kèm bảng chuẩn trường đang dùng để nhập đúng,
-không đoán. Chờ file trước khi làm tiếp.
+Bế tắc trước đó (không tải được bảng chuẩn WHO chính xác từ who.int/CDC do bị chặn 403) đã được
+gỡ: tìm thấy kho GitHub chính thức `WorldHealthOrganization/anthro` — R package công cụ tính
+Chuẩn tăng trưởng trẻ em WHO, do chính nhân viên WHO (bộ phận dữ liệu dinh dưỡng) duy trì — `git
+clone` trực tiếp lấy nguyên văn 3 bảng tham số LMS (`weianthro.txt`, `lenanthro.txt`,
+`bmianthro.txt`, 0-1826 ngày tuổi tức 0-60 tháng) mà **không qua bất kỳ mô hình tóm tắt/diễn giải
+nào** — loại bỏ hoàn toàn rủi ro sai số liệu y tế đã lo ngại trước đó. Người dùng quyết định: trẻ
+trên 60 tháng (Mẫu giáo lớn 5-6 tuổi, ngoài phạm vi chuẩn WHO 0-60 tháng) tạm dùng mốc 60 tháng.
+
+- ✅ Migration 028: bảng `who_growth_standards` (indicator `wfa`/`hfa`/`bmifa` × sex × age_days,
+  tham số `l`/`m`/`s`, khóa chính gộp, `WITHOUT ROWID`).
+- ✅ Migration 029: seed 10.962 dòng (3 chỉ số × 2 giới × 1.827 ngày tuổi), sinh bằng script
+  chuyển đổi cơ học từ file `.txt` gốc (không gõ tay) — đã đối chiếu từng điểm mẫu (đầu/cuối mỗi
+  file, vài mốc giữa) khớp chính xác với file nguồn.
+- ✅ `src/lib/utils/growth.ts`: `ageInDays`, `clampToWhoRange` (cắt về 1826 ngày cho trẻ >60
+  tháng), `calcZScore` (công thức LMS/Cole), `classifyWfa`/`classifyHfa`/`classifyBmifa` (ngưỡng
+  phân loại chuẩn WHO: nhẹ cân, thấp còi, gầy còm ở -2SD/-3SD; BMI/tuổi có thêm nguy cơ thừa cân
+  (+1SD), thừa cân (+2SD), béo phì (+3SD) — cân nặng/tuổi và chiều cao/tuổi không có ngưỡng thừa
+  cân theo đúng khuyến cáo WHO).
+- ✅ `healthRepo.ts`: `getGrowthAssessments(childId)` — tính z-score + phân loại cho toàn bộ lịch
+  sử đo của một trẻ; `getGrowthSummary({classId} | {schoolYearId})` — tổng hợp phân loại (theo
+  lần đo gần nhất mỗi trẻ) cho một lớp hoặc toàn trường.
+- ✅ Tab mới "Đánh giá phát triển (SD)" trong Sức khỏe – An toàn, 2 tab con: "Biểu đồ tăng trưởng
+  trẻ" (biểu đồ đường z-score theo thời gian, 3 chỉ số, có đường tham chiếu ±2SD/±3SD, bảng chi
+  tiết từng lần đo kèm nhãn phân loại) và "Tổng hợp lớp/trường" (chọn lớp hoặc "Toàn trường", số
+  lượng + tỷ lệ % theo từng mức phân loại cho cả 3 chỉ số).
+- ✅ Kiểm thử: 17 unit test cho `growth.ts` (z-score khớp bảng WHO thực tế, ranh giới phân loại,
+  clamp tuổi). Kiểm thử UI qua Playwright/Chromium (bản xem trước web): biểu đồ hiển thị đúng cho
+  trẻ demo (Nguyễn Văn An, 2 lần đo 65,9 và 74 tháng tuổi — đều bị cắt về mốc 60 tháng khi tính,
+  hiển thị đúng "Bình thường" cho cả 3 chỉ số); tổng hợp "Toàn trường" hiển thị đúng 2/2 trẻ có
+  số liệu, 100% bình thường, khớp dữ liệu demo. Không lỗi console.
+- ✅ `tsc --noEmit`, ESLint (0 warning), Vitest (60 test), `cargo check`, `vite build` chạy sạch.
 
 ## Bổ sung ngoài 4 phase — theo phản hồi trực tiếp của người dùng khi dùng thử bản xem trước
 

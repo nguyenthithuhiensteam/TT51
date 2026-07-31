@@ -2,6 +2,14 @@ import { dbExecute, dbSelect, nowIso } from "./client";
 import { newId } from "../utils/id";
 import { logAudit } from "./authRepo";
 import type { IncidentSeverity, PhysicalExamSpecialtyFields, RecordStatus, SafetyArea } from "./types";
+import {
+  ageInDays,
+  calcZScore,
+  classifyByIndicator,
+  clampToWhoRange,
+  type GrowthClassification,
+  type GrowthIndicator,
+} from "../utils/growth";
 
 // ===================== HỒ SƠ SỨC KHỎE =====================
 
@@ -103,6 +111,146 @@ export async function addGrowthMeasurement(
        height_cm = excluded.height_cm, weight_kg = excluded.weight_kg, note = excluded.note`,
     [newId(), childId, date, heightCm, weightKg, note ?? null, measuredBy, nowIso()],
   );
+}
+
+// ===== ĐÁNH GIÁ PHÁT TRIỂN THEO CHUẨN WHO (Z-SCORE / SD) =====
+
+interface WhoStandardTriple {
+  l: number;
+  m: number;
+  s: number;
+}
+
+async function getWhoStandards(
+  sex: "male" | "female",
+  ageDaysRaw: number,
+): Promise<Record<GrowthIndicator, WhoStandardTriple | null>> {
+  const ageDays = clampToWhoRange(ageDaysRaw);
+  const rows = await dbSelect<{ indicator: GrowthIndicator; l: number; m: number; s: number }>(
+    "SELECT indicator, l, m, s FROM who_growth_standards WHERE sex = ? AND age_days = ?",
+    [sex, ageDays],
+  );
+  const result: Record<GrowthIndicator, WhoStandardTriple | null> = { wfa: null, hfa: null, bmifa: null };
+  for (const r of rows) result[r.indicator] = { l: r.l, m: r.m, s: r.s };
+  return result;
+}
+
+export interface GrowthIndicatorAssessment {
+  zScore: number;
+  classification: GrowthClassification;
+}
+
+export interface GrowthAssessment {
+  id: string;
+  measured_date: string;
+  height_cm: number;
+  weight_kg: number;
+  bmi: number;
+  age_months: number;
+  wfa: GrowthIndicatorAssessment;
+  hfa: GrowthIndicatorAssessment;
+  bmifa: GrowthIndicatorAssessment;
+}
+
+function assessOne(
+  indicator: GrowthIndicator,
+  standard: WhoStandardTriple | null,
+  value: number,
+): GrowthIndicatorAssessment {
+  if (!standard) {
+    return { zScore: NaN, classification: classifyByIndicator(indicator, NaN) };
+  }
+  const z = calcZScore(standard.l, standard.m, standard.s, value);
+  return { zScore: z, classification: classifyByIndicator(indicator, z) };
+}
+
+/**
+ * Đánh giá toàn bộ lịch sử đo chiều cao/cân nặng của một trẻ theo chuẩn tăng trưởng WHO
+ * (0-60 tháng tuổi; trẻ trên 60 tháng tạm dùng mốc 60 tháng theo quyết định người dùng).
+ */
+export async function getGrowthAssessments(childId: string): Promise<GrowthAssessment[]> {
+  const child = (
+    await dbSelect<{ dob: string; gender: "male" | "female" }>(
+      "SELECT dob, gender FROM children WHERE id = ?",
+      [childId],
+    )
+  )[0];
+  if (!child) return [];
+  const measurements = await listGrowthMeasurements(childId);
+  const results: GrowthAssessment[] = [];
+  for (const m of measurements) {
+    const ageDays = ageInDays(child.dob, m.measured_date);
+    const standards = await getWhoStandards(child.gender, ageDays);
+    const bmi = m.weight_kg / Math.pow(m.height_cm / 100, 2);
+    results.push({
+      id: m.id,
+      measured_date: m.measured_date,
+      height_cm: m.height_cm,
+      weight_kg: m.weight_kg,
+      bmi: Math.round(bmi * 100) / 100,
+      age_months: Math.round((ageDays / 30.4375) * 10) / 10,
+      wfa: assessOne("wfa", standards.wfa, m.weight_kg),
+      hfa: assessOne("hfa", standards.hfa, m.height_cm),
+      bmifa: assessOne("bmifa", standards.bmifa, bmi),
+    });
+  }
+  return results;
+}
+
+export interface GrowthSummaryCounts {
+  total: number;
+  wfa: Record<string, number>;
+  hfa: Record<string, number>;
+  bmifa: Record<string, number>;
+}
+
+function emptyGrowthSummary(): GrowthSummaryCounts {
+  return { total: 0, wfa: {}, hfa: {}, bmifa: {} };
+}
+
+function tally(counts: Record<string, number>, code: string) {
+  counts[code] = (counts[code] ?? 0) + 1;
+}
+
+/**
+ * Tổng hợp phân loại phát triển (theo lần đo gần nhất của mỗi trẻ) cho một lớp hoặc toàn
+ * trường (theo năm học). Chỉ tính các trẻ đã có ít nhất một lần đo chiều cao/cân nặng.
+ */
+export async function getGrowthSummary(
+  scope: { classId: string } | { schoolYearId: string },
+): Promise<GrowthSummaryCounts> {
+  const whereCol = "classId" in scope ? "ch.class_id" : "ch.school_year_id";
+  const whereVal = "classId" in scope ? scope.classId : scope.schoolYearId;
+  const rows = await dbSelect<{
+    child_id: string;
+    dob: string;
+    gender: "male" | "female";
+    measured_date: string;
+    height_cm: number;
+    weight_kg: number;
+  }>(
+    `SELECT ch.id AS child_id, ch.dob AS dob, ch.gender AS gender,
+        gm.measured_date AS measured_date, gm.height_cm AS height_cm, gm.weight_kg AS weight_kg
+     FROM children ch
+     JOIN growth_measurements gm ON gm.child_id = ch.id
+     WHERE ${whereCol} = ?
+       AND gm.measured_date = (
+         SELECT MAX(gm2.measured_date) FROM growth_measurements gm2 WHERE gm2.child_id = ch.id
+       )`,
+    [whereVal],
+  );
+
+  const summary = emptyGrowthSummary();
+  summary.total = rows.length;
+  for (const r of rows) {
+    const ageDays = ageInDays(r.dob, r.measured_date);
+    const standards = await getWhoStandards(r.gender, ageDays);
+    const bmi = r.weight_kg / Math.pow(r.height_cm / 100, 2);
+    tally(summary.wfa, assessOne("wfa", standards.wfa, r.weight_kg).classification.code);
+    tally(summary.hfa, assessOne("hfa", standards.hfa, r.height_cm).classification.code);
+    tally(summary.bmifa, assessOne("bmifa", standards.bmifa, bmi).classification.code);
+  }
+  return summary;
 }
 
 // ===================== TIÊM CHỦNG =====================
