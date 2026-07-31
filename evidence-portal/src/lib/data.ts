@@ -10,8 +10,8 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { db, storage } from "../firebase";
+import { db } from "../firebase";
+import { uploadToCloudinary } from "./cloudinary";
 import type { AccreditationCriteria, AccreditationStandard, EvidenceFile, EvidenceStatus, PortalUser, UserRole } from "../types";
 
 export function watchPortalUser(uid: string, cb: (user: PortalUser | null) => void) {
@@ -90,15 +90,12 @@ export async function uploadEvidence(
   uploadedBy: string,
   uploadedByEmail: string,
 ) {
-  const storagePath = `evidence/${criteriaId}/${Date.now()}-${file.name}`;
-  const storageRef = ref(storage, storagePath);
-  await uploadBytes(storageRef, file);
-  const fileUrl = await getDownloadURL(storageRef);
+  const { url: fileUrl, publicId } = await uploadToCloudinary(file, `evidence/${criteriaId}`);
   await addDoc(collection(db, "evidence"), {
     criteriaId,
     fileName: file.name,
     fileUrl,
-    storagePath,
+    cloudinaryPublicId: publicId,
     description,
     status: "pending_approval",
     uploadedBy,

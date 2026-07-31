@@ -33,7 +33,7 @@ export interface EvidenceFile {
   criteriaId: string;
   fileName: string;
   fileUrl: string;
-  storagePath: string;
+  cloudinaryPublicId: string;
   description: string;
   status: EvidenceStatus;
   uploadedBy: string;
