@@ -19,6 +19,16 @@ export const COL = {
   notifications: "mn360_notifications",
   auditLogs: "mn360_audit_logs",
   counters: "mn360_counters",
+  classes: "mn360_classes",
+  children: "mn360_children",
+  childStatusHistory: "mn360_child_status_history",
+  attendance: "mn360_attendance",
+  childLeaveRequests: "mn360_child_leave_requests",
+  parentMessages: "mn360_parent_messages",
+  staff: "mn360_staff",
+  staffAssignments: "mn360_staff_assignments",
+  staffLeaves: "mn360_staff_leaves",
+  staffEvaluations: "mn360_staff_evaluations",
 } as const;
 
 export function nowIso(): string {

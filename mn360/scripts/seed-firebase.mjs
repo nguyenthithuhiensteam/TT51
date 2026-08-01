@@ -1,7 +1,9 @@
-// Khởi tạo dữ liệu ban đầu cho bản web thật (Đợt 0-1): 1 trường, 1 năm học hiện tại, và 1 tài
-// khoản đăng nhập thật (Firebase Auth + hồ sơ Firestore) để có thể đăng nhập thử ngay.
-// Dùng Firebase Auth SDK phía client (không cần service account/Cloud Functions) — script này
-// tự đăng nhập bằng tài khoản vừa tạo để ghi hồ sơ của chính tài khoản đó (đúng theo rules).
+// Khởi tạo dữ liệu ban đầu cho bản web thật: 1 trường, 1 năm học hiện tại, và tài khoản đăng
+// nhập thật đầu tiên (Firebase Auth + hồ sơ Firestore). An toàn để CHẠY LẠI nhiều lần khi có
+// phân hệ mới được chuyển đổi — chỉ cập nhật thêm quyền (permissionCodes), không đụng tới mật
+// khẩu/trạng thái đã đổi của tài khoản. Dùng Firebase Auth SDK phía client (không cần service
+// account/Cloud Functions) — script tự đăng nhập bằng tài khoản vừa tạo để ghi hồ sơ của chính
+// tài khoản đó (đúng theo rules).
 //
 // Chạy: node scripts/seed-firebase.mjs
 import { readFileSync, existsSync } from "node:fs";
@@ -9,7 +11,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { initializeApp } from "firebase/app";
 import { createUserWithEmailAndPassword, getAuth, signInWithEmailAndPassword } from "firebase/auth";
-import { doc, getFirestore, setDoc } from "firebase/firestore";
+import { doc, getDoc, getFirestore, setDoc } from "firebase/firestore";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const envPath = path.resolve(__dirname, "../.env.local");
@@ -83,28 +85,46 @@ async function main() {
     updated_at: ts,
   });
 
-  console.log("Ghi hồ sơ tài khoản quản trị (Đợt 1: chỉ Tổng quan + Công việc)...");
-  await setDoc(doc(db, "mn360_users", uid), {
-    username: ADMIN_USERNAME,
-    full_name: "Nguyễn Thị Hiền",
-    email: null,
-    phone: null,
-    must_change_password: 1,
-    is_active: 1,
-    last_login_at: null,
-    created_at: ts,
-    updated_at: ts,
-    roleCodes: ["hieu_truong"],
-    permissionCodes: [
-      "dashboard.view",
-      "task.view",
-      "task.create",
-      "task.edit",
-      "task.export",
-      "task.submit",
-      "task.approve",
-    ],
-  });
+  const PERMISSION_CODES = [
+    "dashboard.view",
+    "task.view",
+    "task.create",
+    "task.edit",
+    "task.export",
+    "task.submit",
+    "task.approve",
+    "children.view",
+    "children.create",
+    "children.edit",
+    "children.export",
+    "children.approve",
+    "staff.view",
+    "staff.create",
+    "staff.edit",
+    "staff.approve",
+  ];
+
+  const userRef = doc(db, "mn360_users", uid);
+  const existingProfile = await getDoc(userRef);
+  if (existingProfile.exists()) {
+    console.log("Hồ sơ đã tồn tại — chỉ cập nhật quyền theo các đợt đã xây (giữ nguyên mật khẩu/trạng thái đã đổi)...");
+    await setDoc(userRef, { roleCodes: ["hieu_truong"], permissionCodes: PERMISSION_CODES, updated_at: ts }, { merge: true });
+  } else {
+    console.log("Ghi hồ sơ tài khoản quản trị lần đầu...");
+    await setDoc(userRef, {
+      username: ADMIN_USERNAME,
+      full_name: "Nguyễn Thị Hiền",
+      email: null,
+      phone: null,
+      must_change_password: 1,
+      is_active: 1,
+      last_login_at: null,
+      created_at: ts,
+      updated_at: ts,
+      roleCodes: ["hieu_truong"],
+      permissionCodes: PERMISSION_CODES,
+    });
+  }
 
   console.log("\nXong! Đăng nhập thử với:");
   console.log("  Tên đăng nhập:", ADMIN_USERNAME);

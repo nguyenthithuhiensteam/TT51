@@ -153,5 +153,77 @@ service cloud.firestore {
       allow read: if mn360HasPerm('system.view');
       allow update, delete: if false;
     }
+
+    // --------------------- Trẻ em ---------------------
+
+    match /mn360_classes/{id} {
+      allow read: if mn360HasPerm('children.view');
+      allow create: if mn360HasPerm('children.create');
+      allow update: if mn360HasAnyPerm(['children.edit', 'children.approve']);
+      allow delete: if false;
+    }
+
+    match /mn360_children/{id} {
+      allow read: if mn360HasPerm('children.view');
+      allow create: if mn360HasPerm('children.create');
+      // update dùng chung cho sửa hồ sơ, cập nhật nhân khẩu học, đổi trạng thái, thêm phụ huynh
+      // (đều nhúng trên cùng tài liệu) — mọi thao tác này đều yêu cầu ít nhất children.edit.
+      allow update: if mn360HasAnyPerm(['children.edit', 'children.approve']);
+      allow delete: if false;
+    }
+
+    match /mn360_child_status_history/{id} {
+      allow read: if mn360HasPerm('children.view');
+      allow create: if mn360HasAnyPerm(['children.edit', 'children.approve']);
+      allow update, delete: if false;
+    }
+
+    match /mn360_attendance/{id} {
+      allow read: if mn360HasPerm('children.view');
+      allow create, update: if mn360HasAnyPerm(['children.edit', 'children.create']);
+      allow delete: if false;
+    }
+
+    match /mn360_child_leave_requests/{id} {
+      // Tạo đơn (từ phía phụ huynh) thuộc phân hệ Phụ huynh — chưa chuyển đổi ở đợt này. Ở đây
+      // chỉ mở quyền đọc/duyệt cho giáo viên/quản lý.
+      allow read: if mn360HasPerm('children.view');
+      allow update: if mn360HasAnyPerm(['children.edit', 'children.approve']);
+      allow create, delete: if false;
+    }
+
+    match /mn360_parent_messages/{id} {
+      allow read: if mn360HasPerm('children.view');
+      allow create: if mn360HasPerm('children.view') && request.resource.data.sender_user_id == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // --------------------- Đội ngũ ---------------------
+
+    match /mn360_staff/{id} {
+      allow read: if mn360HasPerm('staff.view');
+      allow create: if mn360HasPerm('staff.create');
+      allow update: if mn360HasAnyPerm(['staff.edit', 'staff.approve']);
+      allow delete: if false;
+    }
+
+    match /mn360_staff_assignments/{id} {
+      allow read: if mn360HasPerm('staff.view');
+      allow create: if mn360HasAnyPerm(['staff.edit', 'staff.create']);
+      allow update, delete: if false;
+    }
+
+    match /mn360_staff_leaves/{id} {
+      allow read: if mn360HasPerm('staff.view');
+      allow create: if mn360HasPerm('staff.view') && request.resource.data.created_by == request.auth.uid;
+      allow update: if mn360HasAnyPerm(['staff.edit', 'staff.approve']);
+      allow delete: if false;
+    }
+
+    match /mn360_staff_evaluations/{id} {
+      allow read: if mn360HasPerm('staff.view');
+      allow create, update: if mn360HasAnyPerm(['staff.edit', 'staff.approve']);
+      allow delete: if false;
+    }
   }
 }
