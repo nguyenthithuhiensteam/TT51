@@ -3,7 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { loginSchema, type LoginInput } from "../../lib/schemas/auth";
-import { loginWithPassword } from "@/lib/db/authRepo";
+import { loginWithGoogle, loginWithPassword } from "@/lib/db/authRepo";
 import { getSchool, getCurrentSchoolYear } from "@/lib/db/systemRepo";
 import { generateOverdueNotifications } from "@/lib/db/taskRepo";
 import { useAuthStore } from "../../store/authStore";
@@ -18,6 +18,7 @@ export function LoginPage() {
   const setSchoolContext = useAppStore((s) => s.setSchoolContext);
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
 
   const {
     register,
@@ -25,29 +26,46 @@ export function LoginPage() {
     formState: { errors },
   } = useForm<LoginInput>({ resolver: zodResolver(loginSchema) });
 
+  async function afterLogin(result: {
+    user: Awaited<ReturnType<typeof loginWithPassword>>["user"];
+    roles: string[];
+    permissions: string[];
+    sessionId: string;
+  }) {
+    const { user, roles, permissions, sessionId } = result;
+    const school = await getSchool();
+    const schoolYear = school ? await getCurrentSchoolYear(school.id) : null;
+    setSchoolContext(school, schoolYear);
+    if (schoolYear) {
+      const today = new Date().toISOString().slice(0, 10);
+      await generateOverdueNotifications(schoolYear.id, today);
+    }
+
+    setSession({ user, roles, permissions, sessionId });
+    navigate(user.must_change_password ? "/doi-mat-khau" : "/", { replace: true });
+  }
+
   async function onSubmit(data: LoginInput) {
     setServerError(null);
     setSubmitting(true);
     try {
-      const { user, roles, permissions, sessionId } = await loginWithPassword(
-        data.username.trim(),
-        data.password,
-      );
-
-      const school = await getSchool();
-      const schoolYear = school ? await getCurrentSchoolYear(school.id) : null;
-      setSchoolContext(school, schoolYear);
-      if (schoolYear) {
-        const today = new Date().toISOString().slice(0, 10);
-        await generateOverdueNotifications(schoolYear.id, today);
-      }
-
-      setSession({ user, roles, permissions, sessionId });
-      navigate(user.must_change_password ? "/doi-mat-khau" : "/", { replace: true });
+      await afterLogin(await loginWithPassword(data.username.trim(), data.password));
     } catch (err) {
       setServerError(err instanceof Error ? err.message : "Có lỗi xảy ra, vui lòng thử lại");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function onGoogleLogin() {
+    setServerError(null);
+    setGoogleBusy(true);
+    try {
+      await afterLogin(await loginWithGoogle());
+    } catch (err) {
+      setServerError(err instanceof Error ? err.message : "Có lỗi xảy ra, vui lòng thử lại");
+    } finally {
+      setGoogleBusy(false);
     }
   }
 
@@ -76,6 +94,27 @@ export function LoginPage() {
             {submitting ? "Đang đăng nhập..." : "Đăng nhập"}
           </Button>
         </form>
+        {__ENABLE_GOOGLE_LOGIN__ && (
+          <>
+            <div className="my-4 flex items-center gap-3 text-xs text-navy/40">
+              <div className="h-px flex-1 bg-navy/10" />
+              hoặc
+              <div className="h-px flex-1 bg-navy/10" />
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-full"
+              disabled={googleBusy}
+              onClick={onGoogleLogin}
+            >
+              {googleBusy ? "Đang kết nối Google..." : "Đăng nhập bằng Google"}
+            </Button>
+            <p className="mt-2 text-center text-xs text-navy/40">
+              Tài khoản Google đăng nhập lần đầu cần quản trị viên phê duyệt trước khi sử dụng.
+            </p>
+          </>
+        )}
         <p className="mt-4 text-center text-xs text-navy/40">
           Dữ liệu được lưu trữ và bảo vệ theo tài khoản đăng nhập của bạn.
         </p>

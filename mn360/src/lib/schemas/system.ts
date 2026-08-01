@@ -21,3 +21,10 @@ export const schoolYearSchema = z
     path: ["endDate"],
   });
 export type SchoolYearFormInput = z.infer<typeof schoolYearSchema>;
+
+export const myProfileSchema = z.object({
+  fullName: z.string().min(2, "Họ tên phải có ít nhất 2 ký tự"),
+  email: z.string().email("Email không hợp lệ").optional().or(z.literal("")),
+  phone: z.string().optional(),
+});
+export type MyProfileInput = z.infer<typeof myProfileSchema>;

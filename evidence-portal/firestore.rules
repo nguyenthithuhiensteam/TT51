@@ -100,9 +100,12 @@ service cloud.firestore {
       // Tên/hồ sơ cơ bản cần đọc được rộng rãi để hiển thị người phụ trách/người soạn ở các
       // phân hệ khác (chủ trì nhiệm vụ, người duyệt...) — không chứa dữ liệu nhạy cảm.
       allow read: if mn360IsSignedIn();
-      // Chỉ tự sửa hồ sơ của chính mình (đổi mật khẩu, ghi nhận đăng nhập). Quản trị viên tạo/
-      // sửa tài khoản người khác sẽ làm qua script/quy trình riêng ở các đợt sau.
-      allow write: if mn360IsSignedIn() && request.auth.uid == uid;
+      // Tự tạo hồ sơ của chính mình (đăng nhập Google lần đầu ghi hồ sơ "chờ duyệt").
+      allow create: if mn360IsSignedIn() && request.auth.uid == uid;
+      // Tự sửa hồ sơ của chính mình (đổi mật khẩu, ghi nhận đăng nhập, sửa thông tin cá nhân)
+      // HOẶC quản trị viên có quyền system.edit sửa tài khoản người khác (phê duyệt/phân quyền).
+      allow update: if (mn360IsSignedIn() && request.auth.uid == uid) || mn360HasPerm('system.edit');
+      allow delete: if false;
     }
 
     match /mn360_schools/{id} {

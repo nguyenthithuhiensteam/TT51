@@ -79,9 +79,13 @@ Nếu dùng dự án Firebase khác, sửa `"default"` trong `mn360/.firebaserc`
 Khác với bản xem trước ở trên (dữ liệu mất khi tải lại trang), bản này dùng Firebase Auth để
 đăng nhập và Firestore để lưu dữ liệu thật, nhiều người dùng cùng lúc, không cần cài gì trên
 máy người dùng. **Cả 12/12 phân hệ đã được chuyển đổi** sang Firestore — xem chi tiết từng đợt
-trong `docs/ROADMAP.md`. Một số tính năng phụ vẫn còn giới hạn (xem mục "Còn lại để hoàn thiện
-thêm" trong ROADMAP): phân loại tăng trưởng theo chuẩn WHO, đính kèm tệp thật, tạo tài khoản
-đăng nhập mới cho cán bộ, Trợ lý AI tư vấn nuôi dạy trẻ, sao lưu/tìm kiếm toàn hệ thống.
+trong `docs/ROADMAP.md`. Ngoài đăng nhập bằng tên đăng nhập/mật khẩu, bản web còn hỗ trợ **đăng
+nhập bằng Google**: tài khoản Google lần đầu đăng nhập sẽ ở trạng thái chờ duyệt cho tới khi
+quản trị viên (quyền `system.edit`) vào Cài đặt → "Quản lý tài khoản & phân quyền" để chọn quyền
+và phê duyệt; mọi tài khoản cũng tự sửa được thông tin cá nhân ở thẻ "Tài khoản của tôi". Một số
+tính năng phụ khác vẫn còn giới hạn (xem mục "Còn lại để hoàn thiện thêm" trong ROADMAP): phân
+loại tăng trưởng theo chuẩn WHO, đính kèm tệp thật, Trợ lý AI tư vấn nuôi dạy trẻ, sao lưu/tìm
+kiếm toàn hệ thống.
 
 Kiến trúc: mọi lời gọi `@/lib/db/<tên>Repo` trong giao diện được build lại (qua
 `vite.firebase.config.ts`) để trỏ sang `src/lib/db-firebase/<tên>Repo.ts` thay vì
@@ -93,6 +97,7 @@ tố `mn360_` riêng biệt (xem `firestore.rules` ở thư mục đó).
 cd mn360
 npm install
 # 1. Bật "Email/Password" trong Firebase Console → Authentication → Sign-in method (1 lần)
+#    Muốn cho phép đăng nhập Google thì bật thêm "Google" ở cùng màn hình đó (1 lần).
 # 2. Tạo dữ liệu ban đầu + tài khoản đăng nhập đầu tiên (script dùng chính Firebase SDK,
 #    không cần service account/Cloud Functions)
 npm run seed:app

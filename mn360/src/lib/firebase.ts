@@ -1,5 +1,5 @@
 import { initializeApp, getApps, deleteApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -13,6 +13,7 @@ const firebaseConfig = {
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const googleProvider = new GoogleAuthProvider();
 
 /**
  * Tạo một app Firebase phụ dùng riêng cho thao tác "tạo tài khoản đăng nhập mới" ở màn hình

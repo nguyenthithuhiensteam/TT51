@@ -156,6 +156,31 @@ export async function changePassword(
   });
 }
 
+/** Đăng nhập Google chỉ tồn tại trên bản web thật (Firebase Auth) — bản desktop không hỗ trợ,
+ * nút đăng nhập Google cũng bị ẩn ở đây qua __ENABLE_GOOGLE_LOGIN__ nên hàm này không bao giờ
+ * thực sự được gọi, chỉ tồn tại để LoginPage.tsx (dùng chung) biên dịch được trên cả hai bản. */
+export async function loginWithGoogle(): Promise<LoginResult> {
+  throw new AuthError("Đăng nhập bằng Google không khả dụng trên bản cài đặt máy tính");
+}
+
+/** Cập nhật thông tin cá nhân của chính tài khoản đang đăng nhập (họ tên, email, điện thoại). */
+export async function updateMyProfile(
+  userId: string,
+  data: { fullName: string; email?: string | null; phone?: string | null },
+): Promise<void> {
+  await dbExecute(
+    "UPDATE users SET full_name = ?, email = ?, phone = ?, updated_at = ? WHERE id = ?",
+    [data.fullName, data.email ?? null, data.phone ?? null, nowIso(), userId],
+  );
+  await logAudit({
+    entityTable: "users",
+    entityId: userId,
+    action: "update_profile",
+    userId,
+    sessionId: null,
+  });
+}
+
 export async function logAudit(entry: {
   entityTable: string;
   entityId: string;

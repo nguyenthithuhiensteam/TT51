@@ -8,6 +8,7 @@ export default defineConfig({
   plugins: [react()],
   define: {
     __IS_WEB_PREVIEW__: "false",
+    __ENABLE_GOOGLE_LOGIN__: "false",
   },
   resolve: {
     alias: {

@@ -2,11 +2,12 @@ import {
   EmailAuthProvider,
   reauthenticateWithCredential,
   signInWithEmailAndPassword,
+  signInWithPopup,
   signOut,
   updatePassword as updateFirebasePassword,
 } from "firebase/auth";
-import { addDoc, collection, doc, getDoc, updateDoc } from "firebase/firestore";
-import { auth, usernameToAuthEmail } from "../firebase";
+import { addDoc, collection, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { auth, googleProvider, usernameToAuthEmail } from "../firebase";
 import { COL, db, nowIso } from "./client";
 import type { User } from "./types";
 
@@ -96,6 +97,71 @@ export async function loginWithPassword(username: string, password: string): Pro
   };
 }
 
+/** Đăng nhập bằng tài khoản Google (chỉ bản web thật). Tài khoản Google lần đầu đăng nhập sẽ
+ * được tạo hồ sơ ở trạng thái "chờ duyệt" (is_active=0, chưa có quyền gì) và bị đăng xuất ngay —
+ * quản trị viên phải vào "Cài đặt → Quản lý tài khoản & phân quyền" để phê duyệt và gán quyền
+ * trước khi tài khoản đó đăng nhập được. */
+export async function loginWithGoogle(): Promise<LoginResult> {
+  let cred;
+  try {
+    cred = await signInWithPopup(auth, googleProvider);
+  } catch (err) {
+    const code = (err as { code?: string }).code;
+    if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
+      throw new AuthError("Bạn đã đóng cửa sổ đăng nhập Google trước khi hoàn tất.");
+    }
+    throw new AuthError("Không thể đăng nhập bằng Google, vui lòng thử lại.");
+  }
+  const uid = cred.user.uid;
+  const ref = doc(db, COL.users, uid);
+  const snap = await getDoc(ref);
+  const ts = nowIso();
+
+  if (!snap.exists()) {
+    await setDoc(ref, {
+      username: cred.user.email ?? uid,
+      full_name: cred.user.displayName || cred.user.email || "Tài khoản Google",
+      email: cred.user.email ?? null,
+      phone: null,
+      must_change_password: 0,
+      is_active: 0,
+      last_login_at: null,
+      created_at: ts,
+      updated_at: ts,
+      roleCodes: [],
+      permissionCodes: [],
+      authProvider: "google",
+    });
+    await logAudit({
+      entityTable: "users",
+      entityId: uid,
+      action: "google_signup",
+      userId: uid,
+      sessionId: uid,
+    });
+    await signOut(auth);
+    throw new AuthError(
+      "Tài khoản Google của bạn đã được ghi nhận và đang chờ quản trị viên phê duyệt quyền truy cập.",
+    );
+  }
+
+  const data = snap.data() as UserProfileDoc;
+  if (!data.is_active) {
+    await signOut(auth);
+    throw new AuthError("Tài khoản đang chờ quản trị viên phê duyệt quyền truy cập.");
+  }
+
+  await updateDoc(ref, { last_login_at: ts, updated_at: ts });
+  await logAudit({ entityTable: "users", entityId: uid, action: "login", userId: uid, sessionId: uid });
+
+  return {
+    user: mapProfileToUser(uid, data),
+    roles: data.roleCodes ?? [],
+    permissions: data.permissionCodes ?? [],
+    sessionId: uid,
+  };
+}
+
 /** Đổi mật khẩu: Firebase yêu cầu xác thực lại (reauthenticate) trước khi đổi mật khẩu vì lý do
  * bảo mật (thao tác nhạy cảm cần phiên đăng nhập "gần đây"). */
 export async function changePassword(
@@ -124,6 +190,28 @@ export async function changePassword(
     action: "change_password",
     userId: user.id,
     sessionId: user.id,
+  });
+}
+
+/** Cập nhật thông tin cá nhân của chính tài khoản đang đăng nhập (họ tên, email, điện thoại). */
+export async function updateMyProfile(
+  userId: string,
+  data: { fullName: string; email?: string | null; phone?: string | null },
+): Promise<void> {
+  const ref = doc(db, COL.users, userId);
+  const ts = nowIso();
+  await updateDoc(ref, {
+    full_name: data.fullName,
+    email: data.email ?? null,
+    phone: data.phone ?? null,
+    updated_at: ts,
+  });
+  await logAudit({
+    entityTable: "users",
+    entityId: userId,
+    action: "update_profile",
+    userId,
+    sessionId: userId,
   });
 }
 

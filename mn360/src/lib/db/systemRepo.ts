@@ -1,7 +1,7 @@
 import { dbExecute, dbSelect, nowIso } from "./client";
 import { newId } from "../utils/id";
 import { logAudit } from "./authRepo";
-import type { Role, School, SchoolYear, User } from "./types";
+import type { Role, School, SchoolYear, User, UserAccountWithAccess } from "./types";
 
 export async function getSchool(): Promise<School | null> {
   const rows = await dbSelect<School>("SELECT * FROM schools LIMIT 1");
@@ -112,4 +112,30 @@ export async function createUserAccount(input: CreateUserAccountInput): Promise<
     sessionId: input.sessionId,
   });
   return id;
+}
+
+// ===================== Quản lý tài khoản chờ duyệt (chỉ bản web thật/đăng nhập Google) =====
+// Bản desktop không có khái niệm tài khoản Google chờ duyệt (tài khoản luôn được quản trị viên
+// tạo sẵn qua createUserAccount ở trên) — các hàm dưới đây chỉ tồn tại để màn hình Cài đặt (dùng
+// chung UI) biên dịch được, không bao giờ thực sự được gọi trên desktop vì bị ẩn qua
+// __ENABLE_GOOGLE_LOGIN__.
+
+function notSupportedOnDesktop(name: string): never {
+  throw new Error(`${name}: chỉ áp dụng cho tài khoản đăng nhập Google trên bản web thật.`);
+}
+
+export async function listAllUserAccounts(): Promise<UserAccountWithAccess[]> {
+  return notSupportedOnDesktop("listAllUserAccounts");
+}
+
+export async function approveUserAccount(..._args: unknown[]): Promise<never> {
+  return notSupportedOnDesktop("approveUserAccount");
+}
+
+export async function updateUserPermissions(..._args: unknown[]): Promise<never> {
+  return notSupportedOnDesktop("updateUserPermissions");
+}
+
+export async function setUserAccountActive(..._args: unknown[]): Promise<never> {
+  return notSupportedOnDesktop("setUserAccountActive");
 }

@@ -73,6 +73,15 @@ export interface Role {
   is_system: number;
 }
 
+/** Hồ sơ tài khoản kèm quyền — chỉ dùng cho màn hình "Quản lý tài khoản & phân quyền" trên bản
+ * web thật (đăng nhập Google). Bản desktop không có khái niệm tài khoản chờ duyệt nên các hàm
+ * liên quan chỉ là stub báo lỗi ở đó. */
+export interface UserAccountWithAccess extends User {
+  permissionCodes: string[];
+  roleCodes: string[];
+  authProvider: "password" | "google";
+}
+
 export const ROLE_LABELS: Record<string, string> = {
   system_admin: "Quản trị hệ thống",
   principal: "Hiệu trưởng",

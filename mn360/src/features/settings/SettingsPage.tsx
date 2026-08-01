@@ -21,6 +21,8 @@ import { defaultModelFor, loadAiConfig, saveAiConfig, type AiConfig, type AiProv
 import { Select } from "../../components/ui/Input";
 import { getDefaultMealFeeRate, setDefaultMealFeeRate } from "@/lib/db/rationRepo";
 import { loadGoogleDriveConfig, saveGoogleDriveConfig, type GoogleDriveConfig } from "../../lib/import/googleDrive";
+import { MyProfileCard } from "./MyProfileCard";
+import { AccountManagementCard } from "./AccountManagementCard";
 
 export function SettingsPage() {
   const user = useAuthStore((s) => s.user);
@@ -114,6 +116,10 @@ export function SettingsPage() {
         <h1 className="text-xl font-semibold text-navy">Cấu hình trường và năm học</h1>
         <p className="text-sm text-navy/60">Thông tin dùng chung cho toàn bộ hệ thống MN360.</p>
       </div>
+
+      <MyProfileCard />
+
+      {__ENABLE_GOOGLE_LOGIN__ && canEdit && <AccountManagementCard />}
 
       <Card>
         <h2 className="mb-3 text-sm font-semibold text-navy">Thông tin trường</h2>

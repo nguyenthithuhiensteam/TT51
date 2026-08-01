@@ -17,6 +17,7 @@ export default defineConfig({
   publicDir: "public-web",
   define: {
     __IS_WEB_PREVIEW__: "true",
+    __ENABLE_GOOGLE_LOGIN__: "false",
   },
   resolve: {
     alias: {

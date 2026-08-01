@@ -676,6 +676,21 @@ sql.js đã có sẵn), triển khai dần theo từng đợt vì khối lượn
   `npm run build` (desktop), `npm run build:web` (xem trước), `typecheck`/`lint`/`test` (60
   test) không bị ảnh hưởng, và `npm run build:app` (bản Firestore) build thành công trước khi
   xuất bản.
+- ✅ **Đợt 10** — Đăng nhập Google + phê duyệt/phân quyền tài khoản (chỉ bản web thật, cờ biên
+  dịch `__ENABLE_GOOGLE_LOGIN__`): `loginWithGoogle()` trong `db-firebase/authRepo.ts` đăng nhập
+  qua `signInWithPopup`, tài khoản Google lần đầu được ghi hồ sơ `is_active=0` (chờ duyệt) rồi
+  đăng xuất ngay; nút "Đăng nhập bằng Google" ở `LoginPage.tsx` chỉ hiện trên bản web. Trang Cài
+  đặt có thêm hai thẻ mới: "Tài khoản của tôi" (`MyProfileCard.tsx`, mọi tài khoản tự sửa họ
+  tên/email/điện thoại qua `updateMyProfile()`, có ở cả desktop lẫn web) và "Quản lý tài khoản &
+  phân quyền" (`AccountManagementCard.tsx`, chỉ hiện với `system.edit` trên bản web) — liệt kê
+  tài khoản chờ duyệt/đang hoạt động, chọn quyền theo danh mục `permissionCatalog.ts` (khớp toàn
+  bộ mã quyền trong `src-tauri/src/db/sql/*.sql`), phê duyệt/cập nhật quyền/khoá tài khoản qua
+  `listAllUserAccounts`/`approveUserAccount`/`updateUserPermissions`/`setUserAccountActive` trong
+  `db-firebase/systemRepo.ts` (không tự khoá được chính mình để tránh mất quyền admin). Rule
+  `mn360_users` tách `create`/`update`: tự tạo/sửa hồ sơ của chính mình hoặc quản trị viên có
+  `system.edit` sửa tài khoản người khác. Các hàm tương ứng bên `db/systemRepo.ts` (SQLite) chỉ
+  là stub báo "không hỗ trợ trên desktop" vì máy tính không có khái niệm tài khoản Google chờ
+  duyệt — không bao giờ được gọi vì nút/khối giao diện đã ẩn qua cờ biên dịch.
 
 ### Còn lại để hoàn thiện thêm (không chặn sử dụng)
 
@@ -683,10 +698,6 @@ sql.js đã có sẵn), triển khai dần theo từng đợt vì khối lượn
   Z-score ở Sức khỏe.
 - Đính kèm tệp thật (minh chứng, ảnh sự cố...) hiện dùng đường dẫn cục bộ kiểu Tauri — cần nối
   sang Cloudinary (đã dùng cho `evidence-portal`) để hoạt động trên web.
-- "Tạo tài khoản đăng nhập mới" (Đội ngũ, Cài đặt) chưa hỗ trợ — cần thiết kế lại luồng tạo tài
-  khoản Firebase Auth không làm mất phiên đăng nhập của quản trị viên đang thao tác (đã có sẵn
-  `withSecondaryAuthApp` trong `firebase.ts` làm nền tảng) cùng với `mn360_roles`/quản lý quyền
-  qua giao diện thay vì chỉnh trực tiếp trên Firestore Console.
 - Trợ lý AI tư vấn nuôi dạy trẻ (Phụ huynh) cần một cơ chế gọi AI phù hợp cho web (Cloud
   Function trả phí, hoặc gọi thẳng API AI từ trình duyệt có kiểm soát).
 - Sao lưu/khôi phục (`backupRepo.ts`), tìm kiếm toàn hệ thống (`searchRepo.ts`), thông báo
