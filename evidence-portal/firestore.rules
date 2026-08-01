@@ -225,5 +225,55 @@ service cloud.firestore {
       allow create, update: if mn360HasAnyPerm(['staff.edit', 'staff.approve']);
       allow delete: if false;
     }
+
+    // --------------------- Công tác Đảng (CÁCH LY HOÀN TOÀN) ---------------------
+    // Chỉ có 4 mã quyền party.* mới mở được các collection này — không có đường nào khác
+    // (không permission chung "system.*"/admin nào) chạm được vào dữ liệu Đảng, đúng nguyên
+    // tắc cách ly của bản gốc (xem 016_party.sql).
+
+    match /mn360_party_members/{id} {
+      allow read: if mn360HasPerm('party.view');
+      allow create: if mn360HasPerm('party.create');
+      allow update: if mn360HasAnyPerm(['party.edit', 'party.approve']);
+      allow delete: if false;
+    }
+
+    match /mn360_party_meetings/{id} {
+      allow read: if mn360HasPerm('party.view');
+      allow create: if mn360HasPerm('party.create');
+      allow update: if mn360HasAnyPerm(['party.edit', 'party.approve']);
+      allow delete: if false;
+    }
+
+    match /mn360_party_meeting_minutes/{id} {
+      allow read: if mn360HasPerm('party.view');
+      allow create: if mn360HasAnyPerm(['party.edit', 'party.create']);
+      allow update, delete: if false;
+    }
+
+    match /mn360_party_resolutions/{id} {
+      allow read: if mn360HasPerm('party.view');
+      allow create: if mn360HasPerm('party.create');
+      allow update: if mn360HasAnyPerm(['party.edit', 'party.approve']);
+      allow delete: if false;
+    }
+
+    match /mn360_resolution_tracking/{id} {
+      allow read: if mn360HasPerm('party.view');
+      allow create: if mn360HasAnyPerm(['party.edit', 'party.create']);
+      allow update, delete: if false;
+    }
+
+    match /mn360_party_member_evaluations/{id} {
+      allow read: if mn360HasPerm('party.view');
+      allow create, update: if mn360HasAnyPerm(['party.edit', 'party.approve']);
+      allow delete: if false;
+    }
+
+    match /mn360_party_fees/{id} {
+      allow read: if mn360HasPerm('party.view');
+      allow create, update: if mn360HasAnyPerm(['party.edit', 'party.approve']);
+      allow delete: if false;
+    }
   }
 }

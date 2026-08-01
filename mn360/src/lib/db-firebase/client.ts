@@ -29,6 +29,13 @@ export const COL = {
   staffAssignments: "mn360_staff_assignments",
   staffLeaves: "mn360_staff_leaves",
   staffEvaluations: "mn360_staff_evaluations",
+  partyMembers: "mn360_party_members",
+  partyMeetings: "mn360_party_meetings",
+  partyMeetingMinutes: "mn360_party_meeting_minutes",
+  partyResolutions: "mn360_party_resolutions",
+  resolutionTracking: "mn360_resolution_tracking",
+  partyMemberEvaluations: "mn360_party_member_evaluations",
+  partyFees: "mn360_party_fees",
 } as const;
 
 export function nowIso(): string {
