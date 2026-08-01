@@ -68,6 +68,9 @@ export const COL = {
   criteriaAssignments: "mn360_criteria_assignments",
   evidenceFiles: "mn360_evidence_files",
   criteriaEvidenceLinks: "mn360_criteria_evidence_links",
+  documents: "mn360_documents",
+  documentVersions: "mn360_document_versions",
+  documentTaskLinks: "mn360_document_task_links",
 } as const;
 
 export function nowIso(): string {

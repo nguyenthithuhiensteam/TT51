@@ -287,9 +287,18 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Dùng chung cho lịch sử phê duyệt kế hoạch giáo dục, thực đơn, tiêu chí kiểm định, văn bản
+    // (đều là quy trình soạn→duyệt tương tự nhau) — field "plan_id" là id của bản ghi tương ứng.
     match /mn360_plan_approvals/{id} {
-      allow read: if mn360HasPerm('curriculum.view');
-      allow create: if mn360HasAnyPerm(['curriculum.submit', 'curriculum.approve']);
+      allow read: if mn360HasAnyPerm([
+        'curriculum.view', 'nutrition.view', 'accreditation.view', 'document.view',
+      ]);
+      allow create: if mn360HasAnyPerm([
+        'curriculum.submit', 'curriculum.approve',
+        'nutrition.edit', 'nutrition.approve',
+        'accreditation.create', 'accreditation.edit', 'accreditation.approve',
+        'document.submit', 'document.approve', 'document.publish',
+      ]);
       allow update, delete: if false;
     }
 
@@ -481,6 +490,27 @@ service cloud.firestore {
     match /mn360_criteria_evidence_links/{id} {
       allow read: if mn360HasPerm('accreditation.view');
       allow write: if mn360HasAnyPerm(['accreditation.create', 'accreditation.edit']);
+    }
+
+    // --------------------- Văn phòng số ---------------------
+
+    match /mn360_documents/{id} {
+      allow read: if mn360HasPerm('document.view');
+      allow create: if mn360HasPerm('document.create');
+      allow update: if mn360HasAnyPerm(['document.create', 'document.submit', 'document.approve', 'document.publish']);
+      allow delete: if false;
+    }
+
+    match /mn360_document_versions/{id} {
+      allow read: if mn360HasPerm('document.view');
+      allow create: if mn360HasAnyPerm(['document.create', 'document.submit']);
+      allow update, delete: if false;
+    }
+
+    match /mn360_document_task_links/{id} {
+      allow read: if mn360HasAnyPerm(['document.view', 'task.view']);
+      allow create: if mn360HasAnyPerm(['document.view', 'task.create']);
+      allow update, delete: if false;
     }
   }
 }
