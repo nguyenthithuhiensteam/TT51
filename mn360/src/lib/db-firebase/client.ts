@@ -40,6 +40,18 @@ export const COL = {
   planApprovals: "mn360_plan_approvals",
   observations: "mn360_observations",
   childAssessments: "mn360_child_assessments",
+  dishes: "mn360_dishes",
+  menus: "mn360_menus",
+  menuItems: "mn360_menu_items",
+  suppliers: "mn360_suppliers",
+  foodDeliveries: "mn360_food_deliveries",
+  threeStepInspections: "mn360_three_step_inspections",
+  healthRecords: "mn360_health_records",
+  systemSettings: "mn360_system_settings",
+  foods: "mn360_foods",
+  nutritionNorms: "mn360_nutrition_norms",
+  dailyRations: "mn360_daily_rations",
+  rationItems: "mn360_ration_items",
 } as const;
 
 export function nowIso(): string {

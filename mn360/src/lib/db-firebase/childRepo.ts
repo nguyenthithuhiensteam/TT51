@@ -80,11 +80,14 @@ export interface CreateClassInput {
 export async function createClass(input: CreateClassInput): Promise<string> {
   const ts = nowIso();
   const teacherName = input.homeroomTeacherId ? await getUserName(input.homeroomTeacherId) : null;
+  // Suy ra nhóm dinh dưỡng từ độ tuổi, giống đúng logic migration 020_meal_ration.sql.
+  const nutritionGroup = input.ageGroup.includes("tháng") ? "nha_tre" : "mau_giao";
   const ref = await addDoc(collection(db, COL.classes), {
     school_year_id: input.schoolYearId,
     code: input.code,
     name: input.name,
     age_group: input.ageGroup,
+    nutrition_group: nutritionGroup,
     homeroom_teacher_id: input.homeroomTeacherId ?? null,
     homeroom_teacher_name: teacherName,
     room: input.room ?? null,

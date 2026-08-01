@@ -302,5 +302,74 @@ service cloud.firestore {
       allow create: if mn360HasPerm('curriculum.create');
       allow update, delete: if false;
     }
+
+    // --------------------- Nuôi dưỡng ---------------------
+
+    match /mn360_dishes/{id} {
+      allow read: if mn360HasPerm('nutrition.view');
+      allow create: if mn360HasAnyPerm(['nutrition.create', 'nutrition.edit']);
+      allow update, delete: if false;
+    }
+
+    match /mn360_menus/{id} {
+      allow read: if mn360HasPerm('nutrition.view');
+      allow create: if mn360HasAnyPerm(['nutrition.create', 'nutrition.edit']);
+      allow update: if mn360HasAnyPerm(['nutrition.edit', 'nutrition.approve']);
+      allow delete: if false;
+    }
+
+    match /mn360_menu_items/{id} {
+      allow read: if mn360HasPerm('nutrition.view');
+      allow create, delete: if mn360HasAnyPerm(['nutrition.create', 'nutrition.edit']);
+      allow update: if false;
+    }
+
+    match /mn360_suppliers/{id} {
+      allow read: if mn360HasPerm('nutrition.view');
+      allow create: if mn360HasAnyPerm(['nutrition.create', 'nutrition.edit']);
+      allow update, delete: if false;
+    }
+
+    match /mn360_food_deliveries/{id} {
+      allow read: if mn360HasPerm('nutrition.view');
+      allow create: if mn360HasAnyPerm(['nutrition.create', 'nutrition.edit']);
+      allow update, delete: if false;
+    }
+
+    match /mn360_three_step_inspections/{id} {
+      allow read: if mn360HasPerm('nutrition.view');
+      allow create, update: if mn360HasAnyPerm(['nutrition.create', 'nutrition.edit']);
+      allow delete: if false;
+    }
+
+    match /mn360_foods/{id} {
+      allow read: if mn360HasPerm('nutrition.view');
+      allow create: if mn360HasAnyPerm(['nutrition.create', 'nutrition.edit']);
+      allow update, delete: if false;
+    }
+
+    match /mn360_nutrition_norms/{id} {
+      allow read: if mn360HasPerm('nutrition.view');
+      allow write: if false;
+    }
+
+    match /mn360_daily_rations/{id} {
+      allow read: if mn360HasPerm('nutrition.view');
+      allow create: if mn360HasAnyPerm(['nutrition.create', 'nutrition.edit']);
+      allow update: if mn360HasAnyPerm(['nutrition.edit', 'nutrition.approve']);
+      allow delete: if false;
+    }
+
+    match /mn360_ration_items/{id} {
+      allow read: if mn360HasPerm('nutrition.view');
+      allow create, update, delete: if mn360HasAnyPerm(['nutrition.create', 'nutrition.edit']);
+    }
+
+    // system_settings dùng chung cho vài mảnh cấu hình nhỏ (định mức tiền ăn, checklist chính
+    // sách) — đọc rộng cho mọi người đăng nhập, ghi giới hạn theo quyền nutrition.
+    match /mn360_system_settings/{id} {
+      allow read: if mn360IsSignedIn();
+      allow write: if mn360HasAnyPerm(['nutrition.create', 'nutrition.edit']);
+    }
   }
 }
