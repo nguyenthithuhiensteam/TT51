@@ -15,13 +15,13 @@ import { Card } from "../../components/ui/Card";
 import { Select } from "../../components/ui/Input";
 import { useAppStore } from "../../store/appStore";
 import { useAuthStore } from "../../store/authStore";
-import { listChildren, listClasses, type ChildWithClass, type ClassWithTeacher } from "../../lib/db/childRepo";
+import { listChildren, listClasses, type ChildWithClass, type ClassWithTeacher } from "@/lib/db/childRepo";
 import {
   getGrowthAssessments,
   getGrowthSummary,
   type GrowthAssessment,
   type GrowthSummaryCounts,
-} from "../../lib/db/healthRepo";
+} from "@/lib/db/healthRepo";
 import {
   GROWTH_CLASSIFICATION_BY_CODE,
   GROWTH_INDICATOR_LABELS,

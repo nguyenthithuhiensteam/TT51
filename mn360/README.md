@@ -74,6 +74,38 @@ npm run deploy:firebase           # build dist-web rồi "firebase deploy --only
 
 Nếu dùng dự án Firebase khác, sửa `"default"` trong `mn360/.firebaserc` thành đúng Project ID.
 
+## Bản web THẬT (dữ liệu lưu vĩnh viễn trên Firestore)
+
+Khác với bản xem trước ở trên (dữ liệu mất khi tải lại trang), bản này dùng Firebase Auth để
+đăng nhập và Firestore để lưu dữ liệu thật, nhiều người dùng cùng lúc, không cần cài gì trên
+máy người dùng. Đang triển khai **dần theo từng đợt** — xem tiến độ trong `docs/ROADMAP.md`.
+Đợt 0-1 đã có: đăng nhập thật + phân hệ **Tổng quan** và **Công việc** hoạt động đầy đủ với dữ
+liệu thật. Các phân hệ khác hiện báo "chưa hỗ trợ trên bản web" khi mở (chưa bị lỗi/crash,
+chỉ là chưa được chuyển đổi — xem `src/lib/db-firebase/`).
+
+Kiến trúc: mọi lời gọi `@/lib/db/<tên>Repo` trong giao diện được build lại (qua
+`vite.firebase.config.ts`) để trỏ sang `src/lib/db-firebase/<tên>Repo.ts` thay vì
+`src/lib/db/<tên>Repo.ts` (SQLite) — giao diện không cần sửa. Dữ liệu Firestore dùng chung
+project với Cổng minh chứng kiểm định (`evidence-portal`) nhưng nằm trong các collection tiền
+tố `mn360_` riêng biệt (xem `firestore.rules` ở thư mục đó).
+
+```powershell
+cd mn360
+npm install
+# 1. Bật "Email/Password" trong Firebase Console → Authentication → Sign-in method (1 lần)
+# 2. Tạo dữ liệu ban đầu + tài khoản đăng nhập đầu tiên (script dùng chính Firebase SDK,
+#    không cần service account/Cloud Functions)
+npm run seed:app
+# 3. Build và xuất bản lên site Hosting riêng "quantritruongmamnon-app"
+npx firebase-tools login
+npm run deploy:app
+```
+
+Tài khoản seed mặc định: `hieutruong` / `MN360@2026` (bắt buộc đổi mật khẩu lần đầu), hiện chỉ
+được cấp quyền `dashboard.view` + các quyền `task.*` (đúng phạm vi đã xây ở Đợt 0-1) — các menu
+khác sẽ hiện "Không có quyền truy cập" cho tới khi phân hệ tương ứng được chuyển đổi và cấp
+quyền tiếp ở các đợt sau.
+
 ## Tài khoản demo (Trường Mầm non Tràng Đà)
 
 Mật khẩu demo cho **tất cả** tài khoản: `MN360@2026` (bắt buộc đổi mật khẩu lần đăng nhập đầu).
@@ -162,7 +194,9 @@ mn360/
 │   ├── components/     # UI dùng chung + layout (sidebar, topbar, khóa màn hình)
 │   ├── features/       # Từng phân hệ nghiệp vụ (auth, dashboard, tasks, documents, kiểm định,
 │   │                   #   Đảng, phụ huynh, ...)
-│   ├── lib/db/         # Lớp truy cập dữ liệu (DAL) qua SQLite, dễ thay bằng PostgreSQL
+│   ├── lib/db/         # Lớp truy cập dữ liệu (DAL) qua SQLite — dùng cho bản desktop/xem trước
+│   ├── lib/db-firebase/# DAL tương đương nhưng qua Firestore — dùng cho bản web thật (đợt nào
+│   │                   #   chưa chuyển đổi thì chỉ là stub báo "chưa hỗ trợ")
 │   ├── lib/schemas/    # Zod schema kiểm tra dữ liệu đầu vào
 │   ├── lib/export/     # Xuất Word (docx) và Excel (exceljs)
 │   ├── lib/ai/         # Cổng AI: ẩn danh dữ liệu trước khi gửi, gọi lệnh Rust `ai_generate`

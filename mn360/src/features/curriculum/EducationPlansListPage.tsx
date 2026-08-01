@@ -8,10 +8,10 @@ import { Pagination } from "../../components/ui/Pagination";
 import { StatusBadge } from "../../components/ui/Badge";
 import { useAuthStore } from "../../store/authStore";
 import { useAppStore } from "../../store/appStore";
-import { createEducationPlan, listEducationPlans, type EducationPlanRow } from "../../lib/db/curriculumRepo";
-import { listClasses, type ClassWithTeacher } from "../../lib/db/childRepo";
-import { PLAN_TYPE_LABELS, STATUS_LABELS } from "../../lib/db/types";
-import type { PlanType, RecordStatus } from "../../lib/db/types";
+import { createEducationPlan, listEducationPlans, type EducationPlanRow } from "@/lib/db/curriculumRepo";
+import { listClasses, type ClassWithTeacher } from "@/lib/db/childRepo";
+import { PLAN_TYPE_LABELS, STATUS_LABELS } from "@/lib/db/types";
+import type { PlanType, RecordStatus } from "@/lib/db/types";
 import { PlanFormModal, type PlanFormValues } from "./PlanFormModal";
 
 const PAGE_SIZE = 10;

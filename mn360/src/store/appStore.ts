@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { School, SchoolYear } from "../lib/db/types";
+import type { School, SchoolYear } from "@/lib/db/types";
 
 interface AppState {
   isOnline: boolean;

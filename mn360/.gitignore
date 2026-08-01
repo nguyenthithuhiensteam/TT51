@@ -2,6 +2,7 @@ node_modules
 dist
 dist-ssr
 dist-web
+dist-firebase
 artifact-dist
 public-web/*.wasm
 *.local

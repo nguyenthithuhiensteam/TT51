@@ -1,9 +1,20 @@
+import { invoke } from "@tauri-apps/api/core";
 import { dbExecute, dbSelect, nowIso } from "./client";
 import { newId } from "../utils/id";
 import type { User } from "./types";
 
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCK_MINUTES = 15;
+
+/** Lỗi nghiệp vụ đăng nhập/đổi mật khẩu — message đã sẵn sàng hiển thị cho người dùng. */
+export class AuthError extends Error {}
+
+export interface LoginResult {
+  user: User;
+  roles: string[];
+  permissions: string[];
+  sessionId: string;
+}
 
 export async function findUserByUsername(username: string): Promise<User | null> {
   const rows = await dbSelect<User>(
@@ -78,6 +89,71 @@ export async function createSession(userId: string, deviceInfo: string): Promise
     [id, userId, deviceInfo, nowIso()],
   );
   return id;
+}
+
+/** Đăng nhập bằng tài khoản cục bộ: kiểm tra khoá tài khoản, xác minh mật khẩu (Rust/Argon2id),
+ * ghi nhận thành công/thất bại, mở phiên và tải vai trò/quyền. Ném AuthError với thông báo đã
+ * sẵn sàng hiển thị nếu thất bại. */
+export async function loginWithPassword(username: string, password: string): Promise<LoginResult> {
+  const user = await findUserByUsername(username.trim());
+  if (!user || !user.is_active) {
+    throw new AuthError("Tên đăng nhập hoặc mật khẩu không đúng");
+  }
+  if (user.locked_until && new Date(user.locked_until) > new Date()) {
+    const time = new Date(user.locked_until).toLocaleTimeString("vi-VN");
+    throw new AuthError(`Tài khoản đang tạm khóa do đăng nhập sai nhiều lần. Thử lại sau ${time}.`);
+  }
+
+  const ok = await invoke<boolean>("verify_password", {
+    password,
+    hash: user.password_hash,
+  });
+  if (!ok) {
+    const { lockedUntil } = await recordFailedLogin(user);
+    throw new AuthError(
+      lockedUntil
+        ? "Tài khoản đã bị khóa do đăng nhập sai quá 5 lần. Vui lòng thử lại sau 15 phút."
+        : "Tên đăng nhập hoặc mật khẩu không đúng",
+    );
+  }
+
+  await recordSuccessfulLogin(user.id);
+  const [roles, permissions] = await Promise.all([
+    getUserRoleCodes(user.id),
+    getUserPermissionCodes(user.id),
+  ]);
+  const sessionId = await createSession(user.id, navigator.userAgent);
+  await logAudit({
+    entityTable: "users",
+    entityId: user.id,
+    action: "login",
+    userId: user.id,
+    sessionId,
+  });
+  return { user, roles, permissions, sessionId };
+}
+
+/** Đổi mật khẩu: xác minh mật khẩu hiện tại rồi băm/lưu mật khẩu mới (Rust/Argon2id). */
+export async function changePassword(
+  user: User,
+  currentPassword: string,
+  newPassword: string,
+  sessionId: string | null,
+): Promise<void> {
+  const ok = await invoke<boolean>("verify_password", {
+    password: currentPassword,
+    hash: user.password_hash,
+  });
+  if (!ok) throw new AuthError("Mật khẩu hiện tại không đúng");
+  const newHash = await invoke<string>("hash_password", { password: newPassword });
+  await updatePassword(user.id, newHash);
+  await logAudit({
+    entityTable: "users",
+    entityId: user.id,
+    action: "change_password",
+    userId: user.id,
+    sessionId,
+  });
 }
 
 export async function logAudit(entry: {

@@ -6,7 +6,7 @@ import { Button } from "../../components/ui/Button";
 import { Field, Input, Select, Textarea } from "../../components/ui/Input";
 import { StatusBadge } from "../../components/ui/Badge";
 import { useAuthStore } from "../../store/authStore";
-import { listActiveUsers } from "../../lib/db/systemRepo";
+import { listActiveUsers } from "@/lib/db/systemRepo";
 import {
   addResolutionTracking,
   changePartyMeetingStatus,
@@ -30,14 +30,14 @@ import {
   type PartyMemberRow,
   type ResolutionRow,
   type ResolutionTrackingRow,
-} from "../../lib/db/partyRepo";
+} from "@/lib/db/partyRepo";
 import {
   PARTY_MEETING_TYPE_LABELS,
   PARTY_POSITION_LABELS,
   PARTY_RATING_LABELS,
   RESOLUTION_STATUS_LABELS,
-} from "../../lib/db/types";
-import type { PartyCellPosition, PartyMeetingType, PartyMemberRating, ResolutionTrackingStatus, User } from "../../lib/db/types";
+} from "@/lib/db/types";
+import type { PartyCellPosition, PartyMeetingType, PartyMemberRating, ResolutionTrackingStatus, User } from "@/lib/db/types";
 
 type Tab = "members" | "meetings" | "fees";
 

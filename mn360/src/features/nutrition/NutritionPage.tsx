@@ -8,7 +8,7 @@ import { StatusBadge } from "../../components/ui/Badge";
 import { Modal } from "../../components/ui/Modal";
 import { useAuthStore } from "../../store/authStore";
 import { useAppStore } from "../../store/appStore";
-import { listClasses, type ClassWithTeacher } from "../../lib/db/childRepo";
+import { listClasses, type ClassWithTeacher } from "@/lib/db/childRepo";
 import {
   checkAllergyWarnings,
   createDish,
@@ -28,14 +28,14 @@ import {
   type MenuWithDetail,
   type Supplier,
   type ThreeStepInspectionRow,
-} from "../../lib/db/nutritionRepo";
+} from "@/lib/db/nutritionRepo";
 import {
   MEAL_SLOT_LABELS,
   INSPECTION_STEP_LABELS,
   type Dish,
   type DishCategory,
   type RecordStatus,
-} from "../../lib/db/types";
+} from "@/lib/db/types";
 
 import { MealRationTab } from "./MealRationTab";
 

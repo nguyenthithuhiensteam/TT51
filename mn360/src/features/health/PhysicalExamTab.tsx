@@ -4,15 +4,15 @@ import { Button } from "../../components/ui/Button";
 import { Input, Select } from "../../components/ui/Input";
 import { useAuthStore } from "../../store/authStore";
 import { useAppStore } from "../../store/appStore";
-import { listClasses, type ClassWithTeacher } from "../../lib/db/childRepo";
+import { listClasses, type ClassWithTeacher } from "@/lib/db/childRepo";
 import {
   getPhysicalExamGrid,
   listPhysicalExamRounds,
   upsertPhysicalExam,
   type PhysicalExamRow,
   type UpsertPhysicalExamInput,
-} from "../../lib/db/healthRepo";
-import { PHYSICAL_EXAM_SPECIALTY_LABELS, type PhysicalExamSpecialtyFields } from "../../lib/db/types";
+} from "@/lib/db/healthRepo";
+import { PHYSICAL_EXAM_SPECIALTY_LABELS, type PhysicalExamSpecialtyFields } from "@/lib/db/types";
 
 const SPECIALTY_KEYS = Object.keys(PHYSICAL_EXAM_SPECIALTY_LABELS) as (keyof PhysicalExamSpecialtyFields)[];
 

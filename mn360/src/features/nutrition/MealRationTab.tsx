@@ -28,7 +28,7 @@ import {
   type CombinedDailyReport,
   type RationItemRow,
   type WeeklyRationDay,
-} from "../../lib/db/rationRepo";
+} from "@/lib/db/rationRepo";
 import {
   BENEFICIARY_GROUPS,
   COOK_SUPPORT_TEXT,
@@ -48,7 +48,7 @@ import {
   type NutritionGroup,
   type NutritionNorm,
   type RecordStatus,
-} from "../../lib/db/types";
+} from "@/lib/db/types";
 import { exportFinanceReportToExcel } from "../../lib/export/excel";
 
 function formatVnd(amount: number): string {

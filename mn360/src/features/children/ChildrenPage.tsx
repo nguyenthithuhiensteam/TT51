@@ -20,10 +20,10 @@ import {
   type AttendanceRow,
   type ChildWithClass,
   type ClassWithTeacher,
-} from "../../lib/db/childRepo";
-import { listActiveUsers } from "../../lib/db/systemRepo";
-import { CHILD_STATUS_LABELS, ATTENDANCE_LABELS } from "../../lib/db/types";
-import type { AttendanceStatus, ChildStatus, User } from "../../lib/db/types";
+} from "@/lib/db/childRepo";
+import { listActiveUsers } from "@/lib/db/systemRepo";
+import { CHILD_STATUS_LABELS, ATTENDANCE_LABELS } from "@/lib/db/types";
+import type { AttendanceStatus, ChildStatus, User } from "@/lib/db/types";
 import { ClassFormModal, type ClassFormValues } from "./ClassFormModal";
 import { ChildFormModal, type ChildFormValues } from "./ChildFormModal";
 import { ImportChildrenModal } from "./ImportChildrenModal";

@@ -7,7 +7,7 @@ import { Input, Select } from "../../components/ui/Input";
 import { StatusBadge } from "../../components/ui/Badge";
 import { useAuthStore } from "../../store/authStore";
 import { useAppStore } from "../../store/appStore";
-import { listChildren, type ChildWithClass } from "../../lib/db/childRepo";
+import { listChildren, type ChildWithClass } from "@/lib/db/childRepo";
 import {
   createAsset,
   createExpense,
@@ -23,9 +23,9 @@ import {
   type AssetRow,
   type ExpenseRow,
   type RevenueRow,
-} from "../../lib/db/financeRepo";
-import { ASSET_STATUS_LABELS } from "../../lib/db/types";
-import type { FeeItem } from "../../lib/db/types";
+} from "@/lib/db/financeRepo";
+import { ASSET_STATUS_LABELS } from "@/lib/db/types";
+import type { FeeItem } from "@/lib/db/types";
 import { exportFinanceReportToExcel } from "../../lib/export/excel";
 import { VoucherPrint } from "./VoucherPrint";
 

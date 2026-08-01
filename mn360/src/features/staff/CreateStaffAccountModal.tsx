@@ -5,7 +5,7 @@ import { Modal } from "../../components/ui/Modal";
 import { Button } from "../../components/ui/Button";
 import { Field, Input, Select } from "../../components/ui/Input";
 import { newStaffAccountSchema, type NewStaffAccountInput } from "../../lib/schemas/staff";
-import type { Role } from "../../lib/db/types";
+import type { Role } from "@/lib/db/types";
 
 export type CreateStaffAccountValues = NewStaffAccountInput;
 

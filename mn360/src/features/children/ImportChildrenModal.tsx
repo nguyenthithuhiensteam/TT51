@@ -3,7 +3,7 @@ import { Modal } from "../../components/ui/Modal";
 import { Button } from "../../components/ui/Button";
 import { ImportFileSourceBar } from "../../components/import/ImportFileSourceBar";
 import { parseWorkbookRows, downloadImportTemplate } from "../../lib/import/excel";
-import { createChild, type CreateChildInput, type ClassWithTeacher } from "../../lib/db/childRepo";
+import { createChild, type CreateChildInput, type ClassWithTeacher } from "@/lib/db/childRepo";
 
 const TEMPLATE_HEADERS = ["Họ và tên", "Ngày sinh (YYYY-MM-DD)", "Giới tính (Nam/Nữ)", "Lớp", "Ngày nhập học (YYYY-MM-DD)"];
 

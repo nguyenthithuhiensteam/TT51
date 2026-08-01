@@ -4,9 +4,9 @@ import { useEffect } from "react";
 import { Modal } from "../../components/ui/Modal";
 import { Button } from "../../components/ui/Button";
 import { Field, Input, Select, Textarea } from "../../components/ui/Input";
-import { PLAN_TYPE_LABELS } from "../../lib/db/types";
+import { PLAN_TYPE_LABELS } from "@/lib/db/types";
 import { educationPlanSchema, type EducationPlanFormInput } from "../../lib/schemas/curriculum";
-import type { ClassWithTeacher } from "../../lib/db/childRepo";
+import type { ClassWithTeacher } from "@/lib/db/childRepo";
 
 export type PlanFormValues = EducationPlanFormInput;
 

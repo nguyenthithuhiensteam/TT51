@@ -18,10 +18,10 @@ import {
   type DocumentApprovalRow,
   type DocumentVersionRow,
   type DocumentWithCreator,
-} from "../../lib/db/documentRepo";
-import { createTask } from "../../lib/db/taskRepo";
-import { linkDocumentToTask } from "../../lib/db/documentRepo";
-import { DOC_TYPE_LABELS } from "../../lib/db/types";
+} from "@/lib/db/documentRepo";
+import { createTask } from "@/lib/db/taskRepo";
+import { linkDocumentToTask } from "@/lib/db/documentRepo";
+import { DOC_TYPE_LABELS } from "@/lib/db/types";
 import { generateWithAi } from "../../lib/ai/gateway";
 import { redactText } from "../../lib/ai/redact";
 

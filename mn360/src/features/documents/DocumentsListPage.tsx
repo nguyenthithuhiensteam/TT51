@@ -12,9 +12,9 @@ import {
   createDocument,
   listDocuments,
   type DocumentWithCreator,
-} from "../../lib/db/documentRepo";
-import type { DocumentType, RecordStatus } from "../../lib/db/types";
-import { DOC_TYPE_LABELS, STATUS_LABELS } from "../../lib/db/types";
+} from "@/lib/db/documentRepo";
+import type { DocumentType, RecordStatus } from "@/lib/db/types";
+import { DOC_TYPE_LABELS, STATUS_LABELS } from "@/lib/db/types";
 import { DocumentFormModal } from "./DocumentFormModal";
 import type { DocumentFormInput } from "../../lib/schemas/document";
 

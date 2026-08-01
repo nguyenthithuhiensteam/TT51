@@ -2,19 +2,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { loginSchema, type LoginInput } from "../../lib/schemas/auth";
-import {
-  createSession,
-  findUserByUsername,
-  getUserPermissionCodes,
-  getUserRoleCodes,
-  logAudit,
-  recordFailedLogin,
-  recordSuccessfulLogin,
-} from "../../lib/db/authRepo";
-import { getSchool, getCurrentSchoolYear } from "../../lib/db/systemRepo";
-import { generateOverdueNotifications } from "../../lib/db/taskRepo";
+import { loginWithPassword } from "@/lib/db/authRepo";
+import { getSchool, getCurrentSchoolYear } from "@/lib/db/systemRepo";
+import { generateOverdueNotifications } from "@/lib/db/taskRepo";
 import { useAuthStore } from "../../store/authStore";
 import { useAppStore } from "../../store/appStore";
 import { Button } from "../../components/ui/Button";
@@ -38,45 +29,10 @@ export function LoginPage() {
     setServerError(null);
     setSubmitting(true);
     try {
-      const user = await findUserByUsername(data.username.trim());
-      if (!user || !user.is_active) {
-        setServerError("Tên đăng nhập hoặc mật khẩu không đúng");
-        return;
-      }
-      if (user.locked_until && new Date(user.locked_until) > new Date()) {
-        const time = new Date(user.locked_until).toLocaleTimeString("vi-VN");
-        setServerError(`Tài khoản đang tạm khóa do đăng nhập sai nhiều lần. Thử lại sau ${time}.`);
-        return;
-      }
-
-      const ok = await invoke<boolean>("verify_password", {
-        password: data.password,
-        hash: user.password_hash,
-      });
-
-      if (!ok) {
-        const { lockedUntil } = await recordFailedLogin(user);
-        setServerError(
-          lockedUntil
-            ? "Tài khoản đã bị khóa do đăng nhập sai quá 5 lần. Vui lòng thử lại sau 15 phút."
-            : "Tên đăng nhập hoặc mật khẩu không đúng",
-        );
-        return;
-      }
-
-      await recordSuccessfulLogin(user.id);
-      const [roles, permissions] = await Promise.all([
-        getUserRoleCodes(user.id),
-        getUserPermissionCodes(user.id),
-      ]);
-      const sessionId = await createSession(user.id, navigator.userAgent);
-      await logAudit({
-        entityTable: "users",
-        entityId: user.id,
-        action: "login",
-        userId: user.id,
-        sessionId,
-      });
+      const { user, roles, permissions, sessionId } = await loginWithPassword(
+        data.username.trim(),
+        data.password,
+      );
 
       const school = await getSchool();
       const schoolYear = school ? await getCurrentSchoolYear(school.id) : null;
@@ -121,7 +77,7 @@ export function LoginPage() {
           </Button>
         </form>
         <p className="mt-4 text-center text-xs text-navy/40">
-          Ứng dụng hoạt động cục bộ — dữ liệu được lưu ngay trên máy tính của trường.
+          Dữ liệu được lưu trữ và bảo vệ theo tài khoản đăng nhập của bạn.
         </p>
       </div>
     </div>

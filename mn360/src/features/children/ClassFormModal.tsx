@@ -5,7 +5,7 @@ import { Modal } from "../../components/ui/Modal";
 import { Button } from "../../components/ui/Button";
 import { Field, Input, Select } from "../../components/ui/Input";
 import { classSchema, type ClassFormInput } from "../../lib/schemas/children";
-import type { User } from "../../lib/db/types";
+import type { User } from "@/lib/db/types";
 
 export type ClassFormValues = ClassFormInput;
 

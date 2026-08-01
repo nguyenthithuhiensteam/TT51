@@ -10,7 +10,7 @@ import {
   runBackup,
   runRestore,
   type BackupRow,
-} from "../../lib/db/backupRepo";
+} from "@/lib/db/backupRepo";
 import { Modal } from "../../components/ui/Modal";
 
 export function BackupPage() {

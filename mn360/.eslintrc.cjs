@@ -14,7 +14,15 @@ module.exports = {
     ecmaFeatures: { jsx: true },
   },
   plugins: ["@typescript-eslint", "react-refresh"],
-  ignorePatterns: ["dist", "dist-web", "artifact-dist", "src-tauri", "node_modules", "*.cjs"],
+  ignorePatterns: [
+    "dist",
+    "dist-web",
+    "dist-firebase",
+    "artifact-dist",
+    "src-tauri",
+    "node_modules",
+    "*.cjs",
+  ],
   rules: {
     "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
     "@typescript-eslint/no-explicit-any": "warn",

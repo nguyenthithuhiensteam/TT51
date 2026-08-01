@@ -12,14 +12,14 @@ import {
   listSchoolYears,
   setCurrentSchoolYear,
   updateSchool,
-} from "../../lib/db/systemRepo";
-import { getDataDir, setDataDir } from "../../lib/db/backupRepo";
+} from "@/lib/db/systemRepo";
+import { getDataDir, setDataDir } from "@/lib/db/backupRepo";
 import { useAppStore } from "../../store/appStore";
 import { useAuthStore } from "../../store/authStore";
-import type { School, SchoolYear } from "../../lib/db/types";
+import type { School, SchoolYear } from "@/lib/db/types";
 import { defaultModelFor, loadAiConfig, saveAiConfig, type AiConfig, type AiProvider } from "../../lib/ai/gateway";
 import { Select } from "../../components/ui/Input";
-import { getDefaultMealFeeRate, setDefaultMealFeeRate } from "../../lib/db/rationRepo";
+import { getDefaultMealFeeRate, setDefaultMealFeeRate } from "@/lib/db/rationRepo";
 import { loadGoogleDriveConfig, saveGoogleDriveConfig, type GoogleDriveConfig } from "../../lib/import/googleDrive";
 
 export function SettingsPage() {

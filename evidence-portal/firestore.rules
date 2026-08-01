@@ -64,5 +64,90 @@ service cloud.firestore {
         && request.resource.data.storagePath == resource.data.storagePath;
       allow delete: if false;
     }
+
+    // ===================== MN360 (hệ điều hành trường mầm non số) =====================
+    // Toàn bộ collection tiền tố "mn360_" thuộc ứng dụng MN360 (khác Cổng minh chứng ở trên,
+    // dùng chung project Firestore nhưng namespace riêng để không xung đột). Phân quyền dựa
+    // trên permissionCodes lưu trực tiếp trên hồ sơ user (không cần custom claims/Cloud
+    // Functions — vẫn hoạt động trên gói Firebase miễn phí).
+
+    function mn360IsSignedIn() {
+      return request.auth != null;
+    }
+
+    function mn360Perms() {
+      return get(/databases/$(database)/documents/mn360_users/$(request.auth.uid)).data.permissionCodes;
+    }
+
+    function mn360HasPerm(code) {
+      return mn360IsSignedIn() && code in mn360Perms();
+    }
+
+    function mn360HasAnyPerm(codes) {
+      return mn360IsSignedIn() && mn360Perms().hasAny(codes);
+    }
+
+    match /mn360_users/{uid} {
+      // Tên/hồ sơ cơ bản cần đọc được rộng rãi để hiển thị người phụ trách/người soạn ở các
+      // phân hệ khác (chủ trì nhiệm vụ, người duyệt...) — không chứa dữ liệu nhạy cảm.
+      allow read: if mn360IsSignedIn();
+      // Chỉ tự sửa hồ sơ của chính mình (đổi mật khẩu, ghi nhận đăng nhập). Quản trị viên tạo/
+      // sửa tài khoản người khác sẽ làm qua script/quy trình riêng ở các đợt sau.
+      allow write: if mn360IsSignedIn() && request.auth.uid == uid;
+    }
+
+    match /mn360_schools/{id} {
+      allow read: if mn360IsSignedIn();
+      allow write: if false;
+    }
+
+    match /mn360_school_years/{id} {
+      allow read: if mn360IsSignedIn();
+      allow write: if false;
+    }
+
+    match /mn360_tasks/{id} {
+      allow read: if mn360HasPerm('task.view');
+      allow create: if mn360HasPerm('task.create');
+      allow update: if mn360HasAnyPerm(['task.edit', 'task.submit', 'task.approve']);
+      allow delete: if false;
+    }
+
+    match /mn360_task_status_history/{id} {
+      allow read: if mn360HasPerm('task.view');
+      allow create: if mn360HasAnyPerm(['task.edit', 'task.submit', 'task.approve']);
+      allow update, delete: if false;
+    }
+
+    match /mn360_task_comments/{id} {
+      allow read: if mn360HasPerm('task.view');
+      allow create: if mn360HasPerm('task.view') && request.resource.data.user_id == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    match /mn360_task_evidence/{id} {
+      allow read: if mn360HasPerm('task.view');
+      allow create: if mn360HasPerm('task.view') && request.resource.data.uploaded_by == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    match /mn360_notifications/{id} {
+      allow read: if mn360IsSignedIn() && resource.data.user_id == request.auth.uid;
+      // Ghi hộ thông báo cho người khác (VD: nhắc chủ trì nhiệm vụ quá hạn) — nội dung do hệ
+      // thống tự sinh từ dữ liệu nhiệm vụ thật, không phải nội dung tự do người dùng nhập.
+      allow create: if mn360HasPerm('task.view');
+      allow update: if mn360IsSignedIn() && resource.data.user_id == request.auth.uid;
+      allow delete: if false;
+    }
+
+    match /mn360_counters/{id} {
+      allow read, write: if mn360HasPerm('task.create');
+    }
+
+    match /mn360_audit_logs/{id} {
+      allow create: if mn360IsSignedIn();
+      allow read: if mn360HasPerm('system.view');
+      allow update, delete: if false;
+    }
   }
 }

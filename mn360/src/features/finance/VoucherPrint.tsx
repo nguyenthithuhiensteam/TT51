@@ -1,6 +1,6 @@
 import { useAppStore } from "../../store/appStore";
 import { amountToVietnameseWordsVnd } from "../../lib/utils/vietnameseNumber";
-import type { ExpenseRow, RevenueRow } from "../../lib/db/financeRepo";
+import type { ExpenseRow, RevenueRow } from "@/lib/db/financeRepo";
 
 function formatVnd(amount: number): string {
   return Math.round(amount).toLocaleString("vi-VN");

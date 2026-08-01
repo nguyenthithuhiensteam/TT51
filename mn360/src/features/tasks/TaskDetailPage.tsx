@@ -24,11 +24,11 @@ import {
   type TaskEvidenceRow,
   type TaskStatusHistoryRow,
   type TaskWithOwner,
-} from "../../lib/db/taskRepo";
-import { pickAndAttachFile } from "../../lib/db/attachmentRepo";
-import { updateTask } from "../../lib/db/taskRepo";
-import { listActiveUsers } from "../../lib/db/systemRepo";
-import type { RecordStatus, User } from "../../lib/db/types";
+} from "@/lib/db/taskRepo";
+import { pickAndAttachFile } from "@/lib/db/attachmentRepo";
+import { updateTask } from "@/lib/db/taskRepo";
+import { listActiveUsers } from "@/lib/db/systemRepo";
+import type { RecordStatus, User } from "@/lib/db/types";
 import { TaskFormModal } from "./TaskFormModal";
 import type { TaskFormInput } from "../../lib/schemas/task";
 

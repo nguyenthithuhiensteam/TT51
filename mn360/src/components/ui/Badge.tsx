@@ -1,6 +1,6 @@
 import clsx from "clsx";
-import type { RecordStatus, TaskPriority } from "../../lib/db/types";
-import { STATUS_LABELS, PRIORITY_LABELS } from "../../lib/db/types";
+import type { RecordStatus, TaskPriority } from "@/lib/db/types";
+import { STATUS_LABELS, PRIORITY_LABELS } from "@/lib/db/types";
 
 const STATUS_COLORS: Record<RecordStatus, string> = {
   draft: "bg-navy/10 text-navy",

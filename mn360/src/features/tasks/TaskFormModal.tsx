@@ -5,8 +5,8 @@ import { taskSchema, type TaskFormInput } from "../../lib/schemas/task";
 import { Modal } from "../../components/ui/Modal";
 import { Button } from "../../components/ui/Button";
 import { Field, Input, Select, Textarea } from "../../components/ui/Input";
-import type { User } from "../../lib/db/types";
-import type { TaskWithOwner } from "../../lib/db/taskRepo";
+import type { User } from "@/lib/db/types";
+import type { TaskWithOwner } from "@/lib/db/taskRepo";
 
 export function TaskFormModal({
   open,

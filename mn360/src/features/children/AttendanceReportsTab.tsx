@@ -13,7 +13,7 @@ import {
   type MonthlyAttendanceStatsRow,
   type StudentCountSnapshot,
   type YearlyAttendanceSummary,
-} from "../../lib/db/childRepo";
+} from "@/lib/db/childRepo";
 import { exportFinanceReportToExcel } from "../../lib/export/excel";
 
 const WEEKDAY_SHORT = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];

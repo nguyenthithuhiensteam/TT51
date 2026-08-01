@@ -6,7 +6,7 @@ import { Button } from "../../components/ui/Button";
 import { Field, Input, Select, Textarea } from "../../components/ui/Input";
 import { StatusBadge } from "../../components/ui/Badge";
 import { useAuthStore } from "../../store/authStore";
-import { listChildren, type ChildWithClass } from "../../lib/db/childRepo";
+import { listChildren, type ChildWithClass } from "@/lib/db/childRepo";
 import {
   addGrowthMeasurement,
   addVaccination,
@@ -24,9 +24,9 @@ import {
   type IncidentRow,
   type SafetyInspectionRow,
   type VaccinationRow,
-} from "../../lib/db/healthRepo";
-import { SAFETY_AREA_LABELS, SEVERITY_LABELS } from "../../lib/db/types";
-import type { IncidentSeverity, SafetyArea } from "../../lib/db/types";
+} from "@/lib/db/healthRepo";
+import { SAFETY_AREA_LABELS, SEVERITY_LABELS } from "@/lib/db/types";
+import type { IncidentSeverity, SafetyArea } from "@/lib/db/types";
 import { PhysicalExamTab } from "./PhysicalExamTab";
 import { GrowthAssessmentTab } from "./GrowthAssessmentTab";
 

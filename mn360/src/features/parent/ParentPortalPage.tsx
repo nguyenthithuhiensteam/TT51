@@ -23,8 +23,8 @@ import {
   type MyMenuRow,
   type MyRevenueRow,
   type ParentMessageRow,
-} from "../../lib/db/parentRepo";
-import { ATTENDANCE_LABELS, LEAVE_REQUEST_STATUS_LABELS, MEAL_SLOT_LABELS } from "../../lib/db/types";
+} from "@/lib/db/parentRepo";
+import { ATTENDANCE_LABELS, LEAVE_REQUEST_STATUS_LABELS, MEAL_SLOT_LABELS } from "@/lib/db/types";
 
 function ParentAiAssistant({ userId }: { userId: string }) {
   const [question, setQuestion] = useState("");

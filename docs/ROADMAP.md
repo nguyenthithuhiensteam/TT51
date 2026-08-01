@@ -591,5 +591,58 @@ Nếu đã chạy ứng dụng từ trước, CSDL SQLite hiện có sẽ tự �
 (004-008 Giai đoạn 2, 009-013 Giai đoạn 3, 014-018 Giai đoạn 4, 019 Giai đoạn 5, 020-021
 Giai đoạn 6) khi mở lại ứng dụng — không cần xóa dữ liệu cũ.
 
+## Giai đoạn 7: Bản web thật (Firestore, dữ liệu vĩnh viễn) — đang triển khai theo từng đợt
+
+Theo yêu cầu bổ sung: trang web xuất bản trước đó (`quantritruongmamnon-minhchung.web.app`) chỉ
+là Cổng minh chứng kiểm định (một phần nhỏ), chưa có đủ 12 phân hệ như bản cài máy. Quyết định:
+xây bản web thật đầy đủ chức năng, lưu dữ liệu thật trên Firestore (không phải bản xem trước
+sql.js đã có sẵn), triển khai dần theo từng đợt vì khối lượng rất lớn (~19.000 dòng giao diện,
+20 file kho dữ liệu SQL cần viết lại cho Firestore).
+
+- ✅ Codemod: đổi toàn bộ import `lib/db/*` trong `features/routes/components/store` sang alias
+  `@/lib/db` (đã có sẵn trong tsconfig/vite) — để có thể tráo sang bản Firestore bằng alias
+  riêng trong `vite.firebase.config.ts` mà không sửa giao diện.
+- ✅ `vite.firebase.config.ts` (mới): alias `@/lib/db` → `@/lib/db-firebase`, build ra
+  `dist-firebase/`. Script `build:app`/`deploy:app` trong `package.json`, site Hosting riêng
+  `quantritruongmamnon-app` (`firebase.app.json`) — tách khỏi site xem trước và site Cổng minh
+  chứng kiểm định, tránh xung đột.
+- ✅ `src/lib/firebase.ts`: khởi tạo Firebase App/Auth/Firestore, dùng chung project
+  `quantritruongmamnon` với `evidence-portal` nhưng namespace Firestore riêng (tiền tố
+  `mn360_...`) để không đụng dữ liệu của nhau. Hàm `usernameToAuthEmail` ánh xạ username nội bộ
+  sang email giả `@mn360.internal` (Firebase Auth Email/Password bắt buộc định dạng email).
+- ✅ Tách `authRepo.loginWithPassword`/`changePassword` khỏi `LoginPage.tsx`/
+  `ChangePasswordPage.tsx` (trước đó 2 màn hình này gọi thẳng `invoke("verify_password"/
+  "hash_password")` của Tauri — chặn hoàn toàn việc chạy trên web). Bản SQLite giữ nguyên hành
+  vi cũ (đã kiểm thử lại `build`/`test`/`lint` không đổi); bản Firestore dùng thẳng
+  `signInWithEmailAndPassword`/`reauthenticateWithCredential` của Firebase Auth (Firebase tự lo
+  khoá tạm thời khi sai nhiều lần, không cần tự đếm `failed_login_count` như bản SQL).
+- ✅ `src/lib/db-firebase/authRepo.ts`, `systemRepo.ts` (chỉ `getSchool`/`getCurrentSchoolYear`/
+  `listActiveUsers` — đủ cho đăng nhập + chọn người phụ trách nhiệm vụ), `taskRepo.ts` (đầy đủ,
+  làm mẫu đầu tiên): Firestore không có JOIN/LIKE/GROUP BY nên đổi cách tiếp cận — nhúng sẵn
+  `owner_name`/`assignees[]` ngay trên tài liệu nhiệm vụ (denormalize) thay vì JOIN;
+  `listTasks` tải toàn bộ rồi lọc/sắp xếp/phân trang phía client (phù hợp quy mô một trường,
+  vài trăm-nghìn nhiệm vụ); mã nhiệm vụ tuần tự dùng Firestore transaction đếm riêng
+  (`mn360_counters`) thay cho `SELECT COUNT(*)` (không an toàn khi nhiều người dùng ghi đồng
+  thời); thông báo quá hạn dùng doc ID cố định theo `dedupKey` để tự chống trùng thay cho
+  `INSERT OR IGNORE`.
+- ✅ 16 phân hệ còn lại (`childRepo`, `staffRepo`, `curriculumRepo`, `nutritionRepo`,
+  `healthRepo`, `financeRepo`, `accreditationRepo`, `partyRepo`, `parentRepo`, `documentRepo`,
+  `attachmentRepo`, `backupRepo`, `notificationRepo`, `rationRepo`, `searchRepo`, phần còn lại
+  của `systemRepo`) chỉ có **stub tự sinh** (`scripts/gen-firebase-stubs.mjs`) — đủ để bản build
+  không lỗi thiếu import (Rollup vẫn cần resolve được mọi `import()` tĩnh dù lazy-load), nhưng
+  gọi tới sẽ báo lỗi rõ ràng "chưa hỗ trợ trên bản web". Sẽ thay dần ở các đợt sau.
+- ✅ `firestore.rules` (trong `evidence-portal/`, dùng chung 1 project nên 1 file rules): thêm
+  block `mn360_*` — phân quyền qua `permissionCodes` lưu thẳng trên hồ sơ user (không cần custom
+  claims/Cloud Functions, vẫn chạy được trên gói Firebase miễn phí Spark).
+- ✅ `scripts/seed-firebase.mjs`: tạo trường/năm học/tài khoản `hieutruong` đầu tiên bằng chính
+  Firebase Auth SDK phía client (không cần service account) — chỉ cấp quyền `dashboard.view` +
+  `task.*` đúng phạm vi đã xây, tránh vào menu chưa chuyển đổi bị lỗi thay vì thông báo rõ ràng.
+- ✅ Xác nhận không phá bản cũ: `npm run build` (desktop), `npm run build:web` (xem trước),
+  `npm run typecheck`, `npm run lint`, `npm run test` (60 test) đều chạy sạch sau toàn bộ thay
+  đổi; `npm run build:app` (bản Firestore) build thành công.
+- ⏳ Còn lại: bật "Email/Password" trong Firebase Console (thao tác 1 lần, chỉ chủ dự án làm
+  được), lấy token CI để xuất bản Hosting + rules + chạy seed, kiểm thử luồng thật trên trình
+  duyệt, rồi tiếp tục Đợt 2 (Trẻ em, Đội ngũ) ở phiên làm việc sau.
+
 Để đóng gói bộ cài `.msi`/`.exe` chính thức, chạy `npm run tauri build` trên máy Windows có đầy
 đủ Visual Studio Build Tools — xem `mn360/README.md` mục "Đóng gói bộ cài Windows".

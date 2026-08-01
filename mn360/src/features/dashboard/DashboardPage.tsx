@@ -18,9 +18,9 @@ import {
   listTasks,
   type DashboardTaskStats,
   type TaskWithOwner,
-} from "../../lib/db/taskRepo";
-import { countPendingApprovalDocuments } from "../../lib/db/documentRepo";
-import { STATUS_LABELS } from "../../lib/db/types";
+} from "@/lib/db/taskRepo";
+import { countPendingApprovalDocuments } from "@/lib/db/documentRepo";
+import { STATUS_LABELS } from "@/lib/db/types";
 
 const DUE_SOON_DAYS = 7;
 

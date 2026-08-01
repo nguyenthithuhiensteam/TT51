@@ -5,9 +5,9 @@ import { Button } from "../../components/ui/Button";
 import { Field, Input } from "../../components/ui/Input";
 import { ImportFileSourceBar } from "../../components/import/ImportFileSourceBar";
 import { parseWorkbookRows, downloadImportTemplate } from "../../lib/import/excel";
-import { createUserAccount, isUsernameTaken } from "../../lib/db/systemRepo";
-import { createStaff } from "../../lib/db/staffRepo";
-import { ROLE_LABELS, EMPLOYMENT_TYPE_LABELS, type EmploymentType, type Role } from "../../lib/db/types";
+import { createUserAccount, isUsernameTaken } from "@/lib/db/systemRepo";
+import { createStaff } from "@/lib/db/staffRepo";
+import { ROLE_LABELS, EMPLOYMENT_TYPE_LABELS, type EmploymentType, type Role } from "@/lib/db/types";
 
 const TEMPLATE_HEADERS = [
   "Họ và tên",

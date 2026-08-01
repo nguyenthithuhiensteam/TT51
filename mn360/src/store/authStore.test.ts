@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { useAuthStore } from "./authStore";
-import type { User } from "../lib/db/types";
+import type { User } from "@/lib/db/types";
 
 const fakeUser: User = {
   id: "user-1",

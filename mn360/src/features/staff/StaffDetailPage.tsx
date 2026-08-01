@@ -20,11 +20,11 @@ import {
   type StaffEvaluationRow,
   type StaffLeaveRow,
   type StaffWithUser,
-} from "../../lib/db/staffRepo";
-import { listClasses, type ClassWithTeacher } from "../../lib/db/childRepo";
-import { EMPLOYMENT_TYPE_LABELS, EVALUATOR_ROLE_LABELS } from "../../lib/db/types";
+} from "@/lib/db/staffRepo";
+import { listClasses, type ClassWithTeacher } from "@/lib/db/childRepo";
+import { EMPLOYMENT_TYPE_LABELS, EVALUATOR_ROLE_LABELS } from "@/lib/db/types";
 import { StatusBadge } from "../../components/ui/Badge";
-import type { EvaluatorRole } from "../../lib/db/types";
+import type { EvaluatorRole } from "@/lib/db/types";
 
 export function StaffDetailPage() {
   const { id } = useParams<{ id: string }>();

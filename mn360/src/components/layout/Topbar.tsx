@@ -3,15 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { Bell, HelpCircle, Lock, Search, Wifi, WifiOff, ChevronDown, Menu } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import { useAppStore } from "../../store/appStore";
-import { ROLE_LABELS } from "../../lib/db/types";
-import { globalSearch, type SearchResult } from "../../lib/db/searchRepo";
+import { ROLE_LABELS } from "@/lib/db/types";
+import { globalSearch, type SearchResult } from "@/lib/db/searchRepo";
 import {
   countUnreadNotifications,
   listNotifications,
   markAllNotificationsRead,
   markNotificationRead,
   type NotificationRow,
-} from "../../lib/db/notificationRepo";
+} from "@/lib/db/notificationRepo";
 
 function useClickOutside(onOutside: () => void) {
   const ref = useRef<HTMLDivElement>(null);

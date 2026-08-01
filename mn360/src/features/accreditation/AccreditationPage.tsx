@@ -6,8 +6,8 @@ import { Field, Input, Select, Textarea } from "../../components/ui/Input";
 import { StatusBadge } from "../../components/ui/Badge";
 import { Modal } from "../../components/ui/Modal";
 import { useAuthStore } from "../../store/authStore";
-import { listActiveUsers } from "../../lib/db/systemRepo";
-import { pickAndAttachFile } from "../../lib/db/attachmentRepo";
+import { listActiveUsers } from "@/lib/db/systemRepo";
+import { pickAndAttachFile } from "@/lib/db/attachmentRepo";
 import {
   assignCriteria,
   changeCriteriaStatus,
@@ -26,8 +26,8 @@ import {
   type CriteriaRow,
   type EvidenceRow,
   type StandardRow,
-} from "../../lib/db/accreditationRepo";
-import type { RecordStatus, User } from "../../lib/db/types";
+} from "@/lib/db/accreditationRepo";
+import type { RecordStatus, User } from "@/lib/db/types";
 
 interface CriteriaAction {
   label: string;

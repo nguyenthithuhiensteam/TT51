@@ -25,7 +25,7 @@ import {
   type GuardianOfChild,
   type StaffLeaveRequestRow,
   type StaffMessageRow,
-} from "../../lib/db/childRepo";
+} from "@/lib/db/childRepo";
 import {
   addChildAssessment,
   addObservation,
@@ -33,14 +33,14 @@ import {
   listObservationsByChild,
   type ChildAssessmentRow,
   type ObservationRow,
-} from "../../lib/db/curriculumRepo";
+} from "@/lib/db/curriculumRepo";
 import {
   CHILD_STATUS_LABELS,
   ASSESSMENT_DOMAIN_LABELS,
   LEAVE_REQUEST_STATUS_LABELS,
   POLICY_TYPE_LABELS,
-} from "../../lib/db/types";
-import type { AssessmentDomain, ChildStatus, PolicyType } from "../../lib/db/types";
+} from "@/lib/db/types";
+import type { AssessmentDomain, ChildStatus, PolicyType } from "@/lib/db/types";
 
 export function ChildDetailPage() {
   const { id } = useParams<{ id: string }>();

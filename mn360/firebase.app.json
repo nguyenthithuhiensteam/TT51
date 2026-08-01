@@ -1,0 +1,8 @@
+{
+  "hosting": {
+    "site": "quantritruongmamnon-app",
+    "public": "dist-firebase",
+    "ignore": ["firebase.app.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [{ "source": "**", "destination": "/index.html" }]
+  }
+}

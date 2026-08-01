@@ -2,9 +2,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { changePasswordSchema, type ChangePasswordInput } from "../../lib/schemas/auth";
-import { logAudit, updatePassword } from "../../lib/db/authRepo";
+import { changePassword } from "@/lib/db/authRepo";
 import { useAuthStore } from "../../store/authStore";
 import { Button } from "../../components/ui/Button";
 import { Field, Input } from "../../components/ui/Input";
@@ -30,24 +29,8 @@ export function ChangePasswordPage() {
     setServerError(null);
     setSubmitting(true);
     try {
-      const ok = await invoke<boolean>("verify_password", {
-        password: data.currentPassword,
-        hash: user!.password_hash,
-      });
-      if (!ok) {
-        setServerError("Mật khẩu hiện tại không đúng");
-        return;
-      }
-      const newHash = await invoke<string>("hash_password", { password: data.newPassword });
-      await updatePassword(user!.id, newHash);
-      await logAudit({
-        entityTable: "users",
-        entityId: user!.id,
-        action: "change_password",
-        userId: user!.id,
-        sessionId,
-      });
-      updateUser({ ...user!, password_hash: newHash, must_change_password: 0 });
+      await changePassword(user!, data.currentPassword, data.newPassword, sessionId);
+      updateUser({ ...user!, must_change_password: 0 });
       navigate("/", { replace: true });
     } catch (err) {
       setServerError(err instanceof Error ? err.message : "Có lỗi xảy ra, vui lòng thử lại");

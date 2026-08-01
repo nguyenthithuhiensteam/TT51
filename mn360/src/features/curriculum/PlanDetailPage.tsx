@@ -14,9 +14,9 @@ import {
   updateEducationPlanContent,
   type EducationPlanRow,
   type PlanApprovalRow,
-} from "../../lib/db/curriculumRepo";
-import { PLAN_TYPE_LABELS } from "../../lib/db/types";
-import type { RecordStatus } from "../../lib/db/types";
+} from "@/lib/db/curriculumRepo";
+import { PLAN_TYPE_LABELS } from "@/lib/db/types";
+import type { RecordStatus } from "@/lib/db/types";
 import { exportEducationPlanToWord } from "../../lib/export/word";
 
 interface PlanAction {
