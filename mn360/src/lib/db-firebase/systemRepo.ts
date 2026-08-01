@@ -1,7 +1,17 @@
-// getSchool/getCurrentSchoolYear đã chuyển sang Firestore thật (cần cho đăng nhập). Các hàm
-// còn lại (quản lý năm học ở màn hình Cài đặt) TỰ ĐỘNG SINH — chưa triển khai. Quản lý tài
-// khoản/phân quyền (Đợt 10) đã chuyển sang Firestore thật bên dưới.
-import { collection, doc, getDocs, limit, orderBy, query, updateDoc, where } from "firebase/firestore";
+// getSchool/getCurrentSchoolYear/updateSchool/quản lý năm học đã chuyển sang Firestore thật.
+// Quản lý tài khoản/phân quyền (Đợt 10) đã chuyển sang Firestore thật bên dưới.
+import {
+  addDoc,
+  collection,
+  doc,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  updateDoc,
+  where,
+  writeBatch,
+} from "firebase/firestore";
 import { logAudit } from "./authRepo";
 import { COL, db, nowIso } from "./client";
 import type { School, SchoolYear, User, UserAccountWithAccess } from "./types";
@@ -17,12 +27,28 @@ export async function getSchool(): Promise<School | null> {
   return { id: d.id, ...(d.data() as Omit<School, "id">) };
 }
 
-export async function updateSchool(..._args: unknown[]): Promise<never> {
-  return notImplemented("updateSchool");
+export async function updateSchool(
+  id: string,
+  data: { name: string; address?: string; phone?: string; principalName?: string },
+): Promise<void> {
+  await updateDoc(doc(db, COL.schools, id), {
+    name: data.name,
+    address: data.address ?? null,
+    phone: data.phone ?? null,
+    principal_name: data.principalName ?? null,
+    updated_at: nowIso(),
+  });
 }
 
-export async function listSchoolYears(..._args: unknown[]): Promise<never> {
-  return notImplemented("listSchoolYears");
+export async function listSchoolYears(schoolId: string): Promise<SchoolYear[]> {
+  const snap = await getDocs(
+    query(
+      collection(db, COL.schoolYears),
+      where("school_id", "==", schoolId),
+      orderBy("start_date", "desc"),
+    ),
+  );
+  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<SchoolYear, "id">) }));
 }
 
 export async function getCurrentSchoolYear(schoolId: string): Promise<SchoolYear | null> {
@@ -34,12 +60,34 @@ export async function getCurrentSchoolYear(schoolId: string): Promise<SchoolYear
   return { id: d.id, ...(d.data() as Omit<SchoolYear, "id">) };
 }
 
-export async function createSchoolYear(..._args: unknown[]): Promise<never> {
-  return notImplemented("createSchoolYear");
+export async function createSchoolYear(
+  schoolId: string,
+  code: string,
+  startDate: string,
+  endDate: string,
+): Promise<void> {
+  const ts = nowIso();
+  await addDoc(collection(db, COL.schoolYears), {
+    school_id: schoolId,
+    code,
+    start_date: startDate,
+    end_date: endDate,
+    is_current: 0,
+    created_at: ts,
+    updated_at: ts,
+  });
 }
 
-export async function setCurrentSchoolYear(..._args: unknown[]): Promise<never> {
-  return notImplemented("setCurrentSchoolYear");
+/** Firestore không có "UPDATE ... WHERE" — phải đọc toàn bộ năm học của trường rồi cập nhật
+ * từng tài liệu trong một batch để đảm bảo chỉ một năm học is_current=1 tại một thời điểm. */
+export async function setCurrentSchoolYear(schoolId: string, schoolYearId: string): Promise<void> {
+  const snap = await getDocs(query(collection(db, COL.schoolYears), where("school_id", "==", schoolId)));
+  const ts = nowIso();
+  const batch = writeBatch(db);
+  snap.docs.forEach((d) => {
+    batch.update(d.ref, { is_current: d.id === schoolYearId ? 1 : 0, updated_at: ts });
+  });
+  await batch.commit();
 }
 
 export async function listActiveUsers(): Promise<User[]> {

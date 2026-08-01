@@ -110,16 +110,19 @@ service cloud.firestore {
 
     match /mn360_schools/{id} {
       allow read: if mn360IsSignedIn();
-      // "create" cho phép script khởi tạo (seed-firebase.mjs) chạy lần đầu; chưa có màn hình
-      // sửa trường nên không cần "update" — sẽ gạt lại bằng quyền system.edit khi xây xong.
+      // "create" cho phép script khởi tạo (seed-firebase.mjs) chạy lần đầu.
       allow create: if mn360IsSignedIn();
-      allow update, delete: if false;
+      // Màn hình Cài đặt → "Thông tin trường" đã có, chỉ system.edit được sửa.
+      allow update: if mn360HasPerm('system.edit');
+      allow delete: if false;
     }
 
     match /mn360_school_years/{id} {
       allow read: if mn360IsSignedIn();
       allow create: if mn360IsSignedIn();
-      allow update, delete: if false;
+      // Màn hình Cài đặt → "Năm học" (thêm năm học mới, đặt năm học hiện tại) cần system.edit.
+      allow update: if mn360HasPerm('system.edit');
+      allow delete: if false;
     }
 
     match /mn360_tasks/{id} {
