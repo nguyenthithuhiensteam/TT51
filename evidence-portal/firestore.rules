@@ -451,5 +451,36 @@ service cloud.firestore {
       allow create: if mn360HasAnyPerm(['finance.edit', 'finance.approve']);
       allow update, delete: if false;
     }
+
+    // --------------------- Kiểm định ---------------------
+
+    match /mn360_accreditation_standards/{id} {
+      allow read: if mn360HasPerm('accreditation.view');
+      allow create: if mn360HasAnyPerm(['accreditation.create', 'accreditation.edit']);
+      allow update, delete: if false;
+    }
+
+    match /mn360_accreditation_criteria/{id} {
+      allow read: if mn360HasPerm('accreditation.view');
+      allow create: if mn360HasAnyPerm(['accreditation.create', 'accreditation.edit']);
+      allow update: if mn360HasAnyPerm(['accreditation.edit', 'accreditation.approve']);
+      allow delete: if false;
+    }
+
+    match /mn360_criteria_assignments/{id} {
+      allow read: if mn360HasPerm('accreditation.view');
+      allow write: if mn360HasAnyPerm(['accreditation.edit', 'accreditation.approve']);
+    }
+
+    match /mn360_evidence_files/{id} {
+      allow read: if mn360HasPerm('accreditation.view');
+      allow create: if mn360HasAnyPerm(['accreditation.create', 'accreditation.edit']);
+      allow update, delete: if false;
+    }
+
+    match /mn360_criteria_evidence_links/{id} {
+      allow read: if mn360HasPerm('accreditation.view');
+      allow write: if mn360HasAnyPerm(['accreditation.create', 'accreditation.edit']);
+    }
   }
 }

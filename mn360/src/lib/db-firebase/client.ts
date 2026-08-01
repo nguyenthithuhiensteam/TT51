@@ -63,6 +63,11 @@ export const COL = {
   expenses: "mn360_expenses",
   assets: "mn360_assets",
   assetStatusHistory: "mn360_asset_status_history",
+  accreditationStandards: "mn360_accreditation_standards",
+  accreditationCriteria: "mn360_accreditation_criteria",
+  criteriaAssignments: "mn360_criteria_assignments",
+  evidenceFiles: "mn360_evidence_files",
+  criteriaEvidenceLinks: "mn360_criteria_evidence_links",
 } as const;
 
 export function nowIso(): string {
