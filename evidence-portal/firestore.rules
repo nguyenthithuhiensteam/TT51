@@ -98,12 +98,16 @@ service cloud.firestore {
 
     match /mn360_schools/{id} {
       allow read: if mn360IsSignedIn();
-      allow write: if false;
+      // "create" cho phép script khởi tạo (seed-firebase.mjs) chạy lần đầu; chưa có màn hình
+      // sửa trường nên không cần "update" — sẽ gạt lại bằng quyền system.edit khi xây xong.
+      allow create: if mn360IsSignedIn();
+      allow update, delete: if false;
     }
 
     match /mn360_school_years/{id} {
       allow read: if mn360IsSignedIn();
-      allow write: if false;
+      allow create: if mn360IsSignedIn();
+      allow update, delete: if false;
     }
 
     match /mn360_tasks/{id} {
