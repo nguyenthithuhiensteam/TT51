@@ -186,6 +186,7 @@ export async function createChild(input: CreateChildInput): Promise<string> {
     policy_type: "khong" as PolicyType,
     note: input.note ?? null,
     guardians: [],
+    guardian_user_ids: [],
     version: 1,
     created_by: input.createdBy,
     created_at: ts,
@@ -332,6 +333,7 @@ export async function listChildStatusHistory(childId: string): Promise<ChildStat
 export interface GuardianOfChild extends Guardian {
   is_primary: number;
   can_pickup: number;
+  user_id: string | null;
 }
 
 export async function listGuardiansOfChild(childId: string): Promise<GuardianOfChild[]> {
@@ -358,9 +360,22 @@ export async function addGuardianToChild(
     updated_at: ts,
     is_primary: isPrimary ? 1 : 0,
     can_pickup: 1,
+    user_id: null,
   };
   const existing = await listGuardiansOfChild(childId);
   await updateDoc(doc(db, COL.children, childId), { guardians: [...existing, guardian] });
+}
+
+/** Liên kết một phụ huynh (đã có trong danh sách) với tài khoản đăng nhập Góc phụ huynh — cập
+ * nhật cả mảng nhúng `guardians` lẫn `guardian_user_ids` (mảng phẳng, để truy vấn
+ * array-contains ở parentRepo.listMyChildren, vì Firestore không lọc được theo trường lồng
+ * bên trong mảng object). Chưa có UI gọi hàm này — dùng qua script quản trị cho tới khi có
+ * màn hình quản lý tài khoản Phụ huynh riêng. */
+export async function linkGuardianToUserAccount(childId: string, guardianId: string, userId: string): Promise<void> {
+  const guardians = await listGuardiansOfChild(childId);
+  const updated = guardians.map((g) => (g.id === guardianId ? { ...g, user_id: userId } : g));
+  const userIds = [...new Set(updated.map((g) => g.user_id).filter((id): id is string => !!id))];
+  await updateDoc(doc(db, COL.children, childId), { guardians: updated, guardian_user_ids: userIds });
 }
 
 // ===================== ĐIỂM DANH =====================

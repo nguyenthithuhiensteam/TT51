@@ -640,9 +640,58 @@ sql.js đã có sẵn), triển khai dần theo từng đợt vì khối lượn
 - ✅ Xác nhận không phá bản cũ: `npm run build` (desktop), `npm run build:web` (xem trước),
   `npm run typecheck`, `npm run lint`, `npm run test` (60 test) đều chạy sạch sau toàn bộ thay
   đổi; `npm run build:app` (bản Firestore) build thành công.
-- ⏳ Còn lại: bật "Email/Password" trong Firebase Console (thao tác 1 lần, chỉ chủ dự án làm
-  được), lấy token CI để xuất bản Hosting + rules + chạy seed, kiểm thử luồng thật trên trình
-  duyệt, rồi tiếp tục Đợt 2 (Trẻ em, Đội ngũ) ở phiên làm việc sau.
+- ✅ Đợt 0-1 xuất bản và người dùng xác nhận kiểm thử thật thành công (đăng nhập, tạo/duyệt
+  nhiệm vụ) tại `https://quantritruongmamnon-app.web.app`.
+- ✅ **Đợt 2** — `childRepo.ts` (23 hàm: lớp, trẻ, điểm danh, báo cáo chuyên cần tháng/học kỳ/
+  năm, tổng hợp số lượng học sinh theo thời điểm, đơn xin nghỉ/tin nhắn phía giáo viên — đơn
+  giản hoá phụ huynh bằng cách nhúng thẳng vào tài liệu trẻ thay vì bảng riêng) và
+  `staffRepo.ts` (hồ sơ cán bộ, phân công, nghỉ phép, đánh giá 3 vòng dùng doc ID cố định thay
+  ON CONFLICT). Thêm trường `nutrition_group` khi tạo lớp (suy ra từ `age_group`, cần cho Đợt 4).
+- ✅ **Đợt 3** — `partyRepo.ts` (18 hàm), giữ đúng nguyên tắc cách ly hoàn toàn của bản gốc: 7
+  collection `mn360_party_*` riêng biệt, rules chỉ mở cho `permissionCodes` chứa `party.*`.
+- ✅ **Đợt 4** — `curriculumRepo.ts` (kế hoạch giáo dục, quan sát, đánh giá trẻ — nối lại 2 hàm
+  ChildDetailPage đã gọi sẵn từ Đợt 2) và `nutritionRepo.ts` + `rationRepo.ts` (món ăn, thực
+  đơn, cảnh báo dị ứng, nhà cung cấp/giao nhận, kiểm thực ba bước, khẩu phần dinh dưỡng, tổng
+  hợp tuần, biểu in, checklist chính sách).
+- ✅ **Đợt 5** — `healthRepo.ts` (544 dòng, lớn nhất): hồ sơ sức khỏe/dị ứng, tăng trưởng, tiêm
+  chủng, khám sức khỏe toàn diện, sự cố, kiểm tra an toàn. Đánh giá WHO Z-score đã nối đủ luồng
+  tính toán nhưng bảng chuẩn `who_growth_standards` (~11.000 dòng L/M/S) **chưa được nhập** cho
+  bản web — ghi số đo vẫn hoạt động bình thường, chỉ phân loại tự động hiện "chưa xác định" cho
+  tới khi có script nhập riêng.
+- ✅ **Đợt 6** — `financeRepo.ts`: khoản thu, phiếu thu/chi (lập→kiểm tra→phê duyệt), tài sản.
+- ✅ **Đợt 7** — `accreditationRepo.ts`: tiêu chuẩn/tiêu chí, phân công, kho minh chứng dùng
+  chung (upload 1 lần, liên kết N-N nhiều tiêu chí).
+- ✅ **Đợt 8** — `documentRepo.ts`: văn bản đến/đi/nội bộ, phiên bản, quy trình duyệt đầy đủ,
+  liên kết văn bản↔nhiệm vụ. Dùng chung `mn360_plan_approvals` cho lịch sử duyệt (kế hoạch giáo
+  dục/thực đơn/tiêu chí kiểm định/văn bản đều theo mẫu soạn→duyệt tương tự).
+- ✅ **Đợt 9 (module cuối)** — `parentRepo.ts`: mọi hàm tự kiểm tra quyền sở hữu trẻ qua mảng
+  phẳng `guardian_user_ids` nhúng trên tài liệu trẻ (thêm hàm mới `linkGuardianToUserAccount`
+  trong `childRepo.ts` vì bản SQL gốc dựa vào bảng `guardians` độc lập có `user_id` riêng —
+  không còn phù hợp sau khi đơn giản hoá phụ huynh ở Đợt 2). Rules bổ sung hàm `mn360OwnsChild()`
+  để phụ huynh đọc đúng dữ liệu con mình (điểm danh, khoản thu, thực đơn, đơn xin nghỉ, tin
+  nhắn) mà không cần quyền nhân viên. Trợ lý AI tư vấn nuôi dạy trẻ **chưa hỗ trợ** trên web
+  (bản gốc gọi thẳng lệnh Rust `ai_generate`, không có đường tương đương không cần Cloud
+  Functions/Blaze) — lịch sử cũ vẫn đọc được, chỉ chưa hỏi được câu mới.
+- ✅ **Toàn bộ 12/12 phân hệ đã chuyển đổi sang Firestore.** Sau mỗi đợt đều xác nhận lại
+  `npm run build` (desktop), `npm run build:web` (xem trước), `typecheck`/`lint`/`test` (60
+  test) không bị ảnh hưởng, và `npm run build:app` (bản Firestore) build thành công trước khi
+  xuất bản.
+
+### Còn lại để hoàn thiện thêm (không chặn sử dụng)
+
+- Nhập dữ liệu chuẩn tăng trưởng WHO (`mn360_who_growth_standards`) cho tính năng phân loại
+  Z-score ở Sức khỏe.
+- Đính kèm tệp thật (minh chứng, ảnh sự cố...) hiện dùng đường dẫn cục bộ kiểu Tauri — cần nối
+  sang Cloudinary (đã dùng cho `evidence-portal`) để hoạt động trên web.
+- "Tạo tài khoản đăng nhập mới" (Đội ngũ, Cài đặt) chưa hỗ trợ — cần thiết kế lại luồng tạo tài
+  khoản Firebase Auth không làm mất phiên đăng nhập của quản trị viên đang thao tác (đã có sẵn
+  `withSecondaryAuthApp` trong `firebase.ts` làm nền tảng) cùng với `mn360_roles`/quản lý quyền
+  qua giao diện thay vì chỉnh trực tiếp trên Firestore Console.
+- Trợ lý AI tư vấn nuôi dạy trẻ (Phụ huynh) cần một cơ chế gọi AI phù hợp cho web (Cloud
+  Function trả phí, hoặc gọi thẳng API AI từ trình duyệt có kiểm soát).
+- Sao lưu/khôi phục (`backupRepo.ts`), tìm kiếm toàn hệ thống (`searchRepo.ts`), thông báo
+  (`notificationRepo.ts` — khác cơ chế thông báo quá hạn nhiệm vụ đã có trong `taskRepo.ts`) vẫn
+  còn là stub — không chặn sử dụng các phân hệ chính nhưng nên hoàn thiện dần.
 
 Để đóng gói bộ cài `.msi`/`.exe` chính thức, chạy `npm run tauri build` trên máy Windows có đầy
 đủ Visual Studio Build Tools — xem `mn360/README.md` mục "Đóng gói bộ cài Windows".

@@ -78,10 +78,10 @@ Nếu dùng dự án Firebase khác, sửa `"default"` trong `mn360/.firebaserc`
 
 Khác với bản xem trước ở trên (dữ liệu mất khi tải lại trang), bản này dùng Firebase Auth để
 đăng nhập và Firestore để lưu dữ liệu thật, nhiều người dùng cùng lúc, không cần cài gì trên
-máy người dùng. Đang triển khai **dần theo từng đợt** — xem tiến độ trong `docs/ROADMAP.md`.
-Đợt 0-1 đã có: đăng nhập thật + phân hệ **Tổng quan** và **Công việc** hoạt động đầy đủ với dữ
-liệu thật. Các phân hệ khác hiện báo "chưa hỗ trợ trên bản web" khi mở (chưa bị lỗi/crash,
-chỉ là chưa được chuyển đổi — xem `src/lib/db-firebase/`).
+máy người dùng. **Cả 12/12 phân hệ đã được chuyển đổi** sang Firestore — xem chi tiết từng đợt
+trong `docs/ROADMAP.md`. Một số tính năng phụ vẫn còn giới hạn (xem mục "Còn lại để hoàn thiện
+thêm" trong ROADMAP): phân loại tăng trưởng theo chuẩn WHO, đính kèm tệp thật, tạo tài khoản
+đăng nhập mới cho cán bộ, Trợ lý AI tư vấn nuôi dạy trẻ, sao lưu/tìm kiếm toàn hệ thống.
 
 Kiến trúc: mọi lời gọi `@/lib/db/<tên>Repo` trong giao diện được build lại (qua
 `vite.firebase.config.ts`) để trỏ sang `src/lib/db-firebase/<tên>Repo.ts` thay vì

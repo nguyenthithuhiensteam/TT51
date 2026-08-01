@@ -71,6 +71,7 @@ export const COL = {
   documents: "mn360_documents",
   documentVersions: "mn360_document_versions",
   documentTaskLinks: "mn360_document_task_links",
+  aiConsultations: "mn360_parent_ai_consultations",
 } as const;
 
 export function nowIso(): string {

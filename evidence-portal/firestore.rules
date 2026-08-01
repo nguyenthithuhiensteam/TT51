@@ -87,6 +87,15 @@ service cloud.firestore {
       return mn360IsSignedIn() && mn360Perms().hasAny(codes);
     }
 
+    // Phụ huynh: kiểm tra tài khoản đang đăng nhập có phải là một trong các phụ huynh đã liên
+    // kết với trẻ hay không (mảng phẳng guardian_user_ids nhúng trên tài liệu trẻ — xem
+    // childRepo.linkGuardianToUserAccount). Dùng get() vì attendance/revenues/leave_requests/
+    // messages chỉ lưu child_id, không lưu sẵn danh sách phụ huynh.
+    function mn360OwnsChild(childId) {
+      return mn360IsSignedIn()
+        && get(/databases/$(database)/documents/mn360_children/$(childId)).data.guardian_user_ids.hasAny([request.auth.uid]);
+    }
+
     match /mn360_users/{uid} {
       // Tên/hồ sơ cơ bản cần đọc được rộng rãi để hiển thị người phụ trách/người soạn ở các
       // phân hệ khác (chủ trì nhiệm vụ, người duyệt...) — không chứa dữ liệu nhạy cảm.
@@ -165,8 +174,10 @@ service cloud.firestore {
 
     match /mn360_children/{id} {
       // health.view/nutrition.view cũng cần đọc hồ sơ trẻ cơ bản (khám sức khỏe, dị ứng, khẩu
-      // phần theo lớp) dù không có quyền quản lý Trẻ em đầy đủ.
-      allow read: if mn360HasAnyPerm(['children.view', 'health.view', 'nutrition.view']);
+      // phần theo lớp) dù không có quyền quản lý Trẻ em đầy đủ. Phụ huynh chỉ đọc được đúng
+      // tài liệu của con mình (kiểm tra guardian_user_ids ngay trên tài liệu đang đọc).
+      allow read: if mn360HasAnyPerm(['children.view', 'health.view', 'nutrition.view'])
+        || (mn360HasPerm('parent.view') && resource.data.guardian_user_ids.hasAny([request.auth.uid]));
       allow create: if mn360HasPerm('children.create');
       // update dùng chung cho sửa hồ sơ, cập nhật nhân khẩu học, đổi trạng thái, thêm phụ huynh
       // (đều nhúng trên cùng tài liệu) — mọi thao tác này đều yêu cầu ít nhất children.edit.
@@ -181,22 +192,26 @@ service cloud.firestore {
     }
 
     match /mn360_attendance/{id} {
-      allow read: if mn360HasAnyPerm(['children.view', 'health.view', 'nutrition.view']);
+      allow read: if mn360HasAnyPerm(['children.view', 'health.view', 'nutrition.view'])
+        || (mn360HasPerm('parent.view') && mn360OwnsChild(resource.data.child_id));
       allow create, update: if mn360HasAnyPerm(['children.edit', 'children.create']);
       allow delete: if false;
     }
 
     match /mn360_child_leave_requests/{id} {
-      // Tạo đơn (từ phía phụ huynh) thuộc phân hệ Phụ huynh — chưa chuyển đổi ở đợt này. Ở đây
-      // chỉ mở quyền đọc/duyệt cho giáo viên/quản lý.
-      allow read: if mn360HasPerm('children.view');
+      allow read: if mn360HasPerm('children.view')
+        || (mn360HasPerm('parent.view') && mn360OwnsChild(resource.data.child_id));
       allow update: if mn360HasAnyPerm(['children.edit', 'children.approve']);
-      allow create, delete: if false;
+      // Phụ huynh tự tạo đơn cho đúng con mình (phân hệ Phụ huynh).
+      allow create: if mn360HasPerm('parent.view') && mn360OwnsChild(request.resource.data.child_id);
+      allow delete: if false;
     }
 
     match /mn360_parent_messages/{id} {
-      allow read: if mn360HasPerm('children.view');
-      allow create: if mn360HasPerm('children.view') && request.resource.data.sender_user_id == request.auth.uid;
+      allow read: if mn360HasPerm('children.view')
+        || (mn360HasPerm('parent.view') && mn360OwnsChild(resource.data.child_id));
+      allow create: if request.resource.data.sender_user_id == request.auth.uid
+        && (mn360HasPerm('children.view') || (mn360HasPerm('parent.view') && mn360OwnsChild(request.resource.data.child_id)));
       allow update, delete: if false;
     }
 
@@ -323,14 +338,16 @@ service cloud.firestore {
     }
 
     match /mn360_menus/{id} {
-      allow read: if mn360HasPerm('nutrition.view');
+      // Thực đơn đã ban hành không phải dữ liệu nhạy cảm — mở đọc rộng cho parent.view để phụ
+      // huynh xem được thực đơn hôm nay của con, không cần đối chiếu đúng lớp.
+      allow read: if mn360HasAnyPerm(['nutrition.view', 'parent.view']);
       allow create: if mn360HasAnyPerm(['nutrition.create', 'nutrition.edit']);
       allow update: if mn360HasAnyPerm(['nutrition.edit', 'nutrition.approve']);
       allow delete: if false;
     }
 
     match /mn360_menu_items/{id} {
-      allow read: if mn360HasPerm('nutrition.view');
+      allow read: if mn360HasAnyPerm(['nutrition.view', 'parent.view']);
       allow create, delete: if mn360HasAnyPerm(['nutrition.create', 'nutrition.edit']);
       allow update: if false;
     }
@@ -435,7 +452,8 @@ service cloud.firestore {
     }
 
     match /mn360_revenues/{id} {
-      allow read: if mn360HasPerm('finance.view');
+      allow read: if mn360HasPerm('finance.view')
+        || (mn360HasPerm('parent.view') && resource.data.child_id != null && mn360OwnsChild(resource.data.child_id));
       allow create: if mn360HasAnyPerm(['finance.create', 'finance.edit']);
       allow update: if mn360HasAnyPerm(['finance.edit', 'finance.approve']);
       allow delete: if false;
@@ -510,6 +528,17 @@ service cloud.firestore {
     match /mn360_document_task_links/{id} {
       allow read: if mn360HasAnyPerm(['document.view', 'task.view']);
       allow create: if mn360HasAnyPerm(['document.view', 'task.create']);
+      allow update, delete: if false;
+    }
+
+    // --------------------- Phụ huynh ---------------------
+
+    match /mn360_parent_ai_consultations/{id} {
+      // Phụ huynh xem lại đúng lịch sử hỏi của chính mình; nhà trường (system.view) xem lại
+      // toàn bộ để giám sát nội dung Trợ lý AI trả lời cho phụ huynh.
+      allow read: if mn360IsSignedIn() && resource.data.user_id == request.auth.uid;
+      allow read: if mn360HasPerm('system.view');
+      allow create: if mn360HasPerm('parent.view') && request.resource.data.user_id == request.auth.uid;
       allow update, delete: if false;
     }
   }
