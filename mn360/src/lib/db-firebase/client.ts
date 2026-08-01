@@ -58,6 +58,11 @@ export const COL = {
   physicalExams: "mn360_physical_exams",
   incidents: "mn360_incidents",
   safetyInspections: "mn360_safety_inspections",
+  feeItems: "mn360_fee_items",
+  revenues: "mn360_revenues",
+  expenses: "mn360_expenses",
+  assets: "mn360_assets",
+  assetStatusHistory: "mn360_asset_status_history",
 } as const;
 
 export function nowIso(): string {

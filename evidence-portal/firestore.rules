@@ -416,5 +416,40 @@ service cloud.firestore {
       allow update: if mn360HasAnyPerm(['health.edit', 'health.approve']);
       allow delete: if false;
     }
+
+    // --------------------- Tài chính – Tài sản ---------------------
+
+    match /mn360_fee_items/{id} {
+      allow read: if mn360HasPerm('finance.view');
+      allow create: if mn360HasAnyPerm(['finance.create', 'finance.edit']);
+      allow update, delete: if false;
+    }
+
+    match /mn360_revenues/{id} {
+      allow read: if mn360HasPerm('finance.view');
+      allow create: if mn360HasAnyPerm(['finance.create', 'finance.edit']);
+      allow update: if mn360HasAnyPerm(['finance.edit', 'finance.approve']);
+      allow delete: if false;
+    }
+
+    match /mn360_expenses/{id} {
+      allow read: if mn360HasPerm('finance.view');
+      allow create: if mn360HasAnyPerm(['finance.create', 'finance.edit']);
+      allow update: if mn360HasAnyPerm(['finance.edit', 'finance.approve']);
+      allow delete: if false;
+    }
+
+    match /mn360_assets/{id} {
+      allow read: if mn360HasPerm('finance.view');
+      allow create: if mn360HasAnyPerm(['finance.create', 'finance.edit']);
+      allow update: if mn360HasAnyPerm(['finance.edit', 'finance.approve']);
+      allow delete: if false;
+    }
+
+    match /mn360_asset_status_history/{id} {
+      allow read: if mn360HasPerm('finance.view');
+      allow create: if mn360HasAnyPerm(['finance.edit', 'finance.approve']);
+      allow update, delete: if false;
+    }
   }
 }
