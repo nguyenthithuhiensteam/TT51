@@ -157,14 +157,16 @@ service cloud.firestore {
     // --------------------- Trẻ em ---------------------
 
     match /mn360_classes/{id} {
-      allow read: if mn360HasPerm('children.view');
+      allow read: if mn360HasAnyPerm(['children.view', 'health.view', 'nutrition.view']);
       allow create: if mn360HasPerm('children.create');
       allow update: if mn360HasAnyPerm(['children.edit', 'children.approve']);
       allow delete: if false;
     }
 
     match /mn360_children/{id} {
-      allow read: if mn360HasPerm('children.view');
+      // health.view/nutrition.view cũng cần đọc hồ sơ trẻ cơ bản (khám sức khỏe, dị ứng, khẩu
+      // phần theo lớp) dù không có quyền quản lý Trẻ em đầy đủ.
+      allow read: if mn360HasAnyPerm(['children.view', 'health.view', 'nutrition.view']);
       allow create: if mn360HasPerm('children.create');
       // update dùng chung cho sửa hồ sơ, cập nhật nhân khẩu học, đổi trạng thái, thêm phụ huynh
       // (đều nhúng trên cùng tài liệu) — mọi thao tác này đều yêu cầu ít nhất children.edit.
@@ -179,7 +181,7 @@ service cloud.firestore {
     }
 
     match /mn360_attendance/{id} {
-      allow read: if mn360HasPerm('children.view');
+      allow read: if mn360HasAnyPerm(['children.view', 'health.view', 'nutrition.view']);
       allow create, update: if mn360HasAnyPerm(['children.edit', 'children.create']);
       allow delete: if false;
     }
@@ -370,6 +372,49 @@ service cloud.firestore {
     match /mn360_system_settings/{id} {
       allow read: if mn360IsSignedIn();
       allow write: if mn360HasAnyPerm(['nutrition.create', 'nutrition.edit']);
+    }
+
+    // --------------------- Sức khỏe – An toàn ---------------------
+    // health_records đọc thêm cho nutrition.view vì Nuôi dưỡng cần đối chiếu dị ứng khi lập
+    // thực đơn (checkAllergyWarnings) — không có đường nào khác chạm được dữ liệu sức khỏe.
+
+    match /mn360_health_records/{id} {
+      allow read: if mn360HasAnyPerm(['health.view', 'nutrition.view']);
+      allow write: if mn360HasAnyPerm(['health.create', 'health.edit']);
+    }
+
+    match /mn360_growth_measurements/{id} {
+      allow read: if mn360HasPerm('health.view');
+      allow write: if mn360HasAnyPerm(['health.create', 'health.edit']);
+    }
+
+    match /mn360_who_growth_standards/{id} {
+      allow read: if mn360HasPerm('health.view');
+      allow write: if false;
+    }
+
+    match /mn360_vaccinations/{id} {
+      allow read: if mn360HasPerm('health.view');
+      allow create: if mn360HasAnyPerm(['health.create', 'health.edit']);
+      allow update, delete: if false;
+    }
+
+    match /mn360_physical_exams/{id} {
+      allow read: if mn360HasPerm('health.view');
+      allow write: if mn360HasAnyPerm(['health.create', 'health.edit']);
+    }
+
+    match /mn360_incidents/{id} {
+      allow read: if mn360HasPerm('health.view');
+      allow create: if mn360HasAnyPerm(['health.create', 'health.edit']);
+      allow update, delete: if false;
+    }
+
+    match /mn360_safety_inspections/{id} {
+      allow read: if mn360HasPerm('health.view');
+      allow create: if mn360HasAnyPerm(['health.create', 'health.edit']);
+      allow update: if mn360HasAnyPerm(['health.edit', 'health.approve']);
+      allow delete: if false;
     }
   }
 }

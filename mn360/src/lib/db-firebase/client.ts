@@ -52,6 +52,12 @@ export const COL = {
   nutritionNorms: "mn360_nutrition_norms",
   dailyRations: "mn360_daily_rations",
   rationItems: "mn360_ration_items",
+  growthMeasurements: "mn360_growth_measurements",
+  whoGrowthStandards: "mn360_who_growth_standards",
+  vaccinations: "mn360_vaccinations",
+  physicalExams: "mn360_physical_exams",
+  incidents: "mn360_incidents",
+  safetyInspections: "mn360_safety_inspections",
 } as const;
 
 export function nowIso(): string {
