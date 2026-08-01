@@ -36,6 +36,10 @@ export const COL = {
   resolutionTracking: "mn360_resolution_tracking",
   partyMemberEvaluations: "mn360_party_member_evaluations",
   partyFees: "mn360_party_fees",
+  educationPlans: "mn360_education_plans",
+  planApprovals: "mn360_plan_approvals",
+  observations: "mn360_observations",
+  childAssessments: "mn360_child_assessments",
 } as const;
 
 export function nowIso(): string {

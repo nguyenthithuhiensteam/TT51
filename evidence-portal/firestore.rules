@@ -275,5 +275,32 @@ service cloud.firestore {
       allow create, update: if mn360HasAnyPerm(['party.edit', 'party.approve']);
       allow delete: if false;
     }
+
+    // --------------------- Chuyên môn ---------------------
+
+    match /mn360_education_plans/{id} {
+      allow read: if mn360HasPerm('curriculum.view');
+      allow create: if mn360HasPerm('curriculum.create');
+      allow update: if mn360HasAnyPerm(['curriculum.create', 'curriculum.submit', 'curriculum.approve']);
+      allow delete: if false;
+    }
+
+    match /mn360_plan_approvals/{id} {
+      allow read: if mn360HasPerm('curriculum.view');
+      allow create: if mn360HasAnyPerm(['curriculum.submit', 'curriculum.approve']);
+      allow update, delete: if false;
+    }
+
+    match /mn360_observations/{id} {
+      allow read: if mn360HasAnyPerm(['curriculum.view', 'children.view']);
+      allow create: if mn360HasPerm('curriculum.create');
+      allow update, delete: if false;
+    }
+
+    match /mn360_child_assessments/{id} {
+      allow read: if mn360HasAnyPerm(['curriculum.view', 'children.view']);
+      allow create: if mn360HasPerm('curriculum.create');
+      allow update, delete: if false;
+    }
   }
 }
