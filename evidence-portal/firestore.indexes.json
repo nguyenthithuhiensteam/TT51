@@ -15,6 +15,158 @@
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "uploadedAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "mn360_school_years",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "school_id", "order": "ASCENDING" },
+        { "fieldPath": "start_date", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "mn360_child_status_history",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "child_id", "order": "ASCENDING" },
+        { "fieldPath": "changed_at", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "mn360_child_leave_requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "child_id", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "mn360_parent_messages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "child_id", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "mn360_plan_approvals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "plan_id", "order": "ASCENDING" },
+        { "fieldPath": "acted_at", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "mn360_observations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "child_id", "order": "ASCENDING" },
+        { "fieldPath": "observed_date", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "mn360_child_assessments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "child_id", "order": "ASCENDING" },
+        { "fieldPath": "assessed_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "mn360_document_versions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "document_id", "order": "ASCENDING" },
+        { "fieldPath": "version_no", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "mn360_asset_status_history",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "asset_id", "order": "ASCENDING" },
+        { "fieldPath": "changed_at", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "mn360_growth_measurements",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "child_id", "order": "ASCENDING" },
+        { "fieldPath": "measured_date", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "mn360_vaccinations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "child_id", "order": "ASCENDING" },
+        { "fieldPath": "vaccinated_date", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "mn360_three_step_inspections",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "menu_id", "order": "ASCENDING" },
+        { "fieldPath": "checked_at", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "mn360_parent_ai_consultations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "user_id", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "mn360_party_meeting_minutes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "meeting_id", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "mn360_resolution_tracking",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "resolution_id", "order": "ASCENDING" },
+        { "fieldPath": "updated_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "mn360_staff_assignments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "staff_id", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "mn360_task_status_history",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "task_id", "order": "ASCENDING" },
+        { "fieldPath": "changed_at", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "mn360_task_comments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "task_id", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "mn360_task_evidence",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "task_id", "order": "ASCENDING" },
+        { "fieldPath": "uploaded_at", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

@@ -42,6 +42,10 @@ export function SettingsPage() {
   const [driveConfig, setDriveConfig] = useState<GoogleDriveConfig>({ clientId: "", apiKey: "" });
   const [driveBusy, setDriveBusy] = useState(false);
   const [driveMessage, setDriveMessage] = useState<string | null>(null);
+  const [schoolBusy, setSchoolBusy] = useState(false);
+  const [schoolMessage, setSchoolMessage] = useState<string | null>(null);
+  const [schoolError, setSchoolError] = useState<string | null>(null);
+  const [yearError, setYearError] = useState<string | null>(null);
   const canEdit = hasPermission("system.edit");
 
   const schoolForm = useForm<SchoolFormInput>({ resolver: zodResolver(schoolSchema) });
@@ -72,26 +76,46 @@ export function SettingsPage() {
 
   async function onSaveSchool(data: SchoolFormInput) {
     if (!school) return;
-    await updateSchool(school.id, data);
-    const updated = await getSchool();
-    setSchool(updated);
-    const current = years.find((y) => y.is_current) ?? null;
-    setSchoolContext(updated, current);
+    setSchoolError(null);
+    setSchoolMessage(null);
+    setSchoolBusy(true);
+    try {
+      await updateSchool(school.id, data);
+      const updated = await getSchool();
+      setSchool(updated);
+      const current = years.find((y) => y.is_current) ?? null;
+      setSchoolContext(updated, current);
+      setSchoolMessage("Đã lưu thông tin trường.");
+    } catch (err) {
+      setSchoolError(err instanceof Error ? err.message : "Có lỗi xảy ra, vui lòng thử lại");
+    } finally {
+      setSchoolBusy(false);
+    }
   }
 
   async function onAddYear(data: SchoolYearFormInput) {
     if (!school) return;
-    await createSchoolYear(school.id, data.code, data.startDate, data.endDate);
-    yearForm.reset({ code: "", startDate: "", endDate: "" });
-    setYears(await listSchoolYears(school.id));
+    setYearError(null);
+    try {
+      await createSchoolYear(school.id, data.code, data.startDate, data.endDate);
+      yearForm.reset({ code: "", startDate: "", endDate: "" });
+      setYears(await listSchoolYears(school.id));
+    } catch (err) {
+      setYearError(err instanceof Error ? err.message : "Có lỗi xảy ra, vui lòng thử lại");
+    }
   }
 
   async function onSetCurrentYear(yearId: string) {
     if (!school) return;
-    await setCurrentSchoolYear(school.id, yearId);
-    const updatedYears = await listSchoolYears(school.id);
-    setYears(updatedYears);
-    setSchoolContext(school, updatedYears.find((y) => y.id === yearId) ?? null);
+    setYearError(null);
+    try {
+      await setCurrentSchoolYear(school.id, yearId);
+      const updatedYears = await listSchoolYears(school.id);
+      setYears(updatedYears);
+      setSchoolContext(school, updatedYears.find((y) => y.id === yearId) ?? null);
+    } catch (err) {
+      setYearError(err instanceof Error ? err.message : "Có lỗi xảy ra, vui lòng thử lại");
+    }
   }
 
   async function onChangeDataDir() {
@@ -143,7 +167,11 @@ export function SettingsPage() {
           </Field>
           {canEdit && (
             <div className="sm:col-span-2">
-              <Button type="submit">Lưu thông tin trường</Button>
+              <Button type="submit" disabled={schoolBusy}>
+                {schoolBusy ? "Đang lưu..." : "Lưu thông tin trường"}
+              </Button>
+              {schoolMessage && <span className="ml-3 text-sm text-mint">{schoolMessage}</span>}
+              {schoolError && <p className="mt-2 text-sm text-danger">{schoolError}</p>}
             </div>
           )}
         </form>
@@ -151,6 +179,7 @@ export function SettingsPage() {
 
       <Card>
         <h2 className="mb-3 text-sm font-semibold text-navy">Năm học</h2>
+        {yearError && <p className="mb-3 text-sm text-danger">{yearError}</p>}
         <table className="mb-4 w-full text-left text-sm">
           <thead>
             <tr className="border-b border-navy/10 text-navy/50">
