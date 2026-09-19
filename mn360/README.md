@@ -59,7 +59,8 @@ tệp vào một trang HTML có `<div id="root"></div>`, hoặc lưu trữ như 
 
 ### Xuất bản bản xem trước lên Firebase Hosting
 
-Đã cấu hình sẵn `firebase.json`/`.firebaserc` (dự án mặc định: `quantritruongmamnon`) để xuất bản
+Đã cấu hình sẵn `firebase.json`/`.firebaserc` (dự án mặc định: `kehoachgiaoducmn-ba39d`, tên hiển
+thị trên Firebase Console là "KehoachgiaoducMN") để xuất bản
 bản **web preview đầy đủ** (`dist-web` — có Xuất Word/Excel, khác bản một-tệp-HTML ở trên) lên
 Firebase Hosting. Lưu ý đây vẫn là **bản xem trước** (dữ liệu `sql.js` lưu tạm trong trình duyệt
 người xem, mất khi tải lại trang, không phải hệ thống chính thức) — ứng dụng tự hiện một dải
@@ -72,7 +73,9 @@ npx firebase-tools login          # đăng nhập bằng tài khoản Google có
 npm run deploy:firebase           # build dist-web rồi "firebase deploy --only hosting"
 ```
 
-Nếu dùng dự án Firebase khác, sửa `"default"` trong `mn360/.firebaserc` thành đúng Project ID.
+Nếu Firebase yêu cầu chọn dự án khi chạy `firebase-tools login`, chọn đúng dự án hiển thị tên
+**"KehoachgiaoducMN"**. Nếu sau này đổi sang dự án Firebase khác, sửa `"default"` trong
+`mn360/.firebaserc` thành đúng Project ID mới.
 
 ### Tự động xuất bản khi push lên GitHub (không cần chạy tay từ máy)
 
@@ -82,8 +85,10 @@ Firebase Hosting mỗi khi có push vào nhánh `main` hoặc `claude/preschool-
 quyền cho GitHub được triển khai thay bạn:
 
 1. **Tạo khóa tài khoản dịch vụ Firebase** (Service Account):
-   - Vào [Firebase Console](https://console.firebase.google.com/) → chọn dự án
-     `quantritruongmamnon` → biểu tượng bánh răng ⚙️ → **Project settings**.
+   - Vào [Firebase Console](https://console.firebase.google.com/) → chọn dự án tên hiển thị
+     **"KehoachgiaoducMN"** (Project ID thật là `kehoachgiaoducmn-ba39d`, có thể xem lại chính xác
+     ở ⚙️ **Project settings** → tab **General** → dòng "Project ID") → biểu tượng bánh răng ⚙️ →
+     **Project settings**.
    - Chuyển sang tab **Service accounts** → mục "Firebase Admin SDK" → bấm
      **Generate new private key** → xác nhận. Trình duyệt sẽ tải về một tệp `.json`.
    - Giữ tệp này an toàn tuyệt đối — không đưa vào Git, không gửi qua chat công khai. Nếu bạn cần
@@ -92,7 +97,7 @@ quyền cho GitHub được triển khai thay bạn:
 2. **Thêm khóa đó làm Secret trên GitHub** (để CI dùng, không hiện ra ở đâu khác):
    - Vào repo `nguyenthithuhiensteam/TT51` trên GitHub → **Settings** → **Secrets and variables**
      → **Actions** → **New repository secret**.
-   - Đặt tên chính xác: `FIREBASE_SERVICE_ACCOUNT_QUANTRITRUONGMAMNON`.
+   - Đặt tên chính xác: `FIREBASE_SERVICE_ACCOUNT`.
    - Dán toàn bộ nội dung tệp `.json` vừa tải ở bước 1 vào ô Value → **Add secret**.
 
 3. Từ lần push tiếp theo vào `main` hoặc `claude/preschool-education-app-or1al7` (hoặc bấm chạy

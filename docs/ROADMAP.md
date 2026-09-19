@@ -563,6 +563,10 @@ vừa làm nút AI khó bỏ sót hơn, vừa làm rõ ràng bản xem trước 
   `firebase deploy --only hosting`). **Không tự đăng nhập/xuất bản thay được** — `firebase login`
   cần xác thực Google trên trình duyệt của người dùng, môi trường này không có thông tin xác thực
   Firebase/Google Cloud nào. Đã hướng dẫn chi tiết trong `README.md`.
+  **[Đính chính sau]:** Project ID `quantritruongmamnon` ghi ở trên là chưa đúng dự án thật đang
+  dùng để lưu trang web — đã sửa lại thành `kehoachgiaoducmn-ba39d` (tên hiển thị trên Firebase
+  Console là "KehoachgiaoducMN") ở mục Giai đoạn bổ sung "Tự động triển khai... GitHub Actions"
+  bên dưới, sau khi người dùng gửi ảnh chụp Firebase Console xác nhận.
 - ✅ Kiểm thử qua Playwright trên `dist-web`: dải cảnh báo hiện đúng ở màn hình đăng nhập và sau
   đăng nhập, đóng được; nút "Trợ lý AI" có nhãn chữ hiện rõ ràng ở góc dưới bên phải.
 - ✅ `tsc --noEmit`, ESLint (0 warning), Vitest (43 test), `cargo check`, `vite build` chạy sạch.

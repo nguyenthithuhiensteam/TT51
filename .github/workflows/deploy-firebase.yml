@@ -2,8 +2,8 @@ name: Xuất bản bản xem trước web (Firebase Hosting)
 
 # Tự động build + triển khai lên Firebase Hosting mỗi khi có push vào các nhánh dưới đây, hoặc
 # chạy thủ công từ tab Actions → "Xuất bản bản xem trước web (Firebase Hosting)" → "Run workflow".
-# Cần cấu hình secret FIREBASE_SERVICE_ACCOUNT_QUANTRITRUONGMAMNON trong Settings → Secrets and
-# variables → Actions trước khi workflow này chạy được — xem hướng dẫn trong README.md.
+# Cần cấu hình secret FIREBASE_SERVICE_ACCOUNT trong Settings → Secrets and variables → Actions
+# trước khi workflow này chạy được — xem hướng dẫn trong README.md.
 on:
   push:
     branches:
@@ -40,7 +40,7 @@ jobs:
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: "${{ secrets.GITHUB_TOKEN }}"
-          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_QUANTRITRUONGMAMNON }}"
-          projectId: quantritruongmamnon
+          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}"
+          projectId: kehoachgiaoducmn-ba39d
           entryPoint: mn360
           channelId: live
