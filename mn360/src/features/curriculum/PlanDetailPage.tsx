@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, FileDown } from "lucide-react";
+import { ArrowLeft, FileDown, Sparkles, Undo2, ShieldCheck } from "lucide-react";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { StatusBadge } from "../../components/ui/Badge";
@@ -18,6 +18,32 @@ import {
 import { PLAN_TYPE_LABELS } from "../../lib/db/types";
 import type { RecordStatus } from "../../lib/db/types";
 import { exportEducationPlanToWord } from "../../lib/export/word";
+import { exportEducationPlanToPdf } from "../../lib/export/pdf";
+import { editSection, validatePlan, type SectionEditMode } from "../../lib/ai/curriculumAi";
+import { describeAiError } from "../../lib/ai/gateway";
+
+type PlanFieldKey =
+  | "objectives"
+  | "requirements"
+  | "content"
+  | "activities"
+  | "environment"
+  | "materials"
+  | "methods"
+  | "evaluation"
+  | "adjustment";
+
+const FIELD_LABELS: Record<PlanFieldKey, string> = {
+  objectives: "Mục tiêu",
+  requirements: "Yêu cầu cần đạt",
+  content: "Nội dung",
+  activities: "Hoạt động",
+  environment: "Môi trường",
+  materials: "Học liệu",
+  methods: "Phương pháp",
+  evaluation: "Đánh giá",
+  adjustment: "Điều chỉnh",
+};
 
 interface PlanAction {
   label: string;
@@ -77,6 +103,15 @@ export function PlanDetailPage() {
   const [actionModal, setActionModal] = useState<PlanAction | null>(null);
   const [actionComment, setActionComment] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const [aiFieldBusy, setAiFieldBusy] = useState<Partial<Record<PlanFieldKey, boolean>>>({});
+  const [aiFieldError, setAiFieldError] = useState<Partial<Record<PlanFieldKey, string>>>({});
+  const [aiFieldHistory, setAiFieldHistory] = useState<Partial<Record<PlanFieldKey, string[]>>>({});
+  const [validateOpen, setValidateOpen] = useState(false);
+  const [validateBusy, setValidateBusy] = useState(false);
+  const [validateResult, setValidateResult] = useState<string | null>(null);
+  const [validateError, setValidateError] = useState<string | null>(null);
+  const [pdfBusy, setPdfBusy] = useState(false);
 
   async function refresh() {
     if (!id) return;
@@ -141,6 +176,74 @@ export function PlanDetailPage() {
     }
   }
 
+  async function runFieldAi(key: PlanFieldKey, mode: SectionEditMode) {
+    if (!plan) return;
+    setAiFieldError((p) => ({ ...p, [key]: undefined }));
+    setAiFieldBusy((p) => ({ ...p, [key]: true }));
+    const previousValue = fields[key];
+    try {
+      const updated = await editSection(
+        {
+          planType: plan.plan_type,
+          title: plan.title,
+          ageGroup: plan.age_group ?? undefined,
+          className: plan.class_name ?? undefined,
+          periodStart: plan.period_start ?? undefined,
+          periodEnd: plan.period_end ?? undefined,
+        },
+        FIELD_LABELS[key],
+        previousValue,
+        mode,
+      );
+      // Chỉ thay đổi đúng mục đang chọn — các mục khác giữ nguyên.
+      setFields((p) => ({ ...p, [key]: updated }));
+      setAiFieldHistory((p) => ({ ...p, [key]: [...(p[key] ?? []), previousValue] }));
+    } catch (err) {
+      setAiFieldError((p) => ({ ...p, [key]: describeAiError(err) }));
+    } finally {
+      setAiFieldBusy((p) => ({ ...p, [key]: false }));
+    }
+  }
+
+  function undoFieldAi(key: PlanFieldKey) {
+    setAiFieldHistory((p) => {
+      const stack = p[key] ?? [];
+      if (stack.length === 0) return p;
+      const previous = stack[stack.length - 1];
+      setFields((f) => ({ ...f, [key]: previous }));
+      return { ...p, [key]: stack.slice(0, -1) };
+    });
+  }
+
+  async function runValidatePlan() {
+    if (!plan) return;
+    setValidateOpen(true);
+    setValidateBusy(true);
+    setValidateError(null);
+    setValidateResult(null);
+    try {
+      const result = await validatePlan(
+        {
+          planType: plan.plan_type,
+          title: plan.title,
+          ageGroup: plan.age_group ?? undefined,
+          className: plan.class_name ?? undefined,
+          periodStart: plan.period_start ?? undefined,
+          periodEnd: plan.period_end ?? undefined,
+          objectives: fields.objectives,
+          requirements: fields.requirements,
+          content: fields.content,
+        },
+        fields,
+      );
+      setValidateResult(result);
+    } catch (err) {
+      setValidateError(describeAiError(err));
+    } finally {
+      setValidateBusy(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -153,6 +256,26 @@ export function PlanDetailPage() {
               <FileDown size={14} /> Xuất Word
             </Button>
           )}
+          {hasPermission("curriculum.export") && (
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={pdfBusy}
+              onClick={async () => {
+                setPdfBusy(true);
+                try {
+                  await exportEducationPlanToPdf(plan);
+                } finally {
+                  setPdfBusy(false);
+                }
+              }}
+            >
+              <FileDown size={14} /> {pdfBusy ? "Đang xuất PDF..." : "Xuất PDF"}
+            </Button>
+          )}
+          <Button variant="secondary" size="sm" disabled={validateBusy} onClick={runValidatePlan}>
+            <ShieldCheck size={14} /> Kiểm tra tính thống nhất
+          </Button>
           {availableActions.map((a) => (
             <Button
               key={a.label}
@@ -184,15 +307,20 @@ export function PlanDetailPage() {
       <Card>
         <h2 className="mb-3 text-sm font-semibold text-navy">Nội dung kế hoạch</h2>
         <div className="grid grid-cols-1 gap-3">
-          <PlanField label="Mục tiêu" value={fields.objectives} editable={editable} onChange={(v) => setFields((p) => ({ ...p, objectives: v }))} />
-          <PlanField label="Yêu cầu cần đạt" value={fields.requirements} editable={editable} onChange={(v) => setFields((p) => ({ ...p, requirements: v }))} />
-          <PlanField label="Nội dung" value={fields.content} editable={editable} onChange={(v) => setFields((p) => ({ ...p, content: v }))} />
-          <PlanField label="Hoạt động" value={fields.activities} editable={editable} onChange={(v) => setFields((p) => ({ ...p, activities: v }))} />
-          <PlanField label="Môi trường" value={fields.environment} editable={editable} onChange={(v) => setFields((p) => ({ ...p, environment: v }))} />
-          <PlanField label="Học liệu" value={fields.materials} editable={editable} onChange={(v) => setFields((p) => ({ ...p, materials: v }))} />
-          <PlanField label="Phương pháp" value={fields.methods} editable={editable} onChange={(v) => setFields((p) => ({ ...p, methods: v }))} />
-          <PlanField label="Đánh giá" value={fields.evaluation} editable={editable} onChange={(v) => setFields((p) => ({ ...p, evaluation: v }))} />
-          <PlanField label="Điều chỉnh" value={fields.adjustment} editable={editable} onChange={(v) => setFields((p) => ({ ...p, adjustment: v }))} />
+          {(Object.keys(FIELD_LABELS) as PlanFieldKey[]).map((key) => (
+            <PlanField
+              key={key}
+              label={FIELD_LABELS[key]}
+              value={fields[key]}
+              editable={editable}
+              onChange={(v) => setFields((p) => ({ ...p, [key]: v }))}
+              aiBusy={!!aiFieldBusy[key]}
+              aiError={aiFieldError[key]}
+              canUndo={(aiFieldHistory[key]?.length ?? 0) > 0}
+              onAi={(mode) => runFieldAi(key, mode)}
+              onUndo={() => undoFieldAi(key)}
+            />
+          ))}
         </div>
         {editable && (
           <div className="mt-3 flex justify-end">
@@ -236,6 +364,15 @@ export function PlanDetailPage() {
           </Button>
         </div>
       </Modal>
+
+      <Modal open={validateOpen} onClose={() => setValidateOpen(false)} title="Kiểm tra tính thống nhất (AI)">
+        {validateBusy && <p className="text-sm text-navy/60">Đang phân tích kế hoạch...</p>}
+        {validateError && <p className="text-sm text-danger">{validateError}</p>}
+        {validateResult && <p className="whitespace-pre-line text-sm text-navy">{validateResult}</p>}
+        <p className="mt-3 text-xs text-navy/40">
+          Đây chỉ là nhận xét gợi ý từ AI, không tự động thay đổi nội dung kế hoạch.
+        </p>
+      </Modal>
     </div>
   );
 }
@@ -245,11 +382,21 @@ function PlanField({
   value,
   editable,
   onChange,
+  aiBusy,
+  aiError,
+  canUndo,
+  onAi,
+  onUndo,
 }: {
   label: string;
   value: string;
   editable: boolean;
   onChange: (v: string) => void;
+  aiBusy?: boolean;
+  aiError?: string;
+  canUndo?: boolean;
+  onAi?: (mode: SectionEditMode) => void;
+  onUndo?: () => void;
 }) {
   if (!editable) {
     return (
@@ -261,7 +408,33 @@ function PlanField({
   }
   return (
     <Field label={label}>
-      <Textarea value={value} onChange={(e) => onChange(e.target.value)} />
+      <Textarea value={value} onChange={(e) => onChange(e.target.value)} disabled={aiBusy} />
+      <div className="mt-1 flex flex-wrap items-center gap-1">
+        <Button type="button" size="sm" variant="ghost" disabled={aiBusy} onClick={() => onAi?.("rewrite")}>
+          <Sparkles size={12} /> {aiBusy ? "Đang xử lý..." : "Viết lại bằng AI"}
+        </Button>
+        <Button type="button" size="sm" variant="ghost" disabled={aiBusy} onClick={() => onAi?.("shorten")}>
+          Rút gọn
+        </Button>
+        <Button type="button" size="sm" variant="ghost" disabled={aiBusy} onClick={() => onAi?.("expand")}>
+          Mở rộng
+        </Button>
+        <Button type="button" size="sm" variant="ghost" disabled={aiBusy} onClick={() => onAi?.("age_fit")}>
+          Điều chỉnh theo độ tuổi
+        </Button>
+        <Button type="button" size="sm" variant="ghost" disabled={aiBusy} onClick={() => onAi?.("steam")}>
+          Tích hợp STEAM
+        </Button>
+        <Button type="button" size="sm" variant="ghost" disabled={aiBusy} onClick={() => onAi?.("sel")}>
+          Tích hợp SEL
+        </Button>
+        {canUndo && (
+          <Button type="button" size="sm" variant="ghost" disabled={aiBusy} onClick={onUndo}>
+            <Undo2 size={12} /> Hoàn tác
+          </Button>
+        )}
+      </div>
+      {aiError && <p className="mt-1 text-xs text-danger">{aiError}</p>}
     </Field>
   );
 }

@@ -17,7 +17,15 @@ import { getDataDir, setDataDir } from "../../lib/db/backupRepo";
 import { useAppStore } from "../../store/appStore";
 import { useAuthStore } from "../../store/authStore";
 import type { School, SchoolYear } from "../../lib/db/types";
-import { defaultModelFor, loadAiConfig, saveAiConfig, type AiConfig, type AiProvider } from "../../lib/ai/gateway";
+import {
+  defaultModelFor,
+  healthCheckAI,
+  loadAiConfig,
+  saveAiConfig,
+  type AiConfig,
+  type AiHealthResult,
+  type AiProvider,
+} from "../../lib/ai/gateway";
 import { Select } from "../../components/ui/Input";
 import { getDefaultMealFeeRate, setDefaultMealFeeRate } from "../../lib/db/rationRepo";
 import { loadGoogleDriveConfig, saveGoogleDriveConfig, type GoogleDriveConfig } from "../../lib/import/googleDrive";
@@ -34,6 +42,8 @@ export function SettingsPage() {
   const [aiConfig, setAiConfig] = useState<AiConfig>({ provider: "off", apiKey: "", model: "" });
   const [aiBusy, setAiBusy] = useState(false);
   const [aiMessage, setAiMessage] = useState<string | null>(null);
+  const [aiCheckBusy, setAiCheckBusy] = useState(false);
+  const [aiHealth, setAiHealth] = useState<AiHealthResult | null>(null);
   const [mealFeeRate, setMealFeeRateState] = useState("20000");
   const [mealFeeBusy, setMealFeeBusy] = useState(false);
   const [mealFeeMessage, setMealFeeMessage] = useState<string | null>(null);
@@ -232,12 +242,13 @@ export function SettingsPage() {
               value={aiConfig.provider}
               onChange={(e) => {
                 const provider = e.target.value as AiProvider;
+                setAiHealth(null);
                 setAiConfig((p) => ({ ...p, provider, model: p.model || defaultModelFor(provider) }));
               }}
             >
               <option value="off">Tắt hoàn toàn</option>
+              <option value="gemini">Google Gemini (khuyến nghị)</option>
               <option value="openai">OpenAI</option>
-              <option value="gemini">Google Gemini</option>
               <option value="claude">Anthropic Claude</option>
             </Select>
           </Field>
@@ -246,7 +257,10 @@ export function SettingsPage() {
               disabled={!canEdit || aiConfig.provider === "off"}
               value={aiConfig.model}
               placeholder={defaultModelFor(aiConfig.provider)}
-              onChange={(e) => setAiConfig((p) => ({ ...p, model: e.target.value }))}
+              onChange={(e) => {
+                setAiHealth(null);
+                setAiConfig((p) => ({ ...p, model: e.target.value }));
+              }}
             />
           </Field>
           <Field label="Khóa API">
@@ -254,7 +268,10 @@ export function SettingsPage() {
               type="password"
               disabled={!canEdit || aiConfig.provider === "off"}
               value={aiConfig.apiKey}
-              onChange={(e) => setAiConfig((p) => ({ ...p, apiKey: e.target.value }))}
+              onChange={(e) => {
+                setAiHealth(null);
+                setAiConfig((p) => ({ ...p, apiKey: e.target.value }));
+              }}
               placeholder="Dán khóa API tại đây"
             />
           </Field>
@@ -278,7 +295,33 @@ export function SettingsPage() {
             >
               Lưu cấu hình AI
             </Button>
+            <Button
+              className="ml-2"
+              size="sm"
+              variant="secondary"
+              disabled={aiCheckBusy || aiConfig.provider === "off"}
+              onClick={async () => {
+                setAiCheckBusy(true);
+                setAiHealth(null);
+                try {
+                  setAiHealth(await healthCheckAI(aiConfig));
+                } finally {
+                  setAiCheckBusy(false);
+                }
+              }}
+            >
+              {aiCheckBusy ? "Đang kiểm tra..." : "Kiểm tra kết nối"}
+            </Button>
             {aiMessage && <span className="ml-3 text-sm text-mint">{aiMessage}</span>}
+            {aiHealth && (
+              <p
+                className={`mt-2 text-sm ${
+                  aiHealth.status === "connected" ? "text-mint" : "text-danger"
+                }`}
+              >
+                {aiHealth.status === "connected" ? "✓ Đã kết nối" : "✗ Chưa kết nối"} — {aiHealth.message}
+              </p>
+            )}
           </div>
         )}
       </Card>

@@ -1,12 +1,15 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Sparkles } from "lucide-react";
 import { Modal } from "../../components/ui/Modal";
 import { Button } from "../../components/ui/Button";
 import { Field, Input, Select, Textarea } from "../../components/ui/Input";
 import { PLAN_TYPE_LABELS } from "../../lib/db/types";
 import { educationPlanSchema, type EducationPlanFormInput } from "../../lib/schemas/curriculum";
 import type { ClassWithTeacher } from "../../lib/db/childRepo";
+import { generateEducationPlanDraft } from "../../lib/ai/curriculumAi";
+import { describeAiError } from "../../lib/ai/gateway";
 
 export type PlanFormValues = EducationPlanFormInput;
 
@@ -27,11 +30,18 @@ export function PlanFormModal({
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<PlanFormValues>({
     resolver: zodResolver(educationPlanSchema),
     defaultValues: { planType: "week" },
   });
+
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const values = watch();
 
   useEffect(() => {
     if (open) {
@@ -46,8 +56,48 @@ export function PlanFormModal({
         requirements: "",
         content: "",
       });
+      setAiError(null);
+      setAiBusy(false);
     }
   }, [open, reset]);
+
+  async function handleGenerateWithAi() {
+    if (!values.title?.trim()) {
+      setAiError("Nhập tên/chủ đề kế hoạch trước khi tạo nội dung bằng AI.");
+      return;
+    }
+    setAiError(null);
+    setAiBusy(true);
+    const controller = new AbortController();
+    abortRef.current = controller;
+    try {
+      const className = classes.find((c) => c.id === values.classId)?.name;
+      const draft = await generateEducationPlanDraft(
+        {
+          planType: values.planType,
+          title: values.title,
+          ageGroup: values.ageGroup,
+          className,
+          periodStart: values.periodStart,
+          periodEnd: values.periodEnd,
+          objectives: values.objectives,
+          requirements: values.requirements,
+          content: values.content,
+        },
+        controller.signal,
+      );
+      // Chỉ điền vào các mục còn trống — không ghi đè nội dung giáo viên đã nhập.
+      if (!values.objectives?.trim() && draft.objectives) setValue("objectives", draft.objectives);
+      if (!values.requirements?.trim() && draft.requirements) setValue("requirements", draft.requirements);
+      const contentParts = [draft.content, draft.activities].filter(Boolean).join("\n\n");
+      if (!values.content?.trim() && contentParts) setValue("content", contentParts);
+    } catch (err) {
+      setAiError(describeAiError(err));
+    } finally {
+      setAiBusy(false);
+      abortRef.current = null;
+    }
+  }
 
   return (
     <Modal open={open} onClose={onClose} title="Soạn kế hoạch giáo dục" wide>
@@ -89,6 +139,22 @@ export function PlanFormModal({
           <Field label="Đến ngày">
             <Input type="date" {...register("periodEnd")} />
           </Field>
+        </div>
+        <div className="flex flex-col justify-end gap-1 sm:col-span-2">
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="secondary" size="sm" disabled={aiBusy} onClick={handleGenerateWithAi}>
+              <Sparkles size={14} /> {aiBusy ? "Đang tạo nội dung bằng AI..." : "Tạo bằng AI"}
+            </Button>
+            {aiBusy && (
+              <Button type="button" variant="ghost" size="sm" onClick={() => abortRef.current?.abort()}>
+                Hủy
+              </Button>
+            )}
+          </div>
+          <p className="text-xs text-navy/50">
+            AI chỉ điền vào các mục còn trống bên dưới; bạn có thể chỉnh sửa mọi nội dung trước khi lưu.
+          </p>
+          {aiError && <p className="text-xs text-danger">{aiError}</p>}
         </div>
         <div className="sm:col-span-2">
           <Field label="Mục tiêu">

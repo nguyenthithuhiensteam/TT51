@@ -567,6 +567,61 @@ vừa làm nút AI khó bỏ sót hơn, vừa làm rõ ràng bản xem trước 
   đăng nhập, đóng được; nút "Trợ lý AI" có nhãn chữ hiện rõ ràng ở góc dưới bên phải.
 - ✅ `tsc --noEmit`, ESLint (0 warning), Vitest (43 test), `cargo check`, `vite build` chạy sạch.
 
+### Kết nối AI thật cho Chuyên môn (kế hoạch giáo dục) + xuất PDF — ✅ Hoàn thành
+
+Rà soát theo yêu cầu chi tiết của người dùng về "Chương trình giáo dục mầm non" cho thấy AI
+Gateway (Giai đoạn 4) hoạt động đúng ở tầng hạ tầng (Rust `ai_generate` gọi OpenAI/Gemini/Claude
+thật), nhưng **module Chuyên môn (`EducationPlansListPage`/`PlanFormModal`/`PlanDetailPage`)
+chưa hề gọi AI** — đây là nguyên nhân "AI chưa kết nối" khi soạn kế hoạch giáo dục. Ngoài ra chưa
+có nút kiểm tra kết nối AI và chưa có xuất PDF (đã ghi nhận là việc còn thiếu từ Giai đoạn 5).
+
+- ✅ `lib/ai/gateway.ts`: thêm `describeAiError()` (diễn giải lỗi kỹ thuật sang tiếng Việt dễ hiểu:
+  khóa không hợp lệ/hết hạn mức/lỗi mạng/hết thời gian chờ), `healthCheckAI()` (gửi yêu cầu tối
+  thiểu để kiểm tra kết nối, nhận `overrideConfig` để kiểm tra được cấu hình đang nhập chưa lưu),
+  giới hạn thời gian chờ 30 giây và hỗ trợ `AbortSignal` để hủy yêu cầu đang chờ.
+- ✅ `src-tauri/src/commands/ai.rs`: gắn mã trạng thái HTTP vào thông báo lỗi trả về
+  (`[401]`, `[429]`, `[mang]`...) để tầng giao diện phân loại được lỗi mà không đoán mò.
+- ✅ Cài đặt → Trợ lý AI (AI Gateway): thêm nút "Kiểm tra kết nối" hiển thị trạng thái Đã kết
+  nối/Chưa kết nối kèm lý do bằng tiếng Việt; đưa Google Gemini lên đầu danh sách nhà cung cấp
+  (khuyến nghị) theo đúng yêu cầu ưu tiên Gemini; trạng thái kiểm tra tự xoá khi đổi nhà cung
+  cấp/model/khóa để tránh hiển thị kết quả cũ gây hiểu nhầm.
+- ✅ `lib/ai/curriculumAi.ts` (mới): lớp dịch vụ AI dùng riêng cho kế hoạch giáo dục, dùng chung
+  một chỉ dẫn hệ thống (system prompt) — không bịa nội dung ngoài dữ liệu được cung cấp, lấy trẻ
+  làm trung tâm, tích hợp STEAM/SEL chỉ khi phù hợp. Ẩn danh số điện thoại/ngày tháng tự do trong
+  nội dung giáo viên gõ tay trước khi gửi AI (dùng lại `redact.ts` có sẵn). Vì mô hình dữ liệu
+  hiện tại là các trường văn bản tự do (không có ngân hàng mục tiêu có mã chuẩn hoá), AI diễn đạt
+  mục tiêu bằng lời chứ không tự gán mã số — tránh đúng rủi ro "tự tạo mã mục tiêu không tồn tại".
+- ✅ `PlanFormModal.tsx`: nút "Tạo bằng AI" khi soạn kế hoạch mới — chỉ điền vào các mục còn
+  trống (không ghi đè nội dung giáo viên đã gõ), có nút "Hủy" khi đang chờ, báo lỗi rõ ràng.
+- ✅ `PlanDetailPage.tsx`: mỗi mục nội dung (Mục tiêu, Yêu cầu cần đạt, Nội dung, Hoạt động, Môi
+  trường, Học liệu, Phương pháp, Đánh giá, Điều chỉnh) có hàng nút riêng — Viết lại bằng AI/Rút
+  gọn/Mở rộng/Điều chỉnh theo độ tuổi/Tích hợp STEAM/Tích hợp SEL — **AI chỉ thay đổi đúng mục
+  đang chọn**, các mục khác giữ nguyên; có "Hoàn tác" để quay lại giá trị trước khi AI sửa (lưu
+  ngăn xếp lịch sử theo từng mục, phía client, chưa lưu lịch sử phiên bản trong CSDL). Thêm nút
+  "Kiểm tra tính thống nhất" — AI chỉ đưa nhận xét (mục tiêu chưa dùng, trùng lặp, thiếu phù hợp
+  độ tuổi...), không tự sửa dữ liệu.
+- ✅ `lib/export/pdf.ts` (mới): xuất kế hoạch giáo dục ra PDF (A4 dọc, có số trang), dùng phông
+  **Liberation Serif** (giấy phép SIL Open Font License, tương thích số đo với Times New Roman)
+  nhúng base64 trực tiếp trong `lib/export/fonts/` để không phụ thuộc phông cài trên máy người
+  dùng — đã xác minh render đúng toàn bộ dấu tiếng Việt (không vỡ chữ) bằng cách xuất thử và so
+  ảnh (`pdftoppm`). Phông chỉ tải khi thực sự bấm "Xuất PDF" (import động) để không làm nặng gói
+  chính. Bảng "NHẬN XÉT CỦA BAN GIÁM HIỆU" dùng `jspdf-autotable` có đường viền rõ.
+- ✅ Kiểm thử: `tsc --noEmit`, ESLint (0 warning), Vitest (68 test, thêm test cho `parseSections`
+  và `describeAiError`), `cargo check`, `vite build` + `vite build --config vite.web.config.ts`
+  chạy sạch. Kiểm thử thủ công bằng Playwright trên bản `dist-web` (đăng nhập, đổi mật khẩu lần
+  đầu, mở Chuyên môn, soạn kế hoạch, mở kế hoạch có sẵn, bấm từng nút AI mới, mở Cài đặt, chọn
+  Gemini + nhập khóa giả rồi bấm "Kiểm tra kết nối"): mọi nút hiển thị đúng, không lỗi console,
+  thông báo lỗi hiển thị đúng tiếng Việt ("Cổng AI không khả dụng trong bản xem trước trình
+  duyệt..." — đúng hành vi mong đợi vì bản web preview cố tình chặn AI, xem ghi chú Giai đoạn 4).
+- ⬜ Còn thiếu so với yêu cầu đầy đủ của người dùng (ghi nhận rõ để làm tiếp, không nhận nhầm là
+  đã xong): (1) chưa có kế hoạch tháng/tuần/ngày dạng bảng đúng mẫu "MT1 TRƯỜNG MẦM NON" (hiện
+  9 loại kế hoạch dùng chung một bộ trường văn bản tự do); (2) chưa có ngân hàng chương trình
+  khung với mã mục tiêu chuẩn hoá để cấp dưới kế thừa đúng từ cấp trên theo mã; (3) chưa có lưu
+  lịch sử phiên bản đầy đủ trong CSDL (mới có hoàn tác phía client, mất khi tải lại trang); (4)
+  AI vẫn trả về văn bản tự do có nhãn ngăn cách, chưa theo JSON Schema chặt chẽ theo từng loại kế
+  hoạch; (5) bản web preview (Firebase Hosting) vẫn không gọi được AI thật theo đúng thiết kế —
+  chỉ bản desktop Tauri mới gọi AI thật.
+
 ## Hướng dẫn chạy thử Giai đoạn 1-6 (PowerShell trên Windows)
 
 Xem chi tiết đầy đủ trong `mn360/README.md`, tóm tắt:

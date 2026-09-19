@@ -45,15 +45,15 @@ async fn call_openai(client: &reqwest::Client, req: &AiRequest) -> Result<String
         .json(&body)
         .send()
         .await
-        .map_err(|e| format!("Không gọi được OpenAI: {e}"))?;
+        .map_err(|e| format!("[mang] Không gọi được OpenAI: {e}"))?;
     let status = resp.status();
     let json: serde_json::Value = resp
         .json()
         .await
-        .map_err(|e| format!("Phản hồi không hợp lệ từ OpenAI: {e}"))?;
+        .map_err(|e| format!("[mang] Phản hồi không hợp lệ từ OpenAI: {e}"))?;
     if !status.is_success() {
         let message = json["error"]["message"].as_str().unwrap_or("Lỗi không xác định");
-        return Err(format!("OpenAI báo lỗi: {message}"));
+        return Err(format!("[{}] OpenAI báo lỗi: {message}", status.as_u16()));
     }
     json["choices"][0]["message"]["content"]
         .as_str()
@@ -75,15 +75,15 @@ async fn call_gemini(client: &reqwest::Client, req: &AiRequest) -> Result<String
         .json(&body)
         .send()
         .await
-        .map_err(|e| format!("Không gọi được Gemini: {e}"))?;
+        .map_err(|e| format!("[mang] Không gọi được Gemini: {e}"))?;
     let status = resp.status();
     let json: serde_json::Value = resp
         .json()
         .await
-        .map_err(|e| format!("Phản hồi không hợp lệ từ Gemini: {e}"))?;
+        .map_err(|e| format!("[mang] Phản hồi không hợp lệ từ Gemini: {e}"))?;
     if !status.is_success() {
         let message = json["error"]["message"].as_str().unwrap_or("Lỗi không xác định");
-        return Err(format!("Gemini báo lỗi: {message}"));
+        return Err(format!("[{}] Gemini báo lỗi: {message}", status.as_u16()));
     }
     json["candidates"][0]["content"]["parts"][0]["text"]
         .as_str()
@@ -105,15 +105,15 @@ async fn call_claude(client: &reqwest::Client, req: &AiRequest) -> Result<String
         .json(&body)
         .send()
         .await
-        .map_err(|e| format!("Không gọi được Claude: {e}"))?;
+        .map_err(|e| format!("[mang] Không gọi được Claude: {e}"))?;
     let status = resp.status();
     let json: serde_json::Value = resp
         .json()
         .await
-        .map_err(|e| format!("Phản hồi không hợp lệ từ Claude: {e}"))?;
+        .map_err(|e| format!("[mang] Phản hồi không hợp lệ từ Claude: {e}"))?;
     if !status.is_success() {
         let message = json["error"]["message"].as_str().unwrap_or("Lỗi không xác định");
-        return Err(format!("Claude báo lỗi: {message}"));
+        return Err(format!("[{}] Claude báo lỗi: {message}", status.as_u16()));
     }
     json["content"][0]["text"]
         .as_str()
