@@ -622,6 +622,23 @@ có nút kiểm tra kết nối AI và chưa có xuất PDF (đã ghi nhận là
   hoạch; (5) bản web preview (Firebase Hosting) vẫn không gọi được AI thật theo đúng thiết kế —
   chỉ bản desktop Tauri mới gọi AI thật.
 
+### Tự động triển khai bản web lên Firebase Hosting qua GitHub Actions — ✅ Hoàn thành
+
+Người dùng trước đó phải tự chạy `firebase login` + `npm run deploy:firebase` từ máy cá nhân mỗi
+lần muốn cập nhật bản web. Thêm workflow để GitHub tự làm việc này khi có push.
+
+- ✅ `.github/workflows/deploy-firebase.yml` (mới): chạy khi push vào `main` hoặc
+  `claude/preschool-education-app-or1al7` (chỉ khi có thay đổi trong `mn360/`), hoặc chạy tay qua
+  "Run workflow". Các bước: cài phụ thuộc → `tsc --noEmit` → `npm run build:web` → triển khai bằng
+  `FirebaseExtended/action-hosting-deploy@v0` (channel `live`, dự án `quantritruongmamnon`).
+- ✅ Không thể tự tạo/lưu khóa xác thực Firebase thay người dùng (môi trường này không có và
+  không nên có quyền truy cập tài khoản Google/Firebase thật của trường) — đã ghi hướng dẫn từng
+  bước tạo Service Account JSON và thêm làm GitHub Secret
+  (`FIREBASE_SERVICE_ACCOUNT_QUANTRITRUONGMAMNON`) trong `mn360/README.md`. Trước khi thêm secret,
+  workflow vẫn chạy được tới bước build/kiểm tra kiểu dữ liệu, chỉ bước triển khai báo lỗi xác thực.
+- ✅ Đã xác thực cú pháp YAML hợp lệ (`python3 -c "import yaml; yaml.safe_load(...)"`); không thể
+  chạy thử thật trong môi trường này vì cần chạy trên GitHub Actions với secret thật.
+
 ## Hướng dẫn chạy thử Giai đoạn 1-6 (PowerShell trên Windows)
 
 Xem chi tiết đầy đủ trong `mn360/README.md`, tóm tắt:

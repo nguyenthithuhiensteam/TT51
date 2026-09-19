@@ -74,6 +74,35 @@ npm run deploy:firebase           # build dist-web rồi "firebase deploy --only
 
 Nếu dùng dự án Firebase khác, sửa `"default"` trong `mn360/.firebaserc` thành đúng Project ID.
 
+### Tự động xuất bản khi push lên GitHub (không cần chạy tay từ máy)
+
+Workflow `.github/workflows/deploy-firebase.yml` tự động build và triển khai `dist-web` lên
+Firebase Hosting mỗi khi có push vào nhánh `main` hoặc `claude/preschool-education-app-or1al7`
+(hoặc bấm "Run workflow" thủ công trong tab **Actions** trên GitHub). Cần làm **một lần** để cấp
+quyền cho GitHub được triển khai thay bạn:
+
+1. **Tạo khóa tài khoản dịch vụ Firebase** (Service Account):
+   - Vào [Firebase Console](https://console.firebase.google.com/) → chọn dự án
+     `quantritruongmamnon` → biểu tượng bánh răng ⚙️ → **Project settings**.
+   - Chuyển sang tab **Service accounts** → mục "Firebase Admin SDK" → bấm
+     **Generate new private key** → xác nhận. Trình duyệt sẽ tải về một tệp `.json`.
+   - Giữ tệp này an toàn tuyệt đối — không đưa vào Git, không gửi qua chat công khai. Nếu bạn cần
+     đăng nó ở đâu đó, hãy vào lại Firebase Console để **thu hồi (revoke)** khóa cũ và tạo khóa mới.
+
+2. **Thêm khóa đó làm Secret trên GitHub** (để CI dùng, không hiện ra ở đâu khác):
+   - Vào repo `nguyenthithuhiensteam/TT51` trên GitHub → **Settings** → **Secrets and variables**
+     → **Actions** → **New repository secret**.
+   - Đặt tên chính xác: `FIREBASE_SERVICE_ACCOUNT_QUANTRITRUONGMAMNON`.
+   - Dán toàn bộ nội dung tệp `.json` vừa tải ở bước 1 vào ô Value → **Add secret**.
+
+3. Từ lần push tiếp theo vào `main` hoặc `claude/preschool-education-app-or1al7` (hoặc bấm chạy
+   thủ công), vào tab **Actions** trên GitHub để xem tiến trình build/deploy. Khi chạy xong,
+   bản mới sẽ có ngay tại địa chỉ Firebase Hosting đang dùng (ví dụ
+   `https://kehoachgiaoducmn-ba39d.web.app`) — không cần làm gì thêm trên máy cá nhân.
+
+Nếu chưa thêm secret, workflow vẫn chạy nhưng bước triển khai sẽ báo lỗi xác thực — build/typecheck
+vẫn hữu ích để phát hiện lỗi sớm dù chưa cấu hình xong bước deploy.
+
 ## Tài khoản demo (Trường Mầm non Tràng Đà)
 
 Mật khẩu demo cho **tất cả** tài khoản: `MN360@2026` (bắt buộc đổi mật khẩu lần đăng nhập đầu).

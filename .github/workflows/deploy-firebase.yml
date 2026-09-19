@@ -1,0 +1,46 @@
+name: Xuất bản bản xem trước web (Firebase Hosting)
+
+# Tự động build + triển khai lên Firebase Hosting mỗi khi có push vào các nhánh dưới đây, hoặc
+# chạy thủ công từ tab Actions → "Xuất bản bản xem trước web (Firebase Hosting)" → "Run workflow".
+# Cần cấu hình secret FIREBASE_SERVICE_ACCOUNT_QUANTRITRUONGMAMNON trong Settings → Secrets and
+# variables → Actions trước khi workflow này chạy được — xem hướng dẫn trong README.md.
+on:
+  push:
+    branches:
+      - main
+      - claude/preschool-education-app-or1al7
+    paths:
+      - "mn360/**"
+      - ".github/workflows/deploy-firebase.yml"
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mn360
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Cài phụ thuộc Node
+        run: npm ci
+
+      - name: Kiểm tra kiểu dữ liệu TypeScript
+        run: npx tsc --noEmit
+
+      - name: Build bản web (dist-web)
+        run: npm run build:web
+
+      - name: Triển khai lên Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: "${{ secrets.GITHUB_TOKEN }}"
+          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_QUANTRITRUONGMAMNON }}"
+          projectId: quantritruongmamnon
+          entryPoint: mn360
+          channelId: live
