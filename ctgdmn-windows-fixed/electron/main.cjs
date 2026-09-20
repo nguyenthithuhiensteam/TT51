@@ -148,6 +148,7 @@ ipcMain.handle('branding:get-public',()=>repository.getPublicBranding());
 ipcMain.handle('resources:open-trusted',async(_event,{token,resourceId})=>{const user=currentUser(token);authorize(user,'video.view');const url=trustedResourceUrl(resourceId);repository.audit(user.id,'resource.open','online_resource',resourceId);await shell.openExternal(url);return true;});
 ipcMain.handle('auth:status',()=>({hasUsers:repository.hasUsers()}));
 ipcMain.handle('auth:setup-first-admin',(_event,data)=>repository.createFirstAdmin(data));
+ipcMain.handle('auth:request-account',(_event,data)=>repository.requestAccount(data));
 ipcMain.handle('auth:login',(_event,data)=>repository.login(data.username,data.password));
 ipcMain.handle('auth:logout',(_event,token)=>repository.logout(token));
 ipcMain.handle('auth:change-password',(_event,{token,currentPassword,newPassword})=>repository.changePassword(currentUser(token),currentPassword,newPassword));
@@ -156,6 +157,9 @@ ipcMain.handle('accounts:create',(_event,{token,data})=>repository.createUser(cu
 ipcMain.handle('accounts:import',(_event,{token,rows})=>repository.importUsers(currentUser(token),rows));
 ipcMain.handle('accounts:lock',(_event,{token,userId,locked})=>repository.lockUser(currentUser(token),userId,locked));
 ipcMain.handle('accounts:reset-password',(_event,{token,userId,tempPassword})=>repository.resetPassword(currentUser(token),userId,tempPassword));
+ipcMain.handle('accounts:list-requests',(_event,token)=>repository.listAccountRequests(currentUser(token)));
+ipcMain.handle('accounts:approve-request',(_event,{token,requestId})=>repository.approveAccountRequest(currentUser(token),requestId));
+ipcMain.handle('accounts:reject-request',(_event,{token,requestId,reason})=>repository.rejectAccountRequest(currentUser(token),requestId,reason));
 ipcMain.handle('repository:bootstrap',(_event,{token,legacy})=>{currentUser(token);return repository.bootstrapLegacy(legacy);});
 ipcMain.handle('repository:get-state',(_event,token)=>repository.getState(currentUser(token)));
 ipcMain.handle('repository:save-state',(_event,{token,payload})=>{const user=currentUser(token);const config=repository.getJson('systemConfig',{});if(config.repositoryMode==='lan')throw new Error('Chưa kết nối máy chủ LAN; dữ liệu không được ghi để tránh xung đột.');const old=repository.getJson('workspace',{});for(const plan of payload?.workspace?.plans||[]){const previous=(old.plans||[]).find((item)=>item.id===plan.id);if(!previous)authorize(user,'plan.create',plan);else if(JSON.stringify(previous)!==JSON.stringify(plan)){authorize(user,'plan.edit',plan);if(!['draft','changes_requested'].includes(previous.workflowStatus||'draft'))throw new Error('Bản kế hoạch đang gửi đã bị khóa.');}}if(!user.roles.includes(ROLES.ADMIN))for(const key of ['schoolProfile','classes','staff','signatures','customRecords','edits','sourceDocuments'])payload.workspace[key]=old[key];return repository.saveState(user,payload);});

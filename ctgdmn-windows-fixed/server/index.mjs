@@ -113,6 +113,7 @@ app.get('/api/data/index', handler(() => JSON.parse(fs.readFileSync(path.join(ro
 app.get('/api/branding/public', handler(() => repository.getPublicBranding()));
 app.get('/api/auth/status', handler(() => ({ hasUsers: repository.hasUsers() })));
 app.post('/api/auth/setup-first-admin', handler((req) => repository.createFirstAdmin(req.body)));
+app.post('/api/auth/request-account', handler((req) => repository.requestAccount(req.body)));
 app.post('/api/auth/login', handler((req) => repository.login(req.body.username, req.body.password)));
 
 // ---- Xác thực ----
@@ -125,6 +126,9 @@ app.post('/api/accounts', handler((req) => repository.createUser(currentUser(tok
 app.post('/api/accounts/import', handler((req) => repository.importUsers(currentUser(tokenFromRequest(req)), req.body.rows)));
 app.post('/api/accounts/:userId/lock', handler((req) => { repository.lockUser(currentUser(tokenFromRequest(req)), req.params.userId, Boolean(req.body.locked)); return { ok: true }; }));
 app.post('/api/accounts/:userId/reset-password', handler((req) => { repository.resetPassword(currentUser(tokenFromRequest(req)), req.params.userId, req.body.tempPassword); return { ok: true }; }));
+app.get('/api/accounts/requests', handler((req) => repository.listAccountRequests(currentUser(tokenFromRequest(req)))));
+app.post('/api/accounts/requests/:requestId/approve', handler((req) => repository.approveAccountRequest(currentUser(tokenFromRequest(req)), req.params.requestId)));
+app.post('/api/accounts/requests/:requestId/reject', handler((req) => repository.rejectAccountRequest(currentUser(tokenFromRequest(req)), req.params.requestId, req.body.reason)));
 
 // ---- Kho dữ liệu / kế hoạch ----
 app.post('/api/repository/bootstrap', handler((req) => { currentUser(tokenFromRequest(req)); return repository.bootstrapLegacy(req.body.legacy); }));

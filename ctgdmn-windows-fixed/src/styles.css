@@ -42,6 +42,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .auth-card > p:not(.eyebrow) { margin:0 0 18px; color:var(--muted); line-height:1.5; }
 .auth-card .plan-form { gap:11px; text-align:left; }
 .auth-card .primary-button { width:100%; justify-content:center; }
+.auth-card .ghost-button { width:100%; justify-content:center; margin-top:10px; }
 .auth-card > small { display:block; margin-top:16px; }
 .password-field { display:grid; grid-template-columns:minmax(0,1fr) auto; }
 .password-field .input { border-radius:9px 0 0 9px; }

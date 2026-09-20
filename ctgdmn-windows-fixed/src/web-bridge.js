@@ -76,6 +76,7 @@
     getPublicBranding: () => api('GET', '/api/branding/public'),
     getAuthStatus: () => api('GET', '/api/auth/status'),
     setupFirstAdmin: (data) => api('POST', '/api/auth/setup-first-admin', data),
+    requestAccount: (data) => api('POST', '/api/auth/request-account', data),
     login: async (username, password) => {
       const result = await api('POST', '/api/auth/login', { username, password });
       authToken = result.token;
@@ -90,6 +91,9 @@
     importUsers: (rows) => api('POST', '/api/accounts/import', { rows }),
     lockUser: (userId, locked) => api('POST', `/api/accounts/${encodeURIComponent(userId)}/lock`, { locked }),
     resetUserPassword: (userId, tempPassword) => api('POST', `/api/accounts/${encodeURIComponent(userId)}/reset-password`, { tempPassword }),
+    listAccountRequests: () => api('GET', '/api/accounts/requests'),
+    approveAccountRequest: (requestId) => api('POST', `/api/accounts/requests/${encodeURIComponent(requestId)}/approve`),
+    rejectAccountRequest: (requestId, reason) => api('POST', `/api/accounts/requests/${encodeURIComponent(requestId)}/reject`, { reason }),
 
     bootstrapRepository: (legacy) => api('POST', '/api/repository/bootstrap', { legacy }),
     getRepositoryState: () => api('GET', '/api/repository/state'),
