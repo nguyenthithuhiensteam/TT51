@@ -2,3 +2,7 @@ node_modules/
 out/
 .DS_Store
 *.log
+
+# Dữ liệu chạy thử bản máy chủ web cục bộ (SQLite, khóa AI, mẫu DOCX, video, tệp tải lên tạm)
+/data/
+*.local.mjs
