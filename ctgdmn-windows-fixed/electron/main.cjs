@@ -296,6 +296,7 @@ ipcMain.handle('ai:get-config', (_event, token) => {
 
 ipcMain.handle('ai:save-config', (_event, { token, config }) => {
   const user=currentUser(token);
+  authorize(user,'data.manage');
   const saved=aiService.store.save(config);
   repository.audit(user.id,'ai.config_save','ai',saved.provider,0,'success',{model:saved.model,keyMode:saved.keyMode});
   return saved;
@@ -303,6 +304,7 @@ ipcMain.handle('ai:save-config', (_event, { token, config }) => {
 
 ipcMain.handle('ai:clear-config', (_event, token) => {
   const user=currentUser(token);
+  authorize(user,'data.manage');
   aiService.store.clear();
   repository.audit(user.id,'ai.config_clear','ai','local');
   return true;
