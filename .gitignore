@@ -1,0 +1,15 @@
+﻿node_modules/
+dist/
+dist-web/
+build/
+release/
+release-ai-links-setup/
+win-unpacked/
+*.log
+.env
+.env.local
+
+CTGDMN-Setup-0.6.0-x64.exe
+CTGDMN-Portable-0.6.0-x64.zip
+*.exe
+*.zip

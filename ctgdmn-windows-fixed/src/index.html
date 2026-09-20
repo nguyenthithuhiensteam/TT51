@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Ứng dụng ngoại tuyến quản lý chương trình và kế hoạch giáo dục mầm non"
+    />
+    <title>CTGDMN</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="loading" class="loading-screen">
+      <div class="loading-mark"><span></span><span></span></div>
+      <strong>Đang nạp kho chương trình...</strong>
+      <small>Ứng dụng đang lập chỉ mục 246 tài liệu.</small>
+    </div>
+
+    <div id="app" class="app-shell is-hidden">
+      <aside class="sidebar">
+        <div class="brand">
+          <img src="../assets/icon.png" alt="Logo DNA Hiền" />
+          <div><strong>CTGDMN</strong><span>CHƯƠNG TRÌNH NHÀ TRƯỜNG</span></div>
+        </div>
+
+        <p class="nav-label">ĐIỀU HƯỚNG</p>
+        <nav id="primary-nav" aria-label="Điều hướng chính">
+          <button class="nav-item is-active" data-route="work-center">
+            <span class="nav-icon">▦</span><span>Trung tâm công việc</span>
+          </button>
+          <button class="nav-item" data-route="program-builder">
+            <span class="nav-icon">◫</span><span>Xây dựng chương trình</span>
+          </button>
+          <button class="nav-item" data-route="open-data">
+            <span class="nav-icon">⌘</span><span>Kho dữ liệu</span>
+          </button>
+          <button class="nav-item" data-route="planner">
+            <span class="nav-icon">✎</span><span>Soạn kế hoạch</span>
+          </button>
+          <button class="nav-item" data-route="evaluation">
+            <span class="nav-icon">◉</span><span>Đánh giá và điều chỉnh</span>
+          </button>
+          <button class="nav-item" data-route="approval">
+            <span class="nav-icon">✓</span><span>Rà soát – phê duyệt</span><b id="issue-badge">0</b>
+          </button>
+          <button class="nav-item" data-route="videos">
+            <span class="nav-icon">▶</span><span>Video hướng dẫn</span>
+          </button>
+          <button class="nav-item" data-route="online-resources">
+            <span class="nav-icon">⌁</span><span>AI và nguồn trực tuyến</span>
+          </button>
+          <button class="nav-item" data-route="reports">
+            <span class="nav-icon">▥</span><span>Báo cáo</span>
+          </button>
+        </nav>
+
+        <div class="nav-divider"></div>
+        <p class="nav-label">QUẢN TRỊ</p>
+        <nav aria-label="Quản trị dữ liệu">
+          <button class="nav-item" data-route="backup">
+            <span class="nav-icon">▱</span><span>Dữ liệu và sao lưu</span>
+          </button>
+          <button class="nav-item" data-route="settings">
+            <span class="nav-icon">○</span><span>Cài đặt</span>
+          </button>
+        </nav>
+
+        <button class="profile-card" id="logout-button" title="Đăng xuất">
+          <div class="profile-avatar" id="profile-avatar">U</div>
+          <div><strong id="profile-name">Người dùng</strong><span id="profile-role">Đã đăng nhập</span></div>
+          <span class="profile-chevron">↪</span>
+        </button>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div class="school-heading">
+            <span>ỨNG DỤNG XÂY DỰNG CHƯƠNG TRÌNH GIÁO DỤC NHÀ TRƯỜNG</span>
+            <strong id="school-name">Đang tải thông tin nhà trường…</strong>
+          </div>
+          <label class="global-search">
+            <span>⌕</span>
+            <input id="global-search" type="search" placeholder="Tìm mục tiêu, chủ đề, kế hoạch..." />
+            <kbd>Ctrl K</kbd>
+          </label>
+          <div class="year-box"><span>NĂM HỌC</span><strong id="school-year">2026 – 2027</strong></div>
+          <button id="quick-add" class="icon-button add-button" title="Tạo hồ sơ theo dõi">＋</button>
+        </header>
+
+        <main id="main-content" tabindex="-1"></main>
+      </section>
+    </div>
+
+    <div id="drawer-backdrop" class="drawer-backdrop is-hidden"></div>
+    <aside id="document-drawer" class="document-drawer" aria-hidden="true">
+      <div id="drawer-content"></div>
+    </aside>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <input id="backup-import" type="file" accept="application/json,.json" hidden />
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
