@@ -48,6 +48,8 @@ const state = {
   aiRequestId: '',
   pendingAIResult: null,
   templates: { templates: [], defaultByType: {} },
+  programAgeFilter: 'all',
+  draftPlanSeed: null,
 };
 
 function syncPublicBranding(profile = {}) {
@@ -233,10 +235,39 @@ function renderWorkCenter() {
     </details>`;
 }
 
+function programThemes() {
+  const groups = new Map();
+  for (const doc of state.data.documents) {
+    const key = `${doc.ageGroup}\u0000${doc.collection}`;
+    if (!groups.has(key)) groups.set(key, { ageGroup: doc.ageGroup, collection: doc.collection, documents: 0, types: new Set() });
+    const entry = groups.get(key);
+    entry.documents += 1;
+    entry.types.add(doc.documentType);
+  }
+  return [...groups.values()].sort((a, b) => a.ageGroup.localeCompare(b.ageGroup, 'vi') || a.collection.localeCompare(b.collection, 'vi'));
+}
+
+function themeToPlanSeed(ageGroup, collection) {
+  const docs = state.data.documents.filter((doc) => doc.ageGroup === ageGroup && doc.collection === collection);
+  const hasWeekly = docs.some((doc) => /tuần/i.test(doc.documentType || ''));
+  const hasMonthly = docs.some((doc) => /tháng|chủ đề/i.test(doc.documentType || ''));
+  const level = hasWeekly && !hasMonthly ? 'Tuần' : 'Chủ đề';
+  return { ageGroup, level, title: collection, weeklyTheme: level === 'Tuần' ? collection : '', schoolYear: schoolProfile().schoolYear };
+}
+
+function renderProgramBuilder() {
+  const themes = programThemes();
+  const ageFilter = state.programAgeFilter || 'all';
+  const q = normalizeText(state.query);
+  const visible = themes.filter((theme) => (ageFilter === 'all' || theme.ageGroup === ageFilter) && (!q || normalizeText(theme.collection).includes(q)));
+  els.main.innerHTML = `${pageHead('Giai đoạn 1', 'Ngân hàng chủ đề bài soạn', 'Chủ đề được tổng hợp trực tiếp từ 246 tài liệu nguồn đã lập chỉ mục theo từng độ tuổi — không tự thêm nội dung ngoài nguồn. Chọn một chủ đề để xem tài liệu gốc hoặc bắt đầu soạn kế hoạch mới.')}
+    <section class="toolbar"><label class="field"><span>Độ tuổi</span><select id="program-age-filter" class="select"><option value="all">Tất cả</option>${state.data.ageGroups.map((age) => `<option value="${escapeHtml(age.label)}" ${ageFilter === age.label ? 'selected' : ''}>${escapeHtml(age.label)}</option>`).join('')}</select></label><div class="result-count">${visible.length} chủ đề</div></section>
+    <section class="document-list">${visible.map((theme) => `<article class="document-card"><div class="doc-mark">${escapeHtml(theme.ageGroup)}</div><div><h3>${escapeHtml(theme.collection)}</h3><p>${theme.documents} tài liệu nguồn • ${[...theme.types].map((type) => escapeHtml(type)).join(', ')}</p></div><div class="doc-actions"><button class="small-button" data-view-theme-docs="${escapeHtml(theme.ageGroup)}|||${escapeHtml(theme.collection)}">Xem tài liệu nguồn</button><button class="small-button" data-use-theme="${escapeHtml(theme.ageGroup)}|||${escapeHtml(theme.collection)}">Dùng để soạn kế hoạch</button></div></article>`).join('') || '<div class="empty-state">Không tìm thấy chủ đề phù hợp.</div>'}</section>`;
+}
+
 function renderTemporaryRoute(route) {
   const plans = state.workspace.plans || [];
   const configs = {
-    'program-builder': { eyebrow: 'Giai đoạn 1', title: 'Xây dựng chương trình', description: 'Không gian chuẩn bị căn cứ, bối cảnh, mục tiêu và phân bổ chương trình năm học 2026–2027.', icon: '◫', action: '<button class="primary-button" data-route-jump="open-data">Mở kho dữ liệu</button>', note: 'Các bước nghiệp vụ chi tiết sẽ được triển khai tiếp; dữ liệu mở và kế hoạch hiện có vẫn được giữ nguyên.' },
     evaluation: { eyebrow: 'Theo dõi thực hiện', title: 'Đánh giá và điều chỉnh', description: 'Tập hợp kế hoạch cần bổ sung minh chứng, đánh giá và điều chỉnh sau thực hiện.', icon: '◉', action: '<button class="primary-button" data-route-jump="planner">Mở trình soạn kế hoạch</button>', note: `${plans.filter((plan) => !(plan.assessment || '').trim()).length} kế hoạch đang thiếu nội dung minh chứng hoặc đánh giá.` },
     approval: { eyebrow: 'Quy trình chuyên môn', title: 'Rà soát – phê duyệt', description: 'Theo dõi hồ sơ chờ rà soát, yêu cầu chỉnh sửa và lịch sử phê duyệt.', icon: '✓', action: '<button class="primary-button" data-route-jump="review">Mở cảnh báo dữ liệu nguồn</button>', note: `${unresolvedIssues().length} cảnh báo PDF nguồn chưa được xác nhận xử lý.` },
     'online-resources': { eyebrow: 'Kết nối có kiểm soát', title: 'AI và nguồn trực tuyến', description: 'Khu vực chuẩn bị liên kết HTTPS và công cụ hỗ trợ; ứng dụng vẫn hoạt động hoàn toàn ngoại tuyến.', icon: '⌁', action: '', note: 'Không tự động gửi dữ liệu và không đưa thông tin cá nhân của trẻ lên dịch vụ công cộng.' },
@@ -687,7 +718,8 @@ function planTemplate(plan = {}) {
 function workflowActions(plan={}){if(!plan.id)return'';const status=plan.workflowStatus||'draft';const own=plan.authorTeacherId===state.currentUser?.staffId;const buttons=[];if(hasRole('teacher')&&own&&status==='draft')buttons.push(['sent_team','Gửi tổ trưởng']);if(hasRole('teacher')&&own&&status==='changes_requested')buttons.push(['draft','Mở phiên bản chỉnh sửa']);if(hasRole('team_lead')&&status==='sent_team')buttons.push(['changes_requested','Yêu cầu chỉnh sửa'],['sent_professional','Gửi chuyên môn']);if(hasRole('vice_principal')&&status==='sent_professional')buttons.push(['submitted_approval','Trình phê duyệt']);if(hasRole('principal')&&status==='submitted_approval')buttons.push(['changes_requested','Trả lại chỉnh sửa'],['approved','Phê duyệt']);return `<section class="panel workflow-panel"><div><span class="chip teal">${escapeHtml(status)}</span><strong>Quy trình kế hoạch • phiên bản ${plan.version||1}</strong></div><div class="button-row">${buttons.map(([to,label])=>`<button class="${to==='approved'?'primary-button':'secondary-button'}" data-transition-plan="${plan.id}" data-to-status="${to}">${label}</button>`).join('')||'<small>Không có thao tác chuyển trạng thái phù hợp với vai trò hiện tại.</small>'}</div></section>`;}
 
 function renderPlanner(editId = '') {
-  const plan = state.workspace.plans.find((item) => item.id === editId) || {};
+  let plan = state.workspace.plans.find((item) => item.id === editId) || {};
+  if (!editId && state.draftPlanSeed) { plan = { ...state.draftPlanSeed }; state.draftPlanSeed = null; }
   const reviews = state.workspace.professionalReviews.filter((item)=>item.planId===plan.id && (!state.showPendingReviewsOnly || !item.resolved)).sort((a,b)=>a.createdAt.localeCompare(b.createdAt));
   els.main.innerHTML = `${pageHead('Công cụ chuyên môn', 'Soạn kế hoạch 2026–2027', 'Soạn theo cấu trúc mở; có thể tiếp tục chỉnh sửa, sao lưu và chuyển sang máy khác.','<button class="ghost-button" data-guide-context="planner">Xem hướng dẫn</button>')}${workflowActions(plan)}
     <section class="planner-layout"><div><article class="panel">${planTemplate(plan)}</article>${plan.id?`<article class="panel professional-reviews"><div class="panel-title-row"><div><h2>Nhận xét chuyên môn</h2><p class="panel-subtitle">Dòng thời gian bất biến theo từng phiên bản kế hoạch.</p></div><div class="button-row"><button class="secondary-button" data-filter-reviews>${state.showPendingReviewsOnly?'Hiện tất cả':'Chỉ chưa xử lý'}</button><button class="primary-button" data-add-review="${plan.id}">Thêm nhận xét</button></div></div><div class="review-timeline">${reviews.map((item)=>`<article class="${item.resolved?'is-resolved':''}"><i></i><header><strong>${escapeHtml(item.reviewerNameSnapshot||staffName(item.reviewerId))}</strong><span class="chip ${item.type==='Yêu cầu chỉnh sửa'?'amber':'teal'}">${escapeHtml(item.type)}</span></header><small>${escapeHtml(item.reviewerRoleSnapshot)} • Phiên bản ${item.planVersion} • ${new Date(item.createdAt).toLocaleString('vi-VN')}</small><p>${escapeHtml(item.content)}</p>${item.resolved?`<div class="review-response"><b>Đã xử lý:</b> ${escapeHtml(item.response)}</div>`:`<button class="small-button" data-resolve-review="${item.id}">Ghi nhận đã xử lý</button>`}</article>`).join('')||'<div class="empty-state">Chưa có nhận xét chuyên môn.</div>'}</div></article>`:''}</div><aside class="panel plan-list"><div class="panel-title-row"><div><h2>Kế hoạch đã lưu</h2><p class="panel-subtitle">${state.workspace.plans.length} kế hoạch trên máy</p></div></div>${state.workspace.plans.map(p=>`<button class="saved-plan" data-edit-plan="${p.id}"><strong>${escapeHtml(p.title)}</strong><span>Phiên bản ${p.version||1} • ${escapeHtml(className(p.classId,p.ageGroup))} • ${escapeHtml(p.schoolYear)}</span></button>`).join('') || '<div class="empty-state">Chưa có kế hoạch.</div>'}</aside></section>`;
@@ -861,7 +893,8 @@ function render() {
   else if (state.route === 'settings') renderSettings();
   else if (state.route === 'videos') renderVideos();
   else if (state.route === 'online-resources') renderAIWorkspace();
-  else if (['program-builder', 'evaluation', 'approval'].includes(state.route)) renderTemporaryRoute(state.route);
+  else if (state.route === 'program-builder') renderProgramBuilder();
+  else if (['evaluation', 'approval'].includes(state.route)) renderTemporaryRoute(state.route);
   else if (state.route === 'dashboard') renderDashboard();
   else if (state.route === 'open-data') renderOpenData();
   else if (state.route === 'planner') renderPlanner();
@@ -1015,6 +1048,10 @@ function bindEvents() {
     const transition=event.target.closest('[data-transition-plan]');if(transition){try{await window.ctgdmnDesktop.transitionPlan(transition.dataset.transitionPlan,transition.dataset.toStatus);const stored=await window.ctgdmnDesktop.getRepositoryState();state.workspace=migrateWorkspace(stored.workspace,state.data.meta);renderPlanner(transition.dataset.transitionPlan);showToast('Đã chuyển trạng thái và lưu lịch sử.');}catch(error){showToast(error.message);}return;}
     const age = event.target.closest('[data-age-open]');
     if (age) { state.ageGroup = age.dataset.ageOpen; return setRoute('library', { keepFilters: true }); }
+    const viewThemeDocs = event.target.closest('[data-view-theme-docs]');
+    if (viewThemeDocs) { const [ageGroup, collection] = viewThemeDocs.dataset.viewThemeDocs.split('|||'); state.ageGroup = ageGroup; state.collection = collection; state.query = ''; return setRoute('library', { keepFilters: true }); }
+    const useTheme = event.target.closest('[data-use-theme]');
+    if (useTheme) { const [ageGroup, collection] = useTheme.dataset.useTheme.split('|||'); state.draftPlanSeed = themeToPlanSeed(ageGroup, collection); showToast('Đã điền sẵn chủ đề vào kế hoạch mới.'); return setRoute('planner'); }
     const open = event.target.closest('[data-open-doc]');
     if (open) return openDrawer(open.dataset.openDoc);
     const watch = event.target.closest('[data-watch-doc]');
@@ -1112,6 +1149,7 @@ function bindEvents() {
     if(event.target.id==='school-logo-file'&&event.target.files?.[0]){readLocalImage(event.target.files[0]).then((data)=>{state.pendingImageData=data;showToast('Đã kiểm tra logo; bấm Lưu thông tin để ghi nhận.');}).catch((error)=>showToast(error.message));}
     if (event.target.id === 'age-filter') { state.ageGroup = event.target.value; state.collection = 'all'; state.page = 1; render(); }
     if (event.target.id === 'collection-filter') { state.collection = event.target.value; state.page = 1; render(); }
+    if (event.target.id === 'program-age-filter') { state.programAgeFilter = event.target.value; render(); }
     if (event.target.id === 'type-filter') {
       const type = event.target.value;
       if (type === 'all') setRoute('library', { keepFilters: true });
