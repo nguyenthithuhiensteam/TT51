@@ -251,12 +251,21 @@ function programThemes() {
   const groups = new Map();
   for (const doc of state.data.documents) {
     const key = `${doc.ageGroup}\u0000${doc.collection}`;
-    if (!groups.has(key)) groups.set(key, { ageGroup: doc.ageGroup, collection: doc.collection, documents: 0, types: new Set() });
+    if (!groups.has(key)) groups.set(key, { ageGroup: doc.ageGroup, collection: doc.collection, documents: 0, types: new Set(), objectiveDocId: '' });
     const entry = groups.get(key);
     entry.documents += 1;
     entry.types.add(doc.documentType);
+    if (!entry.objectiveDocId && doc.documentType === 'Mục tiêu/kế hoạch chủ đề') entry.objectiveDocId = doc.id;
   }
   return [...groups.values()].sort((a, b) => a.ageGroup.localeCompare(b.ageGroup, 'vi') || a.collection.localeCompare(b.collection, 'vi'));
+}
+
+function openThemePicker() {
+  const form = document.querySelector('#plan-form');
+  const currentAge = form?.elements.ageGroup?.value || 'all';
+  const themes = programThemes().filter((theme) => currentAge === 'all' || theme.ageGroup === currentAge);
+  els.drawerContent.innerHTML = `<header class="drawer-header"><div><span class="chip teal">NGÂN HÀNG CHỦ ĐỀ</span><h2>Chọn chủ đề</h2></div><button class="drawer-close" data-close-drawer>×</button></header><div class="drawer-body"><div class="document-list">${themes.map((theme) => `<article class="document-card"><div class="doc-mark">${escapeHtml(theme.ageGroup)}</div><div><h3>${escapeHtml(theme.collection)}</h3><p>${theme.documents} tài liệu nguồn</p></div><div class="doc-actions"><button class="small-button" data-apply-theme="${escapeHtml(theme.ageGroup)}|||${escapeHtml(theme.collection)}">Dùng chủ đề này</button></div></article>`).join('') || '<div class="empty-state">Không có chủ đề phù hợp với độ tuổi đã chọn.</div>'}</div></div>`;
+  els.drawerBackdrop.classList.remove('is-hidden'); els.drawer.classList.add('is-open'); els.drawer.setAttribute('aria-hidden', 'false');
 }
 
 function themeToPlanSeed(ageGroup, collection) {
@@ -273,8 +282,9 @@ function renderProgramBuilder() {
   const q = normalizeText(state.query);
   const visible = themes.filter((theme) => (ageFilter === 'all' || theme.ageGroup === ageFilter) && (!q || normalizeText(theme.collection).includes(q)));
   els.main.innerHTML = `${pageHead('Giai đoạn 1', 'Ngân hàng chủ đề bài soạn', 'Chủ đề được tổng hợp trực tiếp từ 246 tài liệu nguồn đã lập chỉ mục theo từng độ tuổi — không tự thêm nội dung ngoài nguồn. Chọn một chủ đề để xem tài liệu gốc hoặc bắt đầu soạn kế hoạch mới.')}
+    <section class="panel review-principles"><h2>Nguyên tắc rà soát trước khi dùng chủ đề</h2><ul class="checklist"><li>Phù hợp độ tuổi và khả năng của trẻ trong lớp.</li><li>An toàn về thể chất và tâm lý khi tổ chức hoạt động.</li><li>Khả thi với điều kiện thực tế của lớp/trường (thời gian, học liệu, nhân lực).</li><li>Không dạy trước nội dung của chương trình tiểu học.</li></ul></section>
     <section class="toolbar"><label class="field"><span>Độ tuổi</span><select id="program-age-filter" class="select"><option value="all">Tất cả</option>${state.data.ageGroups.map((age) => `<option value="${escapeHtml(age.label)}" ${ageFilter === age.label ? 'selected' : ''}>${escapeHtml(age.label)}</option>`).join('')}</select></label><div class="result-count">${visible.length} chủ đề</div></section>
-    <section class="document-list">${visible.map((theme) => `<article class="document-card"><div class="doc-mark">${escapeHtml(theme.ageGroup)}</div><div><h3>${escapeHtml(theme.collection)}</h3><p>${theme.documents} tài liệu nguồn • ${[...theme.types].map((type) => escapeHtml(type)).join(', ')}</p></div><div class="doc-actions"><button class="small-button" data-view-theme-docs="${escapeHtml(theme.ageGroup)}|||${escapeHtml(theme.collection)}">Xem tài liệu nguồn</button><button class="small-button" data-use-theme="${escapeHtml(theme.ageGroup)}|||${escapeHtml(theme.collection)}">Dùng để soạn kế hoạch</button></div></article>`).join('') || '<div class="empty-state">Không tìm thấy chủ đề phù hợp.</div>'}</section>`;
+    <section class="document-list">${visible.map((theme) => `<article class="document-card"><div class="doc-mark">${escapeHtml(theme.ageGroup)}</div><div><h3>${escapeHtml(theme.collection)}</h3><p>${theme.documents} tài liệu nguồn • ${[...theme.types].map((type) => escapeHtml(type)).join(', ')}</p></div><div class="doc-actions">${theme.objectiveDocId ? `<button class="small-button" data-open-doc="${escapeHtml(theme.objectiveDocId)}">Xem mục tiêu chủ đề</button>` : ''}<button class="small-button" data-view-theme-docs="${escapeHtml(theme.ageGroup)}|||${escapeHtml(theme.collection)}">Xem tài liệu nguồn</button><button class="small-button" data-use-theme="${escapeHtml(theme.ageGroup)}|||${escapeHtml(theme.collection)}">Dùng để soạn kế hoạch</button></div></article>`).join('') || '<div class="empty-state">Không tìm thấy chủ đề phù hợp.</div>'}</section>`;
 }
 
 function openChildEditor() {
@@ -613,11 +623,21 @@ async function exportPlanWord(plan) {
   } catch (error) { showToast(error.message || 'Không thể xuất Word.'); }
 }
 
+function combineAssessment(data={}) {
+  const parts=[];
+  if((data.observation||'').trim())parts.push(`Biểu hiện quan sát được:\n${data.observation.trim()}`);
+  if((data.evidence||'').trim())parts.push(`Minh chứng:\n${data.evidence.trim()}`);
+  if((data.adjustment||'').trim())parts.push(`Điều chỉnh sau đánh giá:\n${data.adjustment.trim()}`);
+  return parts.join('\n\n');
+}
+
 function currentPlanFromForm() {
   const form=document.querySelector('#plan-form');
   if(!form)return null;
   const formData=new FormData(form);
-  return {...Object.fromEntries(formData),collaboratingTeacherIds:formData.getAll('collaboratingTeacherIds')};
+  const data={...Object.fromEntries(formData),collaboratingTeacherIds:formData.getAll('collaboratingTeacherIds')};
+  data.assessment=combineAssessment(data);
+  return data;
 }
 
 function aiPlanType(level='') {
@@ -653,7 +673,7 @@ function applyAIResult() {
   const form=document.querySelector('#plan-form');
   if(!payload||!form)return;
   const result=payload.result;
-  const values={title:result.title,context:result.context,objectives:result.objectives,activities:result.activities,materials:result.materials,differentiation:result.differentiation,assessment:result.assessment,family:result.family,...rowsToEditorFields(form.elements.level.value,result.templateRows)};
+  const values={title:result.title,context:result.context,objectives:result.objectives,activities:result.activities,materials:result.materials,differentiation:result.differentiation,evidence:result.assessment,family:result.family,...rowsToEditorFields(form.elements.level.value,result.templateRows)};
   Object.entries(values).forEach(([name,value])=>{const field=form.elements[name];if(field)field.value=value||'';});
   state.pendingAIResult=null;
   closeDrawer();
@@ -729,7 +749,7 @@ function planTemplate(plan = {}) {
   return `<form id="plan-form" class="plan-form">
     ${locked?'<div class="legal-warning">Phiên bản đang gửi rà soát đã bị khóa. Người nhận xét chỉ có thể thêm nhận xét, không thay nội dung giáo viên.</div>':''}
     <input type="hidden" name="id" value="${escapeHtml(plan.id || '')}">
-    <label class="field"><span>Tên kế hoạch</span><input class="input" required name="title" value="${escapeHtml(plan.title || '')}" placeholder="Kế hoạch giáo dục..."></label>
+    <div class="form-grid"><label class="field"><span>Tên kế hoạch</span><input class="input" required name="title" value="${escapeHtml(plan.title || '')}" placeholder="Kế hoạch giáo dục..."></label><label class="field"><span>&nbsp;</span><button type="button" class="ghost-button" data-pick-theme>Chọn chủ đề từ ngân hàng</button></label></div>
     <div class="form-grid"><label class="field"><span>Lớp *</span><select class="select" required name="classId"><option value="">— Chọn từ danh mục lớp —</option>${classes.map((item)=>`<option value="${item.id}" ${plan.classId===item.id?'selected':''}>${escapeHtml(item.name)} — ${escapeHtml(item.ageGroup)}</option>`).join('')}</select></label><label class="field"><span>Người soạn *</span><select class="select" required name="authorTeacherId"><option value="">— Chọn từ danh mục nhân sự —</option>${people.filter((item)=>item.roles.includes('Người soạn')||item.id===plan.authorTeacherId).map((item)=>`<option value="${item.id}" ${plan.authorTeacherId===item.id?'selected':''}>${escapeHtml(item.name)} — ${escapeHtml(item.title)}</option>`).join('')}</select></label></div>
     <label class="field"><span>Giáo viên phối hợp</span><select class="select multi-select" multiple name="collaboratingTeacherIds">${people.map((item)=>`<option value="${item.id}" ${(plan.collaboratingTeacherIds||[]).includes(item.id)?'selected':''}>${escapeHtml(item.name)} — ${escapeHtml(item.title)}</option>`).join('')}</select></label>
     <div class="form-grid"><label class="field"><span>Cấp kế hoạch</span><select class="select" name="level">${['Năm','Tháng','Chủ đề','Tuần','Ngày/hoạt động'].map(v=>`<option ${plan.level===v?'selected':''}>${v}</option>`).join('')}</select></label><label class="field"><span>Độ tuổi</span><select class="select" name="ageGroup">${state.data.ageGroups.map(a=>`<option ${plan.ageGroup===a.label?'selected':''}>${escapeHtml(a.label)}</option>`).join('')}</select></label><label class="field"><span>Năm học</span><input class="input" name="schoolYear" value="${escapeHtml(plan.schoolYear || schoolProfile().schoolYear)}"></label><label class="field"><span>Thời gian</span><input class="input" name="period" value="${escapeHtml(plan.period || '')}" placeholder="Tháng/tuần/từ ngày..."></label></div>
@@ -738,7 +758,8 @@ function planTemplate(plan = {}) {
     <label class="field"><span>Mục tiêu / yêu cầu cần đạt</span><textarea name="objectives">${escapeHtml(plan.objectives || '')}</textarea></label>
     <label class="field"><span>Nội dung và hoạt động</span><textarea name="activities">${escapeHtml(plan.activities || '')}</textarea></label>
     <div class="form-grid"><label class="field"><span>Môi trường và học liệu</span><textarea name="materials">${escapeHtml(plan.materials || '')}</textarea></label><label class="field"><span>Phân hóa/hỗ trợ</span><textarea name="differentiation">${escapeHtml(plan.differentiation || '')}</textarea></label></div>
-    <label class="field"><span>Minh chứng, đánh giá và điều chỉnh</span><textarea name="assessment">${escapeHtml(plan.assessment || '')}</textarea></label>
+    <div class="form-grid"><label class="field"><span>Biểu hiện quan sát được</span><textarea name="observation">${escapeHtml(plan.observation || '')}</textarea></label><label class="field"><span>Minh chứng</span><textarea name="evidence">${escapeHtml(plan.evidence || plan.assessment || '')}</textarea></label></div>
+    <label class="field"><span>Điều chỉnh sau đánh giá</span><textarea name="adjustment">${escapeHtml(plan.adjustment || '')}</textarea></label>
     <label class="field"><span>Phối hợp cha mẹ trẻ</span><textarea name="family">${escapeHtml(plan.family || '')}</textarea></label>
     <label class="field"><span>Điều kiện lớp học dùng để đề xuất hoạt động</span><textarea name="classConditions" placeholder="Không nhập họ tên, sức khỏe hoặc dữ liệu nhận dạng của trẻ.">${escapeHtml(plan.classConditions||'')}</textarea></label>
     <details class="template-editor" ${!plan.level||plan.level==='Năm'?'open':''}><summary>Mẫu kế hoạch giáo dục năm</summary><div class="notice">Mỗi dòng: Thời gian | Chủ đề | Mục tiêu | Nội dung | Hoạt động. Bảng xuất sẽ tự thêm dòng và lặp tiêu đề khi sang trang.</div><label class="field"><span>Các giai đoạn trong năm</span><textarea class="tall" name="annualRows" placeholder="Tháng 9 | Trường mầm non | ... | ... | ...">${escapeHtml(plan.annualRows||'')}</textarea></label></details>
@@ -1109,6 +1130,7 @@ function bindEvents() {
     const useTheme = event.target.closest('[data-use-theme]');
     if (useTheme) { const [ageGroup, collection] = useTheme.dataset.useTheme.split('|||'); state.draftPlanSeed = themeToPlanSeed(ageGroup, collection); showToast('Đã điền sẵn chủ đề vào kế hoạch mới.'); return setRoute('planner'); }
     if (event.target.closest('[data-add-child]')) return openChildEditor();
+    if (event.target.closest('[data-pick-theme]')) return openThemePicker();
     const selectChild = event.target.closest('[data-select-child]');
     if (selectChild) { try { state.selectedChildId = selectChild.dataset.selectChild; state.childAssessments = await window.ctgdmnDesktop.listChildAssessments(state.selectedChildId); renderEvaluation(); } catch (error) { showToast(error.message); } return; }
     const deactivateChild = event.target.closest('[data-deactivate-child]');
@@ -1184,17 +1206,17 @@ function bindEvents() {
     }
   });
   els.main.addEventListener('input', (event) => {
-    if (event.target.id === 'library-query') { state.query = event.target.value; state.page = 1; window.clearTimeout(bindEvents.queryTimer); bindEvents.queryTimer = window.setTimeout(render, 180); }
-    if (event.target.id === 'open-query') { state.query = event.target.value; window.clearTimeout(bindEvents.openTimer); bindEvents.openTimer = window.setTimeout(renderOpenData, 180); }
+    if (event.target.getAttribute('id') === 'library-query') { state.query = event.target.value; state.page = 1; window.clearTimeout(bindEvents.queryTimer); bindEvents.queryTimer = window.setTimeout(render, 180); }
+    if (event.target.getAttribute('id') === 'open-query') { state.query = event.target.value; window.clearTimeout(bindEvents.openTimer); bindEvents.openTimer = window.setTimeout(renderOpenData, 180); }
   });
   els.main.addEventListener('submit', async (event) => {
     event.preventDefault();
-    if(event.target.id==='ai-config-form'){try{const formData=new FormData(event.target);const data={...Object.fromEntries(formData),consentAccepted:formData.has('consentAccepted')};state.aiConfig=await window.ctgdmnDesktop.saveAIConfig(data);renderSettings();showToast('Đã lưu cấu hình AI an toàn trên máy.');}catch(error){showToast(error.message);}return;}
-    if(event.target.id==='system-config-form'){try{const data=Object.fromEntries(new FormData(event.target));data.idleMinutes=Math.max(5,Math.min(480,Number(data.idleMinutes)||30));if(data.repositoryMode==='lan'&&!/^https?:\/\/(localhost|127\.0\.0\.1|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/i.test(data.serverUrl||''))throw new Error('Địa chỉ máy chủ phải là địa chỉ HTTP(S) trong mạng nội bộ.');await window.ctgdmnDesktop.updateSystemConfig(data);state.systemConfig=data;renderSettings();showToast(data.repositoryMode==='lan'?'Đã lưu cấu hình LAN; ghi dữ liệu bị khóa cho tới khi có máy chủ.':'Đã chuyển sang SQLite cục bộ.');}catch(error){showToast(error.message);}return;}
-    if(event.target.id==='school-form'){const data={...schoolProfile(),...Object.fromEntries(new FormData(event.target)),logoData:state.pendingImageData||schoolProfile().logoData,userEdited:true,updatedAt:new Date().toISOString()};const errors=validateSchool(data);if(errors.length)return showToast(errors[0]);state.workspace.schoolProfile=data;state.pendingImageData='';state.data.meta.schoolName=data.name;state.data.meta.schoolYear=data.schoolYear;syncPublicBranding(data);document.querySelector('#school-name').textContent=data.name;document.querySelector('#school-year').textContent=data.schoolYear;saveWorkspace();renderSettings();showToast('Đã cập nhật thông tin nhà trường.');return;}
-    if(event.target.id==='assessment-form'){try{const data=Object.fromEntries(new FormData(event.target));await window.ctgdmnDesktop.upsertChildAssessment(data);state.childAssessments=await window.ctgdmnDesktop.listChildAssessments(data.childId);renderEvaluation();showToast('Đã lưu đánh giá.');}catch(error){showToast(error.message);}return;}
-    if (event.target.id !== 'plan-form') return;
-    const formData=new FormData(event.target);const data={...Object.fromEntries(formData),collaboratingTeacherIds:formData.getAll('collaboratingTeacherIds')};data.id||=`plan-${Date.now()}`;data.schoolId=schoolProfile().id;data.workflowStatus=data.workflowStatus||state.workspace.plans.find((item)=>item.id===data.id)?.workflowStatus||'draft';data.reviewerIds=state.workspace.professionalReviews.filter((item)=>item.planId===data.id).map((item)=>item.reviewerId);
+    if(event.target.getAttribute('id')==='ai-config-form'){try{const formData=new FormData(event.target);const data={...Object.fromEntries(formData),consentAccepted:formData.has('consentAccepted')};state.aiConfig=await window.ctgdmnDesktop.saveAIConfig(data);renderSettings();showToast('Đã lưu cấu hình AI an toàn trên máy.');}catch(error){showToast(error.message);}return;}
+    if(event.target.getAttribute('id')==='system-config-form'){try{const data=Object.fromEntries(new FormData(event.target));data.idleMinutes=Math.max(5,Math.min(480,Number(data.idleMinutes)||30));if(data.repositoryMode==='lan'&&!/^https?:\/\/(localhost|127\.0\.0\.1|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/i.test(data.serverUrl||''))throw new Error('Địa chỉ máy chủ phải là địa chỉ HTTP(S) trong mạng nội bộ.');await window.ctgdmnDesktop.updateSystemConfig(data);state.systemConfig=data;renderSettings();showToast(data.repositoryMode==='lan'?'Đã lưu cấu hình LAN; ghi dữ liệu bị khóa cho tới khi có máy chủ.':'Đã chuyển sang SQLite cục bộ.');}catch(error){showToast(error.message);}return;}
+    if(event.target.getAttribute('id')==='school-form'){const data={...schoolProfile(),...Object.fromEntries(new FormData(event.target)),logoData:state.pendingImageData||schoolProfile().logoData,userEdited:true,updatedAt:new Date().toISOString()};const errors=validateSchool(data);if(errors.length)return showToast(errors[0]);state.workspace.schoolProfile=data;state.pendingImageData='';state.data.meta.schoolName=data.name;state.data.meta.schoolYear=data.schoolYear;syncPublicBranding(data);document.querySelector('#school-name').textContent=data.name;document.querySelector('#school-year').textContent=data.schoolYear;saveWorkspace();renderSettings();showToast('Đã cập nhật thông tin nhà trường.');return;}
+    if(event.target.getAttribute('id')==='assessment-form'){try{const data=Object.fromEntries(new FormData(event.target));await window.ctgdmnDesktop.upsertChildAssessment(data);state.childAssessments=await window.ctgdmnDesktop.listChildAssessments(data.childId);renderEvaluation();showToast('Đã lưu đánh giá.');}catch(error){showToast(error.message);}return;}
+    if (event.target.getAttribute('id') !== 'plan-form') return;
+    const formData=new FormData(event.target);const data={...Object.fromEntries(formData),collaboratingTeacherIds:formData.getAll('collaboratingTeacherIds')};data.assessment=combineAssessment(data);data.id||=`plan-${Date.now()}`;data.schoolId=schoolProfile().id;data.workflowStatus=data.workflowStatus||state.workspace.plans.find((item)=>item.id===data.id)?.workflowStatus||'draft';data.reviewerIds=state.workspace.professionalReviews.filter((item)=>item.planId===data.id).map((item)=>item.reviewerId);
     if(data.status==='Đã phê duyệt'&&!canApprovePlan(data.id,state.workspace.professionalReviews))return showToast('Không thể phê duyệt: còn yêu cầu chỉnh sửa chưa xử lý.');
     const result=savePlanWithVersion(state.workspace,data);const saved=result.saved;delete result.saved;state.workspace=result;saveWorkspace();renderPlanner(saved.id);showToast(`Đã lưu phiên bản ${saved.version} của kế hoạch.`);
   });
@@ -1210,11 +1232,11 @@ function bindEvents() {
       }
       return;
     }
-    if(event.target.id==='school-logo-file'&&event.target.files?.[0]){readLocalImage(event.target.files[0]).then((data)=>{state.pendingImageData=data;showToast('Đã kiểm tra logo; bấm Lưu thông tin để ghi nhận.');}).catch((error)=>showToast(error.message));}
-    if (event.target.id === 'age-filter') { state.ageGroup = event.target.value; state.collection = 'all'; state.page = 1; render(); }
-    if (event.target.id === 'collection-filter') { state.collection = event.target.value; state.page = 1; render(); }
-    if (event.target.id === 'program-age-filter') { state.programAgeFilter = event.target.value; render(); }
-    if (event.target.id === 'type-filter') {
+    if(event.target.getAttribute('id')==='school-logo-file'&&event.target.files?.[0]){readLocalImage(event.target.files[0]).then((data)=>{state.pendingImageData=data;showToast('Đã kiểm tra logo; bấm Lưu thông tin để ghi nhận.');}).catch((error)=>showToast(error.message));}
+    if (event.target.getAttribute('id') === 'age-filter') { state.ageGroup = event.target.value; state.collection = 'all'; state.page = 1; render(); }
+    if (event.target.getAttribute('id') === 'collection-filter') { state.collection = event.target.value; state.page = 1; render(); }
+    if (event.target.getAttribute('id') === 'program-age-filter') { state.programAgeFilter = event.target.value; render(); }
+    if (event.target.getAttribute('id') === 'type-filter') {
       const type = event.target.value;
       if (type === 'all') setRoute('library', { keepFilters: true });
       else if (type === 'Mục tiêu/kế hoạch chủ đề') setRoute('objectives', { keepFilters: true });
@@ -1225,6 +1247,19 @@ function bindEvents() {
   els.drawer.addEventListener('click', (event) => {
     if (event.target.closest('[data-close-drawer]')) return closeDrawer();
     if(event.target.closest('[data-apply-ai-result]'))return applyAIResult();
+    const applyTheme=event.target.closest('[data-apply-theme]');
+    if(applyTheme){
+      const [ageGroup,collection]=applyTheme.dataset.applyTheme.split('|||');
+      const form=document.querySelector('#plan-form');
+      if(form){
+        if(form.elements.title)form.elements.title.value=collection;
+        if(form.elements.ageGroup&&!form.elements.ageGroup.value)form.elements.ageGroup.value=ageGroup;
+        if(form.elements.level?.value==='Tuần'&&form.elements.weeklyTheme)form.elements.weeklyTheme.value=collection;
+      }
+      closeDrawer();
+      showToast('Đã điền tên chủ đề vào kế hoạch.');
+      return;
+    }
     const savePending=event.target.closest('[data-save-pending-ai]');if(savePending)return savePendingAIRequest(state.pendingAIPlan||currentPlanFromForm()||{},savePending.dataset.savePendingAi);
     if(event.target.closest('[data-test-ai]')){window.ctgdmnDesktop.testAIConnection().then(async(result)=>{state.aiConfig=await window.ctgdmnDesktop.getAIConfig();showToast(result.ok?'GenAI đã sẵn sàng.':result.message||'Chưa kết nối được GenAI.');}).catch((error)=>showToast(error.message));return;}
     const importChoice = event.target.closest('[data-choose-import]');
@@ -1241,30 +1276,30 @@ function bindEvents() {
     if (note) { state.review.notes[note.dataset.saveNote] = document.querySelector('#document-note').value.trim(); saveReviewState(); showToast('Đã lưu ghi chú rà soát.'); }
   });
   els.drawer.addEventListener('change', (event) => {
-    if (event.target.id === 'import-excel-file') { state.pendingImport.fileIndex = Number(event.target.value); state.pendingImport.sheetIndex = 0; renderImportPreview(); }
-    if (event.target.id === 'import-sheet') { state.pendingImport.sheetIndex = Number(event.target.value); renderImportPreview(); }
-    if(event.target.id==='signature-image-file'&&event.target.files?.[0]){readLocalImage(event.target.files[0],true).then((data)=>{state.pendingImageData=data;document.querySelector('#signature-image-preview').innerHTML=`<img src="${data}" alt="Bản xem trước chữ ký">`;showToast('Đã cắt vùng trắng và tạo bản xem trước.');}).catch((error)=>showToast(error.message));}
+    if (event.target.getAttribute('id') === 'import-excel-file') { state.pendingImport.fileIndex = Number(event.target.value); state.pendingImport.sheetIndex = 0; renderImportPreview(); }
+    if (event.target.getAttribute('id') === 'import-sheet') { state.pendingImport.sheetIndex = Number(event.target.value); renderImportPreview(); }
+    if(event.target.getAttribute('id')==='signature-image-file'&&event.target.files?.[0]){readLocalImage(event.target.files[0],true).then((data)=>{state.pendingImageData=data;document.querySelector('#signature-image-preview').innerHTML=`<img src="${data}" alt="Bản xem trước chữ ký">`;showToast('Đã cắt vùng trắng và tạo bản xem trước.');}).catch((error)=>showToast(error.message));}
   });
   els.drawer.addEventListener('submit', async (event) => {
     event.preventDefault();
-    if(event.target.id==='template-import-form'){try{const data=Object.fromEntries(new FormData(event.target));const result=await window.ctgdmnDesktop.importTemplate(data);if(!result.canceled){state.templates=await window.ctgdmnDesktop.listTemplates();closeDrawer();renderSettings();showToast('Đã nhập mẫu DOCX tùy chỉnh và kiểm tra biến {{PLAN_TABLE}}.');}}catch(error){showToast(error.message);}return;}
-    if(event.target.id==='user-form'){try{const formData=new FormData(event.target);const data={...Object.fromEntries(formData),roles:formData.getAll('roles'),classIds:formData.getAll('classIds'),mustChangePassword:true};if(!data.roles.length)return showToast('Cần chọn ít nhất một vai trò.');await window.ctgdmnDesktop.createUser(data);state.users=await window.ctgdmnDesktop.listUsers();closeDrawer();renderSettings();showToast('Đã tạo tài khoản; người dùng phải đổi mật khẩu lần đầu.');}catch(error){showToast(error.message);}return;}
-    if(event.target.id==='reset-password-form'){try{const data=Object.fromEntries(new FormData(event.target));await window.ctgdmnDesktop.resetUserPassword(data.userId,data.tempPassword);closeDrawer();showToast('Đã đặt mật khẩu tạm thời; không ghi mật khẩu vào nhật ký.');}catch(error){showToast(error.message);}return;}
-    if(event.target.id==='video-form'){try{const formData=new FormData(event.target);const data={...Object.fromEntries(formData),audience:formData.getAll('audience'),enabled:formData.has('enabled')};if(data.sourceType==='offline'&&!data.id)return showToast('Hãy dùng nút “Chọn và sao chép MP4 từ máy”.');await window.ctgdmnDesktop.saveVideo(data);state.videos=await window.ctgdmnDesktop.listVideos();closeDrawer();renderVideos();showToast('Đã lưu danh mục video.');}catch(error){showToast(error.message);}return;}
-    if(event.target.id==='class-form'){try{const data=Object.fromEntries(new FormData(event.target));state.workspace.classes=upsertClass(state.workspace.classes,data);saveWorkspace();closeDrawer();renderSettings();showToast('Đã lưu lớp.');}catch(error){showToast(error.message);}return;}
-    if(event.target.id==='staff-form'){try{const formData=new FormData(event.target);const data={...Object.fromEntries(formData),roles:formData.getAll('roles')};state.workspace.staff=upsertStaff(state.workspace.staff,data);saveWorkspace();closeDrawer();renderSettings();showToast('Đã lưu nhân sự.');}catch(error){showToast(error.message);}return;}
-    if(event.target.id==='child-form'){try{const data=Object.fromEntries(new FormData(event.target));await window.ctgdmnDesktop.upsertChild(data);state.children=await window.ctgdmnDesktop.listChildren();closeDrawer();renderEvaluation();showToast('Đã lưu hồ sơ trẻ.');}catch(error){showToast(error.message);}return;}
-    if(event.target.id==='signature-form'){const formData=new FormData(event.target);const data={...Object.fromEntries(formData),enabled:formData.has('enabled'),imageData:state.pendingImageData,updatedAt:new Date().toISOString()};data.id||=`signature-${Date.now()}`;const person=state.workspace.staff.find((item)=>item.id===data.staffId);if(!person)return showToast('Cần chọn người ký.');data.name=person.name;const index=state.workspace.signatures.findIndex((item)=>item.id===data.id);if(index>=0)state.workspace.signatures[index]={...state.workspace.signatures[index],...data};else state.workspace.signatures.push(data);state.pendingImageData='';saveWorkspace();closeDrawer();renderSettings();showToast('Đã lưu cấu hình chữ ký cục bộ.');return;}
-    if(event.target.id==='review-form'){try{const data=Object.fromEntries(new FormData(event.target));const person=state.workspace.staff.find((item)=>item.id===data.reviewerId);data.reviewerNameSnapshot=person?.name;data.reviewerRoleSnapshot=person?.title;state.workspace.professionalReviews=addProfessionalReview(state.workspace.professionalReviews,data);saveWorkspace();closeDrawer();renderPlanner(data.planId);showToast('Đã ghi nhận nhận xét; nội dung gốc sẽ được giữ nguyên.');}catch(error){showToast(error.message);}return;}
-    if(event.target.id==='resolve-review-form'){try{const data=Object.fromEntries(new FormData(event.target));state.workspace.professionalReviews=resolveProfessionalReview(state.workspace.professionalReviews,data.reviewId,data.response);saveWorkspace();closeDrawer();renderPlanner(data.planId);showToast('Đã ghi nhận phản hồi xử lý.');}catch(error){showToast(error.message);}return;}
-    if(event.target.id==='word-export-form'){const formData=new FormData(event.target);const planId=formData.get('planId');const stored=state.workspace.plans.find((item)=>item.id===planId);const form=document.querySelector('#plan-form');const currentData=form?new FormData(form):null;const plan=stored||{...Object.fromEntries(currentData||[]),collaboratingTeacherIds:currentData?.getAll('collaboratingTeacherIds')||[]};const signatureIds=formData.getAll('signatureIds');const mode=formData.get('signatureMode');const configured=signatureIds.map((id)=>state.workspace.signatures.find((item)=>item.id===id)).filter(Boolean).map((item)=>({role:item.role,displayTitle:item.displayTitle||item.role,name:staffName(item.staffId,item.name),staffId:item.staffId,mode,imageData:mode==='image'?item.imageData:'',width:Number(item.displayWidth)||120,height:55}));const hands=formData.getAll('handRoles').map((role)=>({role,displayTitle:role,name:'',mode:'hand'}));const signers=[...configured,...hands];const exportPlan={...plan,signers,signatureConfigurationIds:signatureIds,className:className(plan.classId,plan.ageGroup),author:staffName(plan.authorTeacherId,plan.author)};if(formData.has('includeReviews'))exportPlan.assessment=`${exportPlan.assessment||''}\n\nNHẬN XÉT CHUYÊN MÔN\n${state.workspace.professionalReviews.filter((item)=>item.planId===plan.id).map((item)=>`${item.reviewerNameSnapshot}: ${item.content}${item.resolved?` — Phản hồi: ${item.response}`:''}`).join('\n')}`;const snapshot=createPublicationSnapshot(state.workspace,plan,configured.map((item)=>item.staffId));state.workspace.publicationSnapshots.push({planId:plan.id,planVersion:plan.version||1,...snapshot});state.workspace.signatureLog.push({id:`signature-log-${Date.now()}`,planId:plan.id,planVersion:plan.version||1,selectedByTeacherId:plan.authorTeacherId||'',signatureIds,mode,createdAt:new Date().toISOString()});if(stored){stored.signatureConfigurationIds=signatureIds;stored.lastPublicationSnapshot=snapshot;}saveWorkspace();await exportPlanWord(exportPlan);closeDrawer();return;}
-    if (event.target.id === 'word-import-form') {
+    if(event.target.getAttribute('id')==='template-import-form'){try{const data=Object.fromEntries(new FormData(event.target));const result=await window.ctgdmnDesktop.importTemplate(data);if(!result.canceled){state.templates=await window.ctgdmnDesktop.listTemplates();closeDrawer();renderSettings();showToast('Đã nhập mẫu DOCX tùy chỉnh và kiểm tra biến {{PLAN_TABLE}}.');}}catch(error){showToast(error.message);}return;}
+    if(event.target.getAttribute('id')==='user-form'){try{const formData=new FormData(event.target);const data={...Object.fromEntries(formData),roles:formData.getAll('roles'),classIds:formData.getAll('classIds'),mustChangePassword:true};if(!data.roles.length)return showToast('Cần chọn ít nhất một vai trò.');await window.ctgdmnDesktop.createUser(data);state.users=await window.ctgdmnDesktop.listUsers();closeDrawer();renderSettings();showToast('Đã tạo tài khoản; người dùng phải đổi mật khẩu lần đầu.');}catch(error){showToast(error.message);}return;}
+    if(event.target.getAttribute('id')==='reset-password-form'){try{const data=Object.fromEntries(new FormData(event.target));await window.ctgdmnDesktop.resetUserPassword(data.userId,data.tempPassword);closeDrawer();showToast('Đã đặt mật khẩu tạm thời; không ghi mật khẩu vào nhật ký.');}catch(error){showToast(error.message);}return;}
+    if(event.target.getAttribute('id')==='video-form'){try{const formData=new FormData(event.target);const data={...Object.fromEntries(formData),audience:formData.getAll('audience'),enabled:formData.has('enabled')};if(data.sourceType==='offline'&&!data.id)return showToast('Hãy dùng nút “Chọn và sao chép MP4 từ máy”.');await window.ctgdmnDesktop.saveVideo(data);state.videos=await window.ctgdmnDesktop.listVideos();closeDrawer();renderVideos();showToast('Đã lưu danh mục video.');}catch(error){showToast(error.message);}return;}
+    if(event.target.getAttribute('id')==='class-form'){try{const data=Object.fromEntries(new FormData(event.target));state.workspace.classes=upsertClass(state.workspace.classes,data);saveWorkspace();closeDrawer();renderSettings();showToast('Đã lưu lớp.');}catch(error){showToast(error.message);}return;}
+    if(event.target.getAttribute('id')==='staff-form'){try{const formData=new FormData(event.target);const data={...Object.fromEntries(formData),roles:formData.getAll('roles')};state.workspace.staff=upsertStaff(state.workspace.staff,data);saveWorkspace();closeDrawer();renderSettings();showToast('Đã lưu nhân sự.');}catch(error){showToast(error.message);}return;}
+    if(event.target.getAttribute('id')==='child-form'){try{const data=Object.fromEntries(new FormData(event.target));await window.ctgdmnDesktop.upsertChild(data);state.children=await window.ctgdmnDesktop.listChildren();closeDrawer();renderEvaluation();showToast('Đã lưu hồ sơ trẻ.');}catch(error){showToast(error.message);}return;}
+    if(event.target.getAttribute('id')==='signature-form'){const formData=new FormData(event.target);const data={...Object.fromEntries(formData),enabled:formData.has('enabled'),imageData:state.pendingImageData,updatedAt:new Date().toISOString()};data.id||=`signature-${Date.now()}`;const person=state.workspace.staff.find((item)=>item.id===data.staffId);if(!person)return showToast('Cần chọn người ký.');data.name=person.name;const index=state.workspace.signatures.findIndex((item)=>item.id===data.id);if(index>=0)state.workspace.signatures[index]={...state.workspace.signatures[index],...data};else state.workspace.signatures.push(data);state.pendingImageData='';saveWorkspace();closeDrawer();renderSettings();showToast('Đã lưu cấu hình chữ ký cục bộ.');return;}
+    if(event.target.getAttribute('id')==='review-form'){try{const data=Object.fromEntries(new FormData(event.target));const person=state.workspace.staff.find((item)=>item.id===data.reviewerId);data.reviewerNameSnapshot=person?.name;data.reviewerRoleSnapshot=person?.title;state.workspace.professionalReviews=addProfessionalReview(state.workspace.professionalReviews,data);saveWorkspace();closeDrawer();renderPlanner(data.planId);showToast('Đã ghi nhận nhận xét; nội dung gốc sẽ được giữ nguyên.');}catch(error){showToast(error.message);}return;}
+    if(event.target.getAttribute('id')==='resolve-review-form'){try{const data=Object.fromEntries(new FormData(event.target));state.workspace.professionalReviews=resolveProfessionalReview(state.workspace.professionalReviews,data.reviewId,data.response);saveWorkspace();closeDrawer();renderPlanner(data.planId);showToast('Đã ghi nhận phản hồi xử lý.');}catch(error){showToast(error.message);}return;}
+    if(event.target.getAttribute('id')==='word-export-form'){const formData=new FormData(event.target);const planId=formData.get('planId');const stored=state.workspace.plans.find((item)=>item.id===planId);const form=document.querySelector('#plan-form');const currentData=form?new FormData(form):null;const plan=stored||{...Object.fromEntries(currentData||[]),collaboratingTeacherIds:currentData?.getAll('collaboratingTeacherIds')||[]};const signatureIds=formData.getAll('signatureIds');const mode=formData.get('signatureMode');const configured=signatureIds.map((id)=>state.workspace.signatures.find((item)=>item.id===id)).filter(Boolean).map((item)=>({role:item.role,displayTitle:item.displayTitle||item.role,name:staffName(item.staffId,item.name),staffId:item.staffId,mode,imageData:mode==='image'?item.imageData:'',width:Number(item.displayWidth)||120,height:55}));const hands=formData.getAll('handRoles').map((role)=>({role,displayTitle:role,name:'',mode:'hand'}));const signers=[...configured,...hands];const exportPlan={...plan,signers,signatureConfigurationIds:signatureIds,className:className(plan.classId,plan.ageGroup),author:staffName(plan.authorTeacherId,plan.author)};if(formData.has('includeReviews'))exportPlan.assessment=`${exportPlan.assessment||''}\n\nNHẬN XÉT CHUYÊN MÔN\n${state.workspace.professionalReviews.filter((item)=>item.planId===plan.id).map((item)=>`${item.reviewerNameSnapshot}: ${item.content}${item.resolved?` — Phản hồi: ${item.response}`:''}`).join('\n')}`;const snapshot=createPublicationSnapshot(state.workspace,plan,configured.map((item)=>item.staffId));state.workspace.publicationSnapshots.push({planId:plan.id,planVersion:plan.version||1,...snapshot});state.workspace.signatureLog.push({id:`signature-log-${Date.now()}`,planId:plan.id,planVersion:plan.version||1,selectedByTeacherId:plan.authorTeacherId||'',signatureIds,mode,createdAt:new Date().toISOString()});if(stored){stored.signatureConfigurationIds=signatureIds;stored.lastPublicationSnapshot=snapshot;}saveWorkspace();await exportPlanWord(exportPlan);closeDrawer();return;}
+    if (event.target.getAttribute('id') === 'word-import-form') {
       const values = Object.fromEntries(new FormData(event.target));
       const records = state.pendingImport.files.map((file) => ({ title: file.preview.headings?.[0]?.text || file.name.replace(/\.docx$/i, ''), ageGroup: values.ageGroup, type: values.type, topic: values.topic, objective: values.objective, content: values.content || file.preview.text, activity: values.activity, evidence: values.evidence, sourcePdf: file.name, sourcePage: '', status: 'Mới nhập – cần rà soát' }));
       state.workspace = createImportBatch(state.workspace, records, { filename: state.pendingImport.files.map((file) => file.name).join(', '), kind: 'word' });
       saveWorkspace(); state.pendingImport = null; closeDrawer(); renderOpenData(); showToast(`Đã nhập ${records.length} bản ghi từ Word.`); return;
     }
-    if (event.target.id === 'excel-import-form') {
+    if (event.target.getAttribute('id') === 'excel-import-form') {
       const values = Object.fromEntries(new FormData(event.target));
       const mapping = Object.fromEntries(EXCEL_FIELDS.map(([field]) => [field, values[`map-${field}`] || '']));
       const existingIds = openRecords().map((record) => record.id);
@@ -1282,7 +1317,7 @@ function bindEvents() {
       state.workspace = createImportBatch(state.workspace, records, { filename: state.pendingImport.files.map((file) => file.name).join(', '), kind: 'excel', result: `${records.length} thành công; ${combined.rejected.length} lỗi; ${combined.skipped.length} bỏ qua` });
       saveWorkspace(); state.pendingImport = null; closeDrawer(); renderOpenData(); showToast(`Đã nhập ${records.length} dòng; bỏ qua ${combined.rejected.length + combined.skipped.length} dòng.`); return;
     }
-    if (event.target.id === 'pdf-import-form') {
+    if (event.target.getAttribute('id') === 'pdf-import-form') {
       try {
         const values = Object.fromEntries(new FormData(event.target));
         const sources = await window.ctgdmnDesktop.commitPdfImport(state.pendingImport.files.map((file) => file.token), values.actor);
@@ -1291,7 +1326,7 @@ function bindEvents() {
       } catch (error) { showToast(error.message || 'Không thể thêm PDF nguồn.'); }
       return;
     }
-    if (event.target.id !== 'record-form') return;
+    if (event.target.getAttribute('id') !== 'record-form') return;
     const data = Object.fromEntries(new FormData(event.target)); data.updatedAt = new Date().toISOString();
     if (data.id.startsWith('custom-')) {
       const index = state.workspace.customRecords.findIndex(item => item.id === data.id);
