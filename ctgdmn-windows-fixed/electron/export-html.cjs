@@ -80,7 +80,7 @@ function createPlanHtml(plan = {}, school = {}) {
   const type = normalizePlanType(plan.level);
   const body = type === 'annual' ? annual(plan) : type === 'theme' ? theme(plan) : type === 'weekly' ? weekly(plan) : lesson(plan);
   const landscape = type !== 'lesson';
-  return `<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>CTGDMN - ${escapeHtml(plan.title || 'Kế hoạch giáo dục')}</title><style>
+  return `<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Trường Mầm non Số - ${escapeHtml(plan.title || 'Kế hoạch giáo dục')}</title><style>
     @page { size: A4 ${landscape ? 'landscape' : 'portrait'}; margin: ${landscape ? '10mm' : '15mm 14mm 14mm 20mm'}; }
     * { box-sizing: border-box; } body { font-family: "Times New Roman", serif; font-size: ${landscape ? '11pt' : '13pt'}; line-height: 1.25; color: #000; }
     header { text-align:center; margin-bottom: 10px; } header b, header strong, header em { display:block; } h1 { font-size: 17pt; margin:4px 0; } h2 { font-size:15pt; text-align:center; margin:5px 0; } h3 { font-size:13pt; margin:10px 0 4px; } p { white-space:normal; margin:3px 0 8px; }

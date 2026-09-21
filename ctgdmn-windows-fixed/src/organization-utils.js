@@ -1,7 +1,7 @@
 const clean = (value) => String(value ?? '').trim();
 const now = () => new Date().toISOString();
 const id = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-export const INTERNAL_SCHOOL_NAME = 'Trường Mầm non Hương Sen';
+export const INTERNAL_SCHOOL_NAME = 'Trường Mầm non Số';
 
 export const STAFF_ROLES = ['Người soạn', 'Giáo viên phối hợp', 'Tổ trưởng chuyên môn', 'Người nhận xét', 'Người duyệt', 'Cán bộ quản trị'];
 export const SIGNATURE_ROLES = ['Người lập kế hoạch', 'Giáo viên phụ trách', 'Tổ trưởng chuyên môn', 'Phó hiệu trưởng', 'Hiệu trưởng'];

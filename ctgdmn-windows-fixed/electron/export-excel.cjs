@@ -13,9 +13,9 @@ function valuesFor(rows) {
 
 async function createProfessionalWorkbook(data = {}) {
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = data.school?.name || 'CTGDMN'; workbook.created = new Date();
+  workbook.creator = data.school?.name || 'Trường Mầm non Số'; workbook.created = new Date();
   const guide = workbook.addWorksheet('Hướng dẫn');
-  guide.addRows([[`${data.school?.name || 'CTGDMN'} — NĂM HỌC ${data.school?.schoolYear || '2026–2027'}`], [`Đơn vị chủ quản: ${data.school?.governingBody || 'Chưa cấu hình'}`], ['Mỗi sheet là một nhóm dữ liệu chuyên môn.'], ['Cột ID, nguồn PDF và trang nguồn dùng để truy xuất ngược.'], ['PDF chỉ là tài liệu nguồn, không phải dữ liệu làm việc.']]);
+  guide.addRows([[`${data.school?.name || 'Trường Mầm non Số'} — NĂM HỌC ${data.school?.schoolYear || '2026–2027'}`], [`Đơn vị chủ quản: ${data.school?.governingBody || 'Chưa cấu hình'}`], ['Mỗi sheet là một nhóm dữ liệu chuyên môn.'], ['Cột ID, nguồn PDF và trang nguồn dùng để truy xuất ngược.'], ['PDF chỉ là tài liệu nguồn, không phải dữ liệu làm việc.']]);
   guide.getColumn(1).width = 90; guide.getCell('A1').font = { bold: true, size: 14 };
   for (const [title, key] of sheets) {
     const worksheet = workbook.addWorksheet(title);
@@ -30,7 +30,7 @@ async function createProfessionalWorkbook(data = {}) {
 }
 
 async function createDirectoryWorkbook(kind, rows = [], template = false, school = {}) {
-  const workbook = new ExcelJS.Workbook(); workbook.creator = school.name || 'CTGDMN';
+  const workbook = new ExcelJS.Workbook(); workbook.creator = school.name || 'Trường Mầm non Số';
   const isClass = kind === 'classes';
   const isVideo = kind === 'videos';
   const title = isClass ? 'Danh mục lớp' : isVideo ? 'Danh mục video' : 'Danh mục giáo viên';
@@ -43,7 +43,7 @@ async function createDirectoryWorkbook(kind, rows = [], template = false, school
   sheet.views = [{ state:'frozen', ySplit:1 }]; sheet.autoFilter = { from:'A1', to:{ row:1, column:headers.length } };
   sheet.getRow(1).eachCell((cell) => { cell.font = {bold:true,color:{argb:'FFFFFFFF'}}; cell.fill = {type:'pattern',pattern:'solid',fgColor:{argb:'FF168C7D'}}; });
   sheet.columns.forEach((column, index) => { column.width = Math.min(38, Math.max(14, headers[index].length + 3)); });
-  const guide = workbook.addWorksheet('Hướng dẫn'); guide.addRows([[`${title.toUpperCase()} – ${school.name || 'CTGDMN'}`],['Không đổi tên hàng tiêu đề. ID phải duy nhất. Nhiều vai trò hoặc ID được phân cách bằng dấu chấm phẩy.'],['Dữ liệu được nhập và lưu cục bộ trên máy.']]); guide.getColumn(1).width = 100;
+  const guide = workbook.addWorksheet('Hướng dẫn'); guide.addRows([[`${title.toUpperCase()} – ${school.name || 'Trường Mầm non Số'}`],['Không đổi tên hàng tiêu đề. ID phải duy nhất. Nhiều vai trò hoặc ID được phân cách bằng dấu chấm phẩy.'],['Dữ liệu được nhập và lưu cục bộ trên máy.']]); guide.getColumn(1).width = 100;
   return workbook;
 }
 

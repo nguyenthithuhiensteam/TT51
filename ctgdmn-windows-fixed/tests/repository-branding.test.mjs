@@ -12,7 +12,7 @@ test('thương hiệu công khai đọc đúng tên trường đã lưu trong SQ
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'ctgdmn-branding-'));
   const repository = new Repository(path.join(directory, 'test.sqlite'));
   try {
-    assert.equal(repository.getPublicBranding().schoolName, 'Trường Mầm non Hương Sen');
+    assert.equal(repository.getPublicBranding().schoolName, 'Trường Mầm non Số');
     repository.setJson('workspace', {
       schoolProfile: {
         name: 'Trường Mầm non Hoa Mai',
