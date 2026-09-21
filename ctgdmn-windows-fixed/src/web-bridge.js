@@ -94,6 +94,12 @@
     listAccountRequests: () => api('GET', '/api/accounts/requests'),
     approveAccountRequest: (requestId) => api('POST', `/api/accounts/requests/${encodeURIComponent(requestId)}/approve`),
     rejectAccountRequest: (requestId, reason) => api('POST', `/api/accounts/requests/${encodeURIComponent(requestId)}/reject`, { reason }),
+    listChildren: () => api('GET', '/api/children'),
+    upsertChild: (data) => api('POST', '/api/children', data),
+    deactivateChild: (childId) => api('POST', `/api/children/${encodeURIComponent(childId)}/deactivate`),
+    listChildAssessments: (childId) => api('GET', `/api/assessments${childId ? `?childId=${encodeURIComponent(childId)}` : ''}`),
+    upsertChildAssessment: (data) => api('POST', '/api/assessments', data),
+    deleteChildAssessment: (assessmentId) => api('POST', `/api/assessments/${encodeURIComponent(assessmentId)}/delete`),
 
     bootstrapRepository: (legacy) => api('POST', '/api/repository/bootstrap', { legacy }),
     getRepositoryState: () => api('GET', '/api/repository/state'),

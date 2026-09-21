@@ -50,7 +50,19 @@ const state = {
   templates: { templates: [], defaultByType: {} },
   programAgeFilter: 'all',
   draftPlanSeed: null,
+  children: [],
+  selectedChildId: '',
+  childAssessments: [],
 };
+
+const DEVELOPMENT_DOMAINS = [
+  'Giáo dục phát triển thể chất',
+  'Giáo dục phát triển tình cảm và kỹ năng xã hội',
+  'Giáo dục phát triển ngôn ngữ',
+  'Giáo dục phát triển nhận thức',
+  'Giáo dục phát triển thẩm mỹ',
+];
+const ASSESSMENT_LEVELS = ['Đạt', 'Chưa đạt', 'Cần hỗ trợ thêm'];
 
 function syncPublicBranding(profile = {}) {
   const schoolName = String(profile.schoolName || profile.name || '').trim() || 'Trường Mầm non Số';
@@ -265,10 +277,50 @@ function renderProgramBuilder() {
     <section class="document-list">${visible.map((theme) => `<article class="document-card"><div class="doc-mark">${escapeHtml(theme.ageGroup)}</div><div><h3>${escapeHtml(theme.collection)}</h3><p>${theme.documents} tài liệu nguồn • ${[...theme.types].map((type) => escapeHtml(type)).join(', ')}</p></div><div class="doc-actions"><button class="small-button" data-view-theme-docs="${escapeHtml(theme.ageGroup)}|||${escapeHtml(theme.collection)}">Xem tài liệu nguồn</button><button class="small-button" data-use-theme="${escapeHtml(theme.ageGroup)}|||${escapeHtml(theme.collection)}">Dùng để soạn kế hoạch</button></div></article>`).join('') || '<div class="empty-state">Không tìm thấy chủ đề phù hợp.</div>'}</section>`;
 }
 
+function openChildEditor() {
+  els.drawerContent.innerHTML = `<header class="drawer-header"><div><span class="chip teal">HỒ SƠ TRẺ</span><h2>Thêm hồ sơ trẻ</h2></div><button class="drawer-close" data-close-drawer>×</button></header><div class="drawer-body"><form id="child-form" class="plan-form">
+    <label class="field"><span>Họ và tên *</span><input class="input" name="fullName" required></label>
+    <div class="form-grid"><label class="field"><span>Mã số học sinh</span><input class="input" name="studentCode"></label><label class="field"><span>Năm sinh</span><input class="input" name="birthYear" placeholder="Ví dụ: 2021"></label></div>
+    <label class="field"><span>Lớp/nhóm</span><input class="input" name="classLabel" placeholder="Tự đặt tên lớp của riêng cô, ví dụ: Lớp 4 tuổi A"></label>
+    <div class="notice">Chỉ chính cô nhìn thấy hồ sơ này; dữ liệu không được gửi cho AI hay chia sẻ với tài khoản khác.</div>
+    <button class="primary-button" type="submit">Lưu hồ sơ</button>
+  </form></div>`;
+  els.drawerBackdrop.classList.remove('is-hidden'); els.drawer.classList.add('is-open'); els.drawer.setAttribute('aria-hidden', 'false');
+}
+
+function renderEvaluation() {
+  const children = state.children;
+  const selected = children.find((child) => child.id === state.selectedChildId) || null;
+  const assessments = state.childAssessments;
+  els.main.innerHTML = `${pageHead('Theo dõi thực hiện', 'Đánh giá và điều chỉnh', 'Ghi nhận biểu hiện quan sát, minh chứng và điều chỉnh cho từng trẻ theo 5 lĩnh vực phát triển. Hồ sơ chỉ hiển thị với chính giáo viên đã tạo, không chia sẻ với tài khoản khác và không được gửi cho AI.', '<button class="primary-button" data-add-child>Thêm hồ sơ trẻ</button>')}
+    <section class="planner-layout">
+      <div>${selected ? `<article class="panel">
+          <div class="panel-title-row"><div><h2>${escapeHtml(selected.fullName)}</h2><p class="panel-subtitle">${escapeHtml(selected.studentCode || 'Chưa có mã số')}${selected.classLabel ? ` • ${escapeHtml(selected.classLabel)}` : ''}</p></div><button class="secondary-button" data-deactivate-child="${selected.id}">Ngừng theo dõi</button></div>
+          <form id="assessment-form" class="plan-form">
+            <input type="hidden" name="childId" value="${selected.id}">
+            <div class="form-grid"><label class="field"><span>Lĩnh vực phát triển *</span><select class="select" required name="domain">${DEVELOPMENT_DOMAINS.map((domain) => `<option>${escapeHtml(domain)}</option>`).join('')}</select></label><label class="field"><span>Mức độ *</span><select class="select" required name="level">${ASSESSMENT_LEVELS.map((level) => `<option>${escapeHtml(level)}</option>`).join('')}</select></label></div>
+            <label class="field"><span>Giai đoạn/thời điểm</span><input class="input" name="period" placeholder="Ví dụ: Cuối chủ đề Gia đình, tháng 10/2026"></label>
+            <label class="field"><span>Kế hoạch liên quan</span><select class="select" name="planId"><option value="">— Không liên kết —</option>${state.workspace.plans.map((plan) => `<option value="${plan.id}">${escapeHtml(plan.title)}</option>`).join('')}</select></label>
+            <label class="field"><span>Biểu hiện quan sát được</span><textarea name="observation" placeholder="Không nhập thông tin sức khỏe, khuyết tật hoặc dữ liệu nhạy cảm khác của trẻ."></textarea></label>
+            <label class="field"><span>Minh chứng</span><textarea name="evidence"></textarea></label>
+            <label class="field"><span>Điều chỉnh đề xuất</span><textarea name="adjustment"></textarea></label>
+            <div class="button-row"><button class="primary-button" type="submit">Lưu đánh giá</button></div>
+          </form>
+        </article>
+        <article class="panel">
+          <div class="panel-title-row"><div><h2>Lịch sử đánh giá</h2><p class="panel-subtitle">${assessments.length} bản ghi</p></div></div>
+          <div class="review-timeline">${assessments.map((item) => `<article><i></i><header><strong>${escapeHtml(item.domain)}</strong><span class="chip ${item.level === 'Đạt' ? 'teal' : item.level === 'Chưa đạt' ? 'amber' : ''}">${escapeHtml(item.level)}</span></header><small>${escapeHtml(item.period || '')}${item.period ? ' • ' : ''}${new Date(item.createdAt).toLocaleString('vi-VN')}</small><p>${escapeHtml(item.observation || '')}</p>${item.evidence ? `<div class="review-response"><b>Minh chứng:</b> ${escapeHtml(item.evidence)}</div>` : ''}${item.adjustment ? `<div class="review-response"><b>Điều chỉnh:</b> ${escapeHtml(item.adjustment)}</div>` : ''}<button class="small-button" data-delete-assessment="${item.id}">Xóa bản ghi</button></article>`).join('') || '<div class="empty-state">Chưa có đánh giá nào cho trẻ này.</div>'}</div>
+        </article>` : '<div class="empty-state">Chọn một trẻ ở danh sách bên phải hoặc thêm hồ sơ mới để bắt đầu ghi nhận đánh giá.</div>'}
+      </div>
+      <aside class="panel plan-list">
+        <div class="panel-title-row"><div><h2>Danh sách trẻ</h2><p class="panel-subtitle">${children.length} hồ sơ đang theo dõi</p></div></div>
+        ${children.map((child) => `<button class="saved-plan ${child.id === state.selectedChildId ? 'is-active' : ''}" data-select-child="${child.id}"><strong>${escapeHtml(child.fullName)}</strong><span>${escapeHtml(child.studentCode || 'Chưa có mã số')}${child.classLabel ? ` • ${escapeHtml(child.classLabel)}` : ''}</span></button>`).join('') || '<div class="empty-state">Chưa có hồ sơ trẻ.</div>'}
+      </aside>
+    </section>`;
+}
+
 function renderTemporaryRoute(route) {
-  const plans = state.workspace.plans || [];
   const configs = {
-    evaluation: { eyebrow: 'Theo dõi thực hiện', title: 'Đánh giá và điều chỉnh', description: 'Tập hợp kế hoạch cần bổ sung minh chứng, đánh giá và điều chỉnh sau thực hiện.', icon: '◉', action: '<button class="primary-button" data-route-jump="planner">Mở trình soạn kế hoạch</button>', note: `${plans.filter((plan) => !(plan.assessment || '').trim()).length} kế hoạch đang thiếu nội dung minh chứng hoặc đánh giá.` },
     approval: { eyebrow: 'Quy trình chuyên môn', title: 'Rà soát – phê duyệt', description: 'Theo dõi hồ sơ chờ rà soát, yêu cầu chỉnh sửa và lịch sử phê duyệt.', icon: '✓', action: '<button class="primary-button" data-route-jump="review">Mở cảnh báo dữ liệu nguồn</button>', note: `${unresolvedIssues().length} cảnh báo PDF nguồn chưa được xác nhận xử lý.` },
     'online-resources': { eyebrow: 'Kết nối có kiểm soát', title: 'AI và nguồn trực tuyến', description: 'Khu vực chuẩn bị liên kết HTTPS và công cụ hỗ trợ; ứng dụng vẫn hoạt động hoàn toàn ngoại tuyến.', icon: '⌁', action: '', note: 'Không tự động gửi dữ liệu và không đưa thông tin cá nhân của trẻ lên dịch vụ công cộng.' },
     settings: { eyebrow: 'Quản trị', title: 'Cài đặt', description: 'Cấu hình năm học, đơn vị, nguyên tắc dữ liệu và các tùy chọn ứng dụng.', icon: '○', action: '<button class="secondary-button" data-route-jump="backup">Mở dữ liệu và sao lưu</button>', note: 'Dữ liệu người dùng tiếp tục được lưu bằng các khóa localStorage hiện có.' },
@@ -894,7 +946,8 @@ function render() {
   else if (state.route === 'videos') renderVideos();
   else if (state.route === 'online-resources') renderAIWorkspace();
   else if (state.route === 'program-builder') renderProgramBuilder();
-  else if (['evaluation', 'approval'].includes(state.route)) renderTemporaryRoute(state.route);
+  else if (state.route === 'evaluation') renderEvaluation();
+  else if (state.route === 'approval') renderTemporaryRoute(state.route);
   else if (state.route === 'dashboard') renderDashboard();
   else if (state.route === 'open-data') renderOpenData();
   else if (state.route === 'planner') renderPlanner();
@@ -1025,12 +1078,15 @@ async function startAuthenticated() {
   const legacy={workspace:state.workspace,review:state.review};await window.ctgdmnDesktop.bootstrapRepository(legacy);const stored=await window.ctgdmnDesktop.getRepositoryState();state.workspace=migrateWorkspace(stored.workspace,state.data.meta);state.workspace.pendingAIRequests=state.workspace.pendingAIRequests||[];state.review={...defaultReviewState(),...(stored.review||{})};state.systemConfig=stored.systemConfig||state.systemConfig;[state.aiConfig,state.templates]=await Promise.all([window.ctgdmnDesktop.getAIConfig(),window.ctgdmnDesktop.listTemplates()]);state.originalSchoolProfile=defaultSchoolProfile(state.data.meta);state.data.meta.schoolName=schoolProfile().name;state.data.meta.schoolYear=schoolProfile().schoolYear;syncPublicBranding(schoolProfile());state.videos=await window.ctgdmnDesktop.listVideos();localStorage.removeItem('ctgdmn-open-workspace-v1');localStorage.removeItem('ctgdmn-review-v1');document.querySelector('#school-name').textContent=schoolProfile().name;document.querySelector('#school-year').textContent=schoolProfile().schoolYear;document.querySelector('#profile-name').textContent=state.currentUser.fullName;document.querySelector('#profile-role').textContent=(state.currentUser.roles||[]).map((role)=>ROLE_LABELS[role]||role).join(', ');document.querySelector('#profile-avatar').textContent=(state.currentUser.fullName||'U').trim().charAt(0).toUpperCase();applyRoleVisibility();if(!bindEvents.bound){bindEvents();bindEvents.bound=true;}render();els.loading.classList.add('is-hidden');els.app.classList.remove('is-hidden');if(hasRole('system_admin'))saveWorkspace('migration.confirmed','workspace','main');
 }
 
-function applyRoleVisibility(){const roles=state.currentUser?.roles||[];const allowed={settings:roles.includes('system_admin'),backup:roles.includes('system_admin'),reports:roles.some((role)=>['principal','vice_principal'].includes(role)),approval:roles.some((role)=>['principal','vice_principal','team_lead'].includes(role))};for(const [route,visible]of Object.entries(allowed)){const button=document.querySelector(`[data-route="${route}"]`);if(button)button.hidden=!visible;}}
+function applyRoleVisibility(){const roles=state.currentUser?.roles||[];const allowed={settings:roles.includes('system_admin'),backup:roles.includes('system_admin'),reports:roles.some((role)=>['principal','vice_principal'].includes(role)),approval:roles.some((role)=>['principal','vice_principal','team_lead'].includes(role)),evaluation:!roles.includes('viewer')};for(const [route,visible]of Object.entries(allowed)){const button=document.querySelector(`[data-route="${route}"]`);if(button)button.hidden=!visible;}}
 
 function bindEvents() {
-  els.nav.addEventListener('click', (event) => {
+  els.nav.addEventListener('click', async (event) => {
     const button = event.target.closest('[data-route]');
-    if (button) setRoute(button.dataset.route);
+    if (!button) return;
+    const route = button.dataset.route;
+    if (route === 'evaluation') { try { state.children = await window.ctgdmnDesktop.listChildren(); state.selectedChildId = ''; state.childAssessments = []; } catch (error) { showToast(error.message); } }
+    setRoute(route);
   });
   els.main.addEventListener('click', async (event) => {
     const route = event.target.closest('[data-route-jump]');
@@ -1052,6 +1108,13 @@ function bindEvents() {
     if (viewThemeDocs) { const [ageGroup, collection] = viewThemeDocs.dataset.viewThemeDocs.split('|||'); state.ageGroup = ageGroup; state.collection = collection; state.query = ''; return setRoute('library', { keepFilters: true }); }
     const useTheme = event.target.closest('[data-use-theme]');
     if (useTheme) { const [ageGroup, collection] = useTheme.dataset.useTheme.split('|||'); state.draftPlanSeed = themeToPlanSeed(ageGroup, collection); showToast('Đã điền sẵn chủ đề vào kế hoạch mới.'); return setRoute('planner'); }
+    if (event.target.closest('[data-add-child]')) return openChildEditor();
+    const selectChild = event.target.closest('[data-select-child]');
+    if (selectChild) { try { state.selectedChildId = selectChild.dataset.selectChild; state.childAssessments = await window.ctgdmnDesktop.listChildAssessments(state.selectedChildId); renderEvaluation(); } catch (error) { showToast(error.message); } return; }
+    const deactivateChild = event.target.closest('[data-deactivate-child]');
+    if (deactivateChild) { if (window.confirm('Ngừng theo dõi hồ sơ trẻ này? Các đánh giá đã ghi nhận vẫn được giữ lại.')) { try { await window.ctgdmnDesktop.deactivateChild(deactivateChild.dataset.deactivateChild); state.children = await window.ctgdmnDesktop.listChildren(); state.selectedChildId = ''; state.childAssessments = []; renderEvaluation(); showToast('Đã ngừng theo dõi hồ sơ trẻ.'); } catch (error) { showToast(error.message); } } return; }
+    const deleteAssessment = event.target.closest('[data-delete-assessment]');
+    if (deleteAssessment) { if (window.confirm('Xóa bản ghi đánh giá này?')) { try { await window.ctgdmnDesktop.deleteChildAssessment(deleteAssessment.dataset.deleteAssessment); state.childAssessments = await window.ctgdmnDesktop.listChildAssessments(state.selectedChildId); renderEvaluation(); showToast('Đã xóa bản ghi đánh giá.'); } catch (error) { showToast(error.message); } } return; }
     const open = event.target.closest('[data-open-doc]');
     if (open) return openDrawer(open.dataset.openDoc);
     const watch = event.target.closest('[data-watch-doc]');
@@ -1129,6 +1192,7 @@ function bindEvents() {
     if(event.target.id==='ai-config-form'){try{const formData=new FormData(event.target);const data={...Object.fromEntries(formData),consentAccepted:formData.has('consentAccepted')};state.aiConfig=await window.ctgdmnDesktop.saveAIConfig(data);renderSettings();showToast('Đã lưu cấu hình AI an toàn trên máy.');}catch(error){showToast(error.message);}return;}
     if(event.target.id==='system-config-form'){try{const data=Object.fromEntries(new FormData(event.target));data.idleMinutes=Math.max(5,Math.min(480,Number(data.idleMinutes)||30));if(data.repositoryMode==='lan'&&!/^https?:\/\/(localhost|127\.0\.0\.1|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/i.test(data.serverUrl||''))throw new Error('Địa chỉ máy chủ phải là địa chỉ HTTP(S) trong mạng nội bộ.');await window.ctgdmnDesktop.updateSystemConfig(data);state.systemConfig=data;renderSettings();showToast(data.repositoryMode==='lan'?'Đã lưu cấu hình LAN; ghi dữ liệu bị khóa cho tới khi có máy chủ.':'Đã chuyển sang SQLite cục bộ.');}catch(error){showToast(error.message);}return;}
     if(event.target.id==='school-form'){const data={...schoolProfile(),...Object.fromEntries(new FormData(event.target)),logoData:state.pendingImageData||schoolProfile().logoData,userEdited:true,updatedAt:new Date().toISOString()};const errors=validateSchool(data);if(errors.length)return showToast(errors[0]);state.workspace.schoolProfile=data;state.pendingImageData='';state.data.meta.schoolName=data.name;state.data.meta.schoolYear=data.schoolYear;syncPublicBranding(data);document.querySelector('#school-name').textContent=data.name;document.querySelector('#school-year').textContent=data.schoolYear;saveWorkspace();renderSettings();showToast('Đã cập nhật thông tin nhà trường.');return;}
+    if(event.target.id==='assessment-form'){try{const data=Object.fromEntries(new FormData(event.target));await window.ctgdmnDesktop.upsertChildAssessment(data);state.childAssessments=await window.ctgdmnDesktop.listChildAssessments(data.childId);renderEvaluation();showToast('Đã lưu đánh giá.');}catch(error){showToast(error.message);}return;}
     if (event.target.id !== 'plan-form') return;
     const formData=new FormData(event.target);const data={...Object.fromEntries(formData),collaboratingTeacherIds:formData.getAll('collaboratingTeacherIds')};data.id||=`plan-${Date.now()}`;data.schoolId=schoolProfile().id;data.workflowStatus=data.workflowStatus||state.workspace.plans.find((item)=>item.id===data.id)?.workflowStatus||'draft';data.reviewerIds=state.workspace.professionalReviews.filter((item)=>item.planId===data.id).map((item)=>item.reviewerId);
     if(data.status==='Đã phê duyệt'&&!canApprovePlan(data.id,state.workspace.professionalReviews))return showToast('Không thể phê duyệt: còn yêu cầu chỉnh sửa chưa xử lý.');
@@ -1189,6 +1253,7 @@ function bindEvents() {
     if(event.target.id==='video-form'){try{const formData=new FormData(event.target);const data={...Object.fromEntries(formData),audience:formData.getAll('audience'),enabled:formData.has('enabled')};if(data.sourceType==='offline'&&!data.id)return showToast('Hãy dùng nút “Chọn và sao chép MP4 từ máy”.');await window.ctgdmnDesktop.saveVideo(data);state.videos=await window.ctgdmnDesktop.listVideos();closeDrawer();renderVideos();showToast('Đã lưu danh mục video.');}catch(error){showToast(error.message);}return;}
     if(event.target.id==='class-form'){try{const data=Object.fromEntries(new FormData(event.target));state.workspace.classes=upsertClass(state.workspace.classes,data);saveWorkspace();closeDrawer();renderSettings();showToast('Đã lưu lớp.');}catch(error){showToast(error.message);}return;}
     if(event.target.id==='staff-form'){try{const formData=new FormData(event.target);const data={...Object.fromEntries(formData),roles:formData.getAll('roles')};state.workspace.staff=upsertStaff(state.workspace.staff,data);saveWorkspace();closeDrawer();renderSettings();showToast('Đã lưu nhân sự.');}catch(error){showToast(error.message);}return;}
+    if(event.target.id==='child-form'){try{const data=Object.fromEntries(new FormData(event.target));await window.ctgdmnDesktop.upsertChild(data);state.children=await window.ctgdmnDesktop.listChildren();closeDrawer();renderEvaluation();showToast('Đã lưu hồ sơ trẻ.');}catch(error){showToast(error.message);}return;}
     if(event.target.id==='signature-form'){const formData=new FormData(event.target);const data={...Object.fromEntries(formData),enabled:formData.has('enabled'),imageData:state.pendingImageData,updatedAt:new Date().toISOString()};data.id||=`signature-${Date.now()}`;const person=state.workspace.staff.find((item)=>item.id===data.staffId);if(!person)return showToast('Cần chọn người ký.');data.name=person.name;const index=state.workspace.signatures.findIndex((item)=>item.id===data.id);if(index>=0)state.workspace.signatures[index]={...state.workspace.signatures[index],...data};else state.workspace.signatures.push(data);state.pendingImageData='';saveWorkspace();closeDrawer();renderSettings();showToast('Đã lưu cấu hình chữ ký cục bộ.');return;}
     if(event.target.id==='review-form'){try{const data=Object.fromEntries(new FormData(event.target));const person=state.workspace.staff.find((item)=>item.id===data.reviewerId);data.reviewerNameSnapshot=person?.name;data.reviewerRoleSnapshot=person?.title;state.workspace.professionalReviews=addProfessionalReview(state.workspace.professionalReviews,data);saveWorkspace();closeDrawer();renderPlanner(data.planId);showToast('Đã ghi nhận nhận xét; nội dung gốc sẽ được giữ nguyên.');}catch(error){showToast(error.message);}return;}
     if(event.target.id==='resolve-review-form'){try{const data=Object.fromEntries(new FormData(event.target));state.workspace.professionalReviews=resolveProfessionalReview(state.workspace.professionalReviews,data.reviewId,data.response);saveWorkspace();closeDrawer();renderPlanner(data.planId);showToast('Đã ghi nhận phản hồi xử lý.');}catch(error){showToast(error.message);}return;}

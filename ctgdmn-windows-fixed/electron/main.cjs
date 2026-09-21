@@ -160,6 +160,12 @@ ipcMain.handle('accounts:reset-password',(_event,{token,userId,tempPassword})=>r
 ipcMain.handle('accounts:list-requests',(_event,token)=>repository.listAccountRequests(currentUser(token)));
 ipcMain.handle('accounts:approve-request',(_event,{token,requestId})=>repository.approveAccountRequest(currentUser(token),requestId));
 ipcMain.handle('accounts:reject-request',(_event,{token,requestId,reason})=>repository.rejectAccountRequest(currentUser(token),requestId,reason));
+ipcMain.handle('children:list',(_event,token)=>repository.listChildren(currentUser(token)));
+ipcMain.handle('children:upsert',(_event,{token,data})=>repository.upsertChild(currentUser(token),data));
+ipcMain.handle('children:deactivate',(_event,{token,childId})=>repository.deactivateChild(currentUser(token),childId));
+ipcMain.handle('assessments:list',(_event,{token,childId})=>repository.listChildAssessments(currentUser(token),childId));
+ipcMain.handle('assessments:upsert',(_event,{token,data})=>repository.upsertChildAssessment(currentUser(token),data));
+ipcMain.handle('assessments:delete',(_event,{token,assessmentId})=>repository.deleteChildAssessment(currentUser(token),assessmentId));
 ipcMain.handle('repository:bootstrap',(_event,{token,legacy})=>{currentUser(token);return repository.bootstrapLegacy(legacy);});
 ipcMain.handle('repository:get-state',(_event,token)=>repository.getState(currentUser(token)));
 ipcMain.handle('repository:save-state',(_event,{token,payload})=>{const user=currentUser(token);const config=repository.getJson('systemConfig',{});if(config.repositoryMode==='lan')throw new Error('Chưa kết nối máy chủ LAN; dữ liệu không được ghi để tránh xung đột.');const old=repository.getJson('workspace',{});for(const plan of payload?.workspace?.plans||[]){const previous=(old.plans||[]).find((item)=>item.id===plan.id);if(!previous)authorize(user,'plan.create',plan);else if(JSON.stringify(previous)!==JSON.stringify(plan)){authorize(user,'plan.edit',plan);if(!['draft','changes_requested'].includes(previous.workflowStatus||'draft'))throw new Error('Bản kế hoạch đang gửi đã bị khóa.');}}if(!user.roles.includes(ROLES.ADMIN))for(const key of ['schoolProfile','classes','staff','signatures','customRecords','edits','sourceDocuments'])payload.workspace[key]=old[key];return repository.saveState(user,payload);});

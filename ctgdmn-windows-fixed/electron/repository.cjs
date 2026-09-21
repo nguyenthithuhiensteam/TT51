@@ -1,7 +1,9 @@
 const { DatabaseSync } = require('node:sqlite');
 const crypto=require('crypto');
 const { hashPassword,verifyPassword,authorize,sanitizeAuditDetails,scopeAllows,transitionPlan,ROLES }=require('./security.cjs');
+const { DEVELOPMENT_DOMAINS }=require('./plan-schema.cjs');
 const iso=()=>new Date().toISOString();
+const ASSESSMENT_LEVELS=['Đạt','Chưa đạt','Cần hỗ trợ thêm'];
 
 class Repository {
   constructor(filePath){this.db=new DatabaseSync(filePath);this.sessions=new Map();this.db.exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON;
@@ -9,7 +11,12 @@ class Repository {
     CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,username TEXT NOT NULL UNIQUE,full_name TEXT NOT NULL,staff_id TEXT,title TEXT,team TEXT,class_ids_json TEXT NOT NULL,roles_json TEXT NOT NULL,scope_json TEXT NOT NULL,active INTEGER NOT NULL DEFAULT 1,password_hash TEXT NOT NULL,must_change_password INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL,last_login_at TEXT,created_by TEXT);
     CREATE TABLE IF NOT EXISTS audit_log(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id TEXT,created_at TEXT NOT NULL,action TEXT NOT NULL,target_type TEXT,target_id TEXT,version INTEGER,result TEXT NOT NULL,details_json TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS videos(id TEXT PRIMARY KEY,title TEXT NOT NULL,description TEXT,category TEXT NOT NULL,audience_json TEXT NOT NULL,thumbnail TEXT,source_type TEXT NOT NULL,url TEXT,local_path TEXT,duration TEXT,sort_order INTEGER NOT NULL DEFAULT 0,enabled INTEGER NOT NULL DEFAULT 1,context_key TEXT,updated_at TEXT NOT NULL,updated_by TEXT,used_count INTEGER NOT NULL DEFAULT 0);
-    CREATE TABLE IF NOT EXISTS account_requests(id TEXT PRIMARY KEY,full_name TEXT NOT NULL,username TEXT NOT NULL,password_hash TEXT NOT NULL,title TEXT,team TEXT,status TEXT NOT NULL DEFAULT 'pending',created_at TEXT NOT NULL,decided_at TEXT,decided_by TEXT,reject_reason TEXT);`);this.seedBuiltinResources();}
+    CREATE TABLE IF NOT EXISTS account_requests(id TEXT PRIMARY KEY,full_name TEXT NOT NULL,username TEXT NOT NULL,password_hash TEXT NOT NULL,title TEXT,team TEXT,status TEXT NOT NULL DEFAULT 'pending',created_at TEXT NOT NULL,decided_at TEXT,decided_by TEXT,reject_reason TEXT);
+    CREATE TABLE IF NOT EXISTS children(id TEXT PRIMARY KEY,owner_id TEXT NOT NULL,full_name TEXT NOT NULL,student_code TEXT,class_label TEXT,birth_year TEXT,active INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL,updated_at TEXT NOT NULL);
+    CREATE INDEX IF NOT EXISTS idx_children_owner ON children(owner_id);
+    CREATE TABLE IF NOT EXISTS child_assessments(id TEXT PRIMARY KEY,owner_id TEXT NOT NULL,child_id TEXT NOT NULL,plan_id TEXT,domain TEXT NOT NULL,period TEXT,level TEXT NOT NULL,observation TEXT,evidence TEXT,adjustment TEXT,created_at TEXT NOT NULL,created_by TEXT);
+    CREATE INDEX IF NOT EXISTS idx_child_assessments_owner ON child_assessments(owner_id);
+    CREATE INDEX IF NOT EXISTS idx_child_assessments_child ON child_assessments(child_id);`);this.seedBuiltinResources();}
   seedBuiltinResources(){const version=Number(this.getJson('builtinResourceVersion',0));if(version>=1)return;this.db.prepare('INSERT OR IGNORE INTO videos(id,title,description,category,audience_json,thumbnail,source_type,url,local_path,duration,sort_order,enabled,context_key,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run('builtin-video-ctgdmn-guide','Video hướng dẫn sử dụng Trường Mầm non Số','Video hướng dẫn trực tuyến dành cho giáo viên và cán bộ quản lý khi bắt đầu sử dụng ứng dụng.','Bắt đầu sử dụng','[]','','online','https://www.youtube.com/watch?v=P5DgJHPLkDk',null,'',10,1,'',iso(),'system');this.setJson('builtinResourceVersion',1);}
   close(){this.db.close();}
   hasUsers(){return this.db.prepare('SELECT COUNT(*) AS n FROM users').get().n>0;}
@@ -73,5 +80,81 @@ class Repository {
   createBackup(actor){authorize(actor,'backup.manage');const users=this.db.prepare('SELECT * FROM users').all();const payload={format:'ctgdmn-sqlite-backup',version:4,exportedAt:iso(),state:{workspace:this.getJson('workspace',{}),review:this.getJson('review',{}),systemConfig:this.getJson('systemConfig',{})},users};this.audit(actor.id,'backup.export','database','main');return payload;}
   restoreBackup(actor,payload){authorize(actor,'backup.manage');if(payload?.format!=='ctgdmn-sqlite-backup'||!payload.state||!Array.isArray(payload.users))throw new Error('Tệp sao lưu không hợp lệ.');this.db.exec('BEGIN IMMEDIATE');try{this.setJson('workspace',payload.state.workspace||{});this.setJson('review',payload.state.review||{});this.setJson('systemConfig',payload.state.systemConfig||{});const statement=this.db.prepare('INSERT OR REPLACE INTO users(id,username,full_name,staff_id,title,team,class_ids_json,roles_json,scope_json,active,password_hash,must_change_password,created_at,last_login_at,created_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');for(const row of payload.users){if(!String(row.password_hash||'').startsWith('scrypt$'))throw new Error('Bản sao lưu chứa thông tin xác thực không hợp lệ.');statement.run(row.id,row.username,row.full_name,row.staff_id,row.title,row.team,row.class_ids_json,row.roles_json,row.scope_json,row.active,row.password_hash,row.must_change_password,row.created_at,row.last_login_at,row.created_by);}this.db.exec('COMMIT');}catch(error){this.db.exec('ROLLBACK');throw error;}this.audit(actor.id,'backup.restore','database','main');return true;}
   auditRows(actor,limit=500){authorize(actor,'audit.view');return this.db.prepare('SELECT * FROM audit_log ORDER BY id DESC LIMIT ?').all(Math.min(1000,Number(limit)||500)).map((row)=>({...row,details:JSON.parse(row.details_json)}));}
+  rowChild(row){return{id:row.id,fullName:row.full_name,studentCode:row.student_code,classLabel:row.class_label,birthYear:row.birth_year,active:Boolean(row.active),createdAt:row.created_at,updatedAt:row.updated_at};}
+  listChildren(actor){authorize(actor,'assessment.manage');return this.db.prepare('SELECT * FROM children WHERE owner_id=? AND active=1 ORDER BY full_name').all(actor.id).map((row)=>this.rowChild(row));}
+  upsertChild(actor,data){
+    authorize(actor,'assessment.manage');
+    const fullName=String(data.fullName||'').trim();
+    if(!fullName)throw new Error('Họ và tên trẻ là bắt buộc.');
+    const studentCode=String(data.studentCode||'').trim();
+    const classLabel=String(data.classLabel||'').trim();
+    const birthYear=String(data.birthYear||'').trim();
+    const id=String(data.id||'').trim();
+    const now=iso();
+    if(id){
+      const existing=this.db.prepare('SELECT owner_id FROM children WHERE id=?').get(id);
+      if(!existing||existing.owner_id!==actor.id)throw new Error('Không tìm thấy hồ sơ trẻ hoặc bạn không có quyền sửa.');
+      this.db.prepare('UPDATE children SET full_name=?,student_code=?,class_label=?,birth_year=?,updated_at=? WHERE id=?').run(fullName,studentCode,classLabel,birthYear,now,id);
+      this.audit(actor.id,'child.update','child',id);
+      return this.rowChild(this.db.prepare('SELECT * FROM children WHERE id=?').get(id));
+    }
+    const newId=`child-${crypto.randomUUID()}`;
+    this.db.prepare('INSERT INTO children(id,owner_id,full_name,student_code,class_label,birth_year,active,created_at,updated_at) VALUES(?,?,?,?,?,?,1,?,?)').run(newId,actor.id,fullName,studentCode,classLabel,birthYear,now,now);
+    this.audit(actor.id,'child.create','child',newId);
+    return this.rowChild(this.db.prepare('SELECT * FROM children WHERE id=?').get(newId));
+  }
+  deactivateChild(actor,childId){
+    authorize(actor,'assessment.manage');
+    const existing=this.db.prepare('SELECT owner_id FROM children WHERE id=?').get(childId);
+    if(!existing||existing.owner_id!==actor.id)throw new Error('Không tìm thấy hồ sơ trẻ hoặc bạn không có quyền xóa.');
+    this.db.prepare('UPDATE children SET active=0,updated_at=? WHERE id=?').run(iso(),childId);
+    this.audit(actor.id,'child.deactivate','child',childId);
+    return {ok:true};
+  }
+  rowAssessment(row){return{id:row.id,childId:row.child_id,planId:row.plan_id,domain:row.domain,period:row.period,level:row.level,observation:row.observation,evidence:row.evidence,adjustment:row.adjustment,createdAt:row.created_at,createdBy:row.created_by};}
+  listChildAssessments(actor,childId=''){
+    authorize(actor,'assessment.manage');
+    if(childId){
+      const child=this.db.prepare('SELECT owner_id FROM children WHERE id=?').get(childId);
+      if(!child||child.owner_id!==actor.id)throw new Error('Không tìm thấy hồ sơ trẻ hoặc bạn không có quyền xem.');
+      return this.db.prepare('SELECT * FROM child_assessments WHERE owner_id=? AND child_id=? ORDER BY created_at DESC').all(actor.id,childId).map((row)=>this.rowAssessment(row));
+    }
+    return this.db.prepare('SELECT * FROM child_assessments WHERE owner_id=? ORDER BY created_at DESC').all(actor.id).map((row)=>this.rowAssessment(row));
+  }
+  upsertChildAssessment(actor,data){
+    authorize(actor,'assessment.manage');
+    const childId=String(data.childId||'').trim();
+    const child=this.db.prepare('SELECT owner_id FROM children WHERE id=?').get(childId);
+    if(!child||child.owner_id!==actor.id)throw new Error('Không tìm thấy hồ sơ trẻ hoặc bạn không có quyền ghi nhận đánh giá.');
+    const domain=String(data.domain||'').trim();
+    if(!DEVELOPMENT_DOMAINS.includes(domain))throw new Error('Lĩnh vực phát triển không hợp lệ.');
+    const level=String(data.level||'').trim();
+    if(!ASSESSMENT_LEVELS.includes(level))throw new Error('Mức độ đánh giá không hợp lệ.');
+    const period=String(data.period||'').trim();
+    const observation=String(data.observation||'').trim();
+    const evidence=String(data.evidence||'').trim();
+    const adjustment=String(data.adjustment||'').trim();
+    const planId=String(data.planId||'').trim()||null;
+    const id=String(data.id||'').trim();
+    if(id){
+      const existing=this.db.prepare('SELECT owner_id FROM child_assessments WHERE id=?').get(id);
+      if(!existing||existing.owner_id!==actor.id)throw new Error('Không tìm thấy bản ghi đánh giá hoặc bạn không có quyền sửa.');
+      this.db.prepare('UPDATE child_assessments SET plan_id=?,domain=?,period=?,level=?,observation=?,evidence=?,adjustment=? WHERE id=?').run(planId,domain,period,level,observation,evidence,adjustment,id);
+      this.audit(actor.id,'child.assessment_update','child_assessment',id);
+      return this.rowAssessment(this.db.prepare('SELECT * FROM child_assessments WHERE id=?').get(id));
+    }
+    const newId=`assessment-${crypto.randomUUID()}`;
+    this.db.prepare('INSERT INTO child_assessments(id,owner_id,child_id,plan_id,domain,period,level,observation,evidence,adjustment,created_at,created_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(newId,actor.id,childId,planId,domain,period,level,observation,evidence,adjustment,iso(),actor.id);
+    this.audit(actor.id,'child.assessment_create','child_assessment',newId);
+    return this.rowAssessment(this.db.prepare('SELECT * FROM child_assessments WHERE id=?').get(newId));
+  }
+  deleteChildAssessment(actor,assessmentId){
+    authorize(actor,'assessment.manage');
+    const existing=this.db.prepare('SELECT owner_id FROM child_assessments WHERE id=?').get(assessmentId);
+    if(!existing||existing.owner_id!==actor.id)throw new Error('Không tìm thấy bản ghi đánh giá hoặc bạn không có quyền xóa.');
+    this.db.prepare('DELETE FROM child_assessments WHERE id=?').run(assessmentId);
+    this.audit(actor.id,'child.assessment_delete','child_assessment',assessmentId);
+    return {ok:true};
+  }
 }
-module.exports={Repository};
+module.exports={Repository,ASSESSMENT_LEVELS};

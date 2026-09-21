@@ -129,6 +129,12 @@ app.post('/api/accounts/:userId/reset-password', handler((req) => { repository.r
 app.get('/api/accounts/requests', handler((req) => repository.listAccountRequests(currentUser(tokenFromRequest(req)))));
 app.post('/api/accounts/requests/:requestId/approve', handler((req) => repository.approveAccountRequest(currentUser(tokenFromRequest(req)), req.params.requestId)));
 app.post('/api/accounts/requests/:requestId/reject', handler((req) => repository.rejectAccountRequest(currentUser(tokenFromRequest(req)), req.params.requestId, req.body.reason)));
+app.get('/api/children', handler((req) => repository.listChildren(currentUser(tokenFromRequest(req)))));
+app.post('/api/children', handler((req) => repository.upsertChild(currentUser(tokenFromRequest(req)), req.body)));
+app.post('/api/children/:childId/deactivate', handler((req) => repository.deactivateChild(currentUser(tokenFromRequest(req)), req.params.childId)));
+app.get('/api/assessments', handler((req) => repository.listChildAssessments(currentUser(tokenFromRequest(req)), req.query.childId || '')));
+app.post('/api/assessments', handler((req) => repository.upsertChildAssessment(currentUser(tokenFromRequest(req)), req.body)));
+app.post('/api/assessments/:assessmentId/delete', handler((req) => repository.deleteChildAssessment(currentUser(tokenFromRequest(req)), req.params.assessmentId)));
 
 // ---- Kho dữ liệu / kế hoạch ----
 app.post('/api/repository/bootstrap', handler((req) => { currentUser(tokenFromRequest(req)); return repository.bootstrapLegacy(req.body.legacy); }));
