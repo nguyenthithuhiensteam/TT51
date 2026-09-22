@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const ROLES = Object.freeze({ ADMIN:'system_admin', PRINCIPAL:'principal', VICE:'vice_principal', LEAD:'team_lead', TEACHER:'teacher', VIEWER:'viewer' });
 const ROLE_LABELS = Object.freeze({ system_admin:'Quản trị hệ thống', principal:'Hiệu trưởng/người phê duyệt', vice_principal:'Phó hiệu trưởng phụ trách chuyên môn', team_lead:'Tổ trưởng chuyên môn', teacher:'Giáo viên', viewer:'Người xem' });
 const PERMISSIONS = Object.freeze({
-  system_admin:['accounts.manage','school.configure','backup.manage','video.manage','audit.view','data.manage','data.read','assessment.manage','objectives.manage'],
+  system_admin:['accounts.manage','school.configure','backup.manage','video.manage','audit.view','data.manage','data.read','assessment.manage','objectives.manage','plan.read','plan.create','plan.edit'],
   principal:['plan.read','plan.review','plan.approve','report.read','signature.use','document.export','data.read','assessment.manage','objectives.manage'],
   vice_principal:['plan.read','plan.review','plan.submit_approval','plan.approve_configured','report.read','document.export','data.read','assessment.manage','objectives.manage'],
   team_lead:['plan.read','plan.review','plan.request_changes','plan.submit_professional','data.read','assessment.manage','objectives.manage'],
@@ -22,7 +22,7 @@ function verifyPassword(password,encoded='') {
 function permissionsFor(user={}) { const permissions=new Set((user.roles||[]).flatMap((role)=>PERMISSIONS[role]||[]));if((user.roles||[]).length)permissions.add('video.view');return permissions; }
 function hasPermission(user,action){return permissionsFor(user).has(action);}
 function scopeAllows(user={},resource={}) {
-  const roles=user.roles||[]; if(roles.includes(ROLES.PRINCIPAL))return true;
+  const roles=user.roles||[]; if(roles.includes(ROLES.ADMIN)||roles.includes(ROLES.PRINCIPAL))return true;
   if(roles.includes(ROLES.VICE))return (!user.scopeCampus||user.scopeCampus===resource.campus)&&(!user.scopeTeam||user.scopeTeam===resource.team)&&(!(user.scopeClassIds||[]).length||(user.scopeClassIds||[]).includes(resource.classId));
   if(roles.includes(ROLES.LEAD))return Boolean(user.team)&&user.team===resource.team;
   if(roles.includes(ROLES.TEACHER))return resource.authorTeacherId===user.staffId||(user.classIds||[]).includes(resource.classId);
@@ -32,7 +32,7 @@ function scopeAllows(user={},resource={}) {
 function authorize(user,action,resource={}) {
   if(!user||user.active===false)throw new Error('Tài khoản không hoạt động.');
   if(!hasPermission(user,action))throw new Error('Bạn không có quyền thực hiện thao tác này.');
-  if(action==='plan.create'&&resource.authorTeacherId!==user.staffId)throw new Error('Giáo viên chỉ được tạo kế hoạch của chính mình.');
+  if(action==='plan.create'&&resource.authorTeacherId!==user.staffId&&!user.roles.includes(ROLES.ADMIN))throw new Error('Giáo viên chỉ được tạo kế hoạch của chính mình.');
   if(action.startsWith('plan.')&&!['plan.create'].includes(action)&&!scopeAllows(user,resource))throw new Error('Dữ liệu nằm ngoài phạm vi được phân công.');
   if(action==='plan.approve'&&resource.authorTeacherId===user.staffId)throw new Error('Người soạn không được tự phê duyệt kế hoạch của mình.');
   if(action==='signature.use'&&resource.ownerStaffId&&resource.ownerStaffId!==user.staffId&&!user.roles.includes(ROLES.PRINCIPAL))throw new Error('Không được sử dụng chữ ký của người khác.');

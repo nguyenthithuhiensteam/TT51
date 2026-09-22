@@ -670,12 +670,25 @@ function combineAssessment(data={}) {
   return parts.join('\n\n');
 }
 
+function combineLessonActivities(data={}) {
+  if(data.lessonType==='STEAM/Dự án'){
+    const steps=[['1. Đặt vấn đề','steamProblem'],['2. Khám phá','steamExplore'],['3. Thiết kế','steamDesign'],['4. Chế tạo','steamMake'],['5. Thử nghiệm/Cải tiến','steamTest'],['6. Chia sẻ','steamShare']];
+    const teacherActivities=steps.filter(([,key])=>(data[key]||'').trim()).map(([label,key])=>`${label}:\n${data[key].trim()}`).join('\n\n');
+    return {teacherActivities,childActivities:''};
+  }
+  const parts=[['Hoạt động 1 — Gây hứng thú','activity1'],['Hoạt động 2 — Nội dung chính','activity2'],['Hoạt động 3 — Kết thúc','activity3']];
+  const teacherActivities=parts.filter(([,key])=>(data[`${key}Teacher`]||'').trim()).map(([label,key])=>`${label}:\n${data[`${key}Teacher`].trim()}`).join('\n\n');
+  const childActivities=parts.filter(([,key])=>(data[`${key}Child`]||'').trim()).map(([label,key])=>`${label}:\n${data[`${key}Child`].trim()}`).join('\n\n');
+  return {teacherActivities,childActivities};
+}
+
 function currentPlanFromForm() {
   const form=document.querySelector('#plan-form');
   if(!form)return null;
   const formData=new FormData(form);
   const data={...Object.fromEntries(formData),collaboratingTeacherIds:formData.getAll('collaboratingTeacherIds')};
   data.assessment=combineAssessment(data);
+  if(data.level==='Ngày/hoạt động')Object.assign(data,combineLessonActivities(data));
   return data;
 }
 
@@ -690,7 +703,7 @@ function rowsToEditorFields(level,rows=[]) {
   const type=aiPlanType(level);
   if(type==='annual')return{annualRows:rows.map((item)=>[item.period,item.theme,item.objective,item.content,item.activity].join(' | ')).join('\n')};
   if(type==='weekly')return{weeklyRows:rows.map((item)=>[item.activity||item.category,item.monday,item.tuesday,item.wednesday,item.thursday,item.friday].join(' | ')).join('\n')};
-  if(type==='lesson'){const first=rows[0]||{};return{teacherActivities:first.teacherActivity||first.activity||'',childActivities:first.childActivity||''};}
+  if(type==='lesson'){const first=rows[0]||{};return{activity2Teacher:first.teacherActivity||first.activity||'',activity2Child:first.childActivity||''};}
   const fields={themePhysical:[],themeSocial:[],themeLanguage:[],themeCognitive:[],themeAesthetic:[]};
   const domains=['Giáo dục phát triển thể chất','Giáo dục phát triển tình cảm và kỹ năng xã hội','Giáo dục phát triển ngôn ngữ','Giáo dục phát triển nhận thức','Giáo dục phát triển thẩm mỹ'];
   rows.forEach((item)=>{const index=Math.max(0,domains.indexOf(item.category));Object.keys(fields)[index].push([item.objective,item.content,item.activity].join(' | '));});
@@ -817,9 +830,25 @@ function planTemplate(plan = {}) {
     </details>
     <details class="template-editor" ${plan.level==='Ngày/hoạt động'?'open':''}><summary>Mẫu giáo án/hoạt động giáo dục ngày</summary>
       <div class="form-grid"><label class="field"><span>Lĩnh vực</span><input class="input" name="lessonDomain" value="${escapeHtml(plan.lessonDomain||'')}"></label><label class="field"><span>Tên bài/hoạt động</span><input class="input" name="lessonTitle" value="${escapeHtml(plan.lessonTitle||'')}"></label></div>
+      <label class="field"><span>Loại giáo án</span><select class="select" name="lessonType">${['Hoạt động thông thường','STEAM/Dự án'].map((v)=>`<option ${(plan.lessonType||'Hoạt động thông thường')===v?'selected':''}>${v}</option>`).join('')}</select></label>
+      <label class="field"><span>Liên kết mục tiêu (MT) từ ngân hàng</span><select class="select" name="lessonObjectiveCode"><option value="">— Không liên kết —</option>${state.objectives.filter((o)=>o.ageGroup===plan.ageGroup).map((o)=>`<option value="${escapeHtml(o.code)}" ${plan.lessonObjectiveCode===o.code?'selected':''}>${escapeHtml(o.code)} — ${escapeHtml(o.description.slice(0,70))}</option>`).join('')}</select></label>
       <label class="field"><span>I. Mục đích - yêu cầu</span><textarea name="lessonObjectives">${escapeHtml(plan.lessonObjectives||'')}</textarea></label>
       <label class="field"><span>II. Chuẩn bị</span><textarea name="lessonPreparation">${escapeHtml(plan.lessonPreparation||'')}</textarea></label>
-      <div class="form-grid"><label class="field"><span>Hoạt động của cô</span><textarea class="tall" name="teacherActivities">${escapeHtml(plan.teacherActivities||'')}</textarea></label><label class="field"><span>Hoạt động của trẻ</span><textarea class="tall" name="childActivities">${escapeHtml(plan.childActivities||'')}</textarea></label></div>
+      <div id="lesson-normal-activities" class="${(plan.lessonType||'Hoạt động thông thường')==='STEAM/Dự án'?'is-hidden':''}">
+        <h4>III. Cách tiến hành</h4>
+        <div class="form-grid"><label class="field"><span>Hoạt động 1 — Gây hứng thú (Cô)</span><textarea name="activity1Teacher">${escapeHtml(plan.activity1Teacher||'')}</textarea></label><label class="field"><span>Hoạt động 1 — Gây hứng thú (Trẻ)</span><textarea name="activity1Child">${escapeHtml(plan.activity1Child||'')}</textarea></label></div>
+        <div class="form-grid"><label class="field"><span>Hoạt động 2 — Nội dung chính (Cô)</span><textarea class="tall" name="activity2Teacher">${escapeHtml(plan.activity2Teacher||'')}</textarea></label><label class="field"><span>Hoạt động 2 — Nội dung chính (Trẻ)</span><textarea class="tall" name="activity2Child">${escapeHtml(plan.activity2Child||'')}</textarea></label></div>
+        <div class="form-grid"><label class="field"><span>Hoạt động 3 — Kết thúc (Cô)</span><textarea name="activity3Teacher">${escapeHtml(plan.activity3Teacher||'')}</textarea></label><label class="field"><span>Hoạt động 3 — Kết thúc (Trẻ)</span><textarea name="activity3Child">${escapeHtml(plan.activity3Child||'')}</textarea></label></div>
+      </div>
+      <div id="lesson-steam-activities" class="${(plan.lessonType||'Hoạt động thông thường')==='STEAM/Dự án'?'':'is-hidden'}">
+        <h4>III. Quy trình STEAM</h4>
+        <label class="field"><span>1. Đặt vấn đề</span><textarea name="steamProblem">${escapeHtml(plan.steamProblem||'')}</textarea></label>
+        <label class="field"><span>2. Khám phá</span><textarea name="steamExplore">${escapeHtml(plan.steamExplore||'')}</textarea></label>
+        <label class="field"><span>3. Thiết kế</span><textarea name="steamDesign">${escapeHtml(plan.steamDesign||'')}</textarea></label>
+        <label class="field"><span>4. Chế tạo</span><textarea name="steamMake">${escapeHtml(plan.steamMake||'')}</textarea></label>
+        <label class="field"><span>5. Thử nghiệm/Cải tiến</span><textarea name="steamTest">${escapeHtml(plan.steamTest||'')}</textarea></label>
+        <label class="field"><span>6. Chia sẻ</span><textarea name="steamShare">${escapeHtml(plan.steamShare||'')}</textarea></label>
+      </div>
       <label class="field"><span>Đánh giá cuối ngày</span><textarea name="dailyEvaluation">${escapeHtml(plan.dailyEvaluation||'')}</textarea></label>
     </details>
     <div class="form-grid"><label class="field"><span>Người duyệt</span><select class="select" name="approverId"><option value="">— Chưa chọn —</option>${people.filter((item)=>item.roles.includes('Người duyệt')||item.id===plan.approverId).map((item)=>`<option value="${item.id}" ${plan.approverId===item.id?'selected':''}>${escapeHtml(item.name)}</option>`).join('')}</select></label><label class="field"><span>Trạng thái kế hoạch</span><select class="select" name="status">${['Bản nháp','Cần rà soát','Đã rà soát','Đã phê duyệt'].map((value)=>`<option ${plan.status===value?'selected':''}>${value}</option>`).join('')}</select></label></div>
@@ -1147,6 +1176,7 @@ function bindEvents() {
     const route = button.dataset.route;
     if (route === 'evaluation') { try { state.children = await window.ctgdmnDesktop.listChildren(); state.selectedChildId = ''; state.childAssessments = []; } catch (error) { showToast(error.message); } }
     if (route === 'program-builder') { state.objectivesAgeGroup = state.objectivesAgeGroup || state.data.ageGroups[0]?.label || ''; try { state.objectives = await window.ctgdmnDesktop.listObjectives(state.objectivesAgeGroup); } catch (error) { showToast(error.message); } }
+    if (route === 'planner') { try { state.objectives = await window.ctgdmnDesktop.listObjectives(); } catch (error) { showToast(error.message); } }
     setRoute(route);
   });
   els.main.addEventListener('click', async (event) => {
@@ -1261,7 +1291,7 @@ function bindEvents() {
     if(event.target.getAttribute('id')==='school-form'){const data={...schoolProfile(),...Object.fromEntries(new FormData(event.target)),logoData:state.pendingImageData||schoolProfile().logoData,userEdited:true,updatedAt:new Date().toISOString()};const errors=validateSchool(data);if(errors.length)return showToast(errors[0]);state.workspace.schoolProfile=data;state.pendingImageData='';state.data.meta.schoolName=data.name;state.data.meta.schoolYear=data.schoolYear;syncPublicBranding(data);document.querySelector('#school-name').textContent=data.name;document.querySelector('#school-year').textContent=data.schoolYear;saveWorkspace();renderSettings();showToast('Đã cập nhật thông tin nhà trường.');return;}
     if(event.target.getAttribute('id')==='assessment-form'){try{const data=Object.fromEntries(new FormData(event.target));await window.ctgdmnDesktop.upsertChildAssessment(data);state.childAssessments=await window.ctgdmnDesktop.listChildAssessments(data.childId);renderEvaluation();showToast('Đã lưu đánh giá.');}catch(error){showToast(error.message);}return;}
     if (event.target.getAttribute('id') !== 'plan-form') return;
-    const formData=new FormData(event.target);const data={...Object.fromEntries(formData),collaboratingTeacherIds:formData.getAll('collaboratingTeacherIds')};data.assessment=combineAssessment(data);data.id||=`plan-${Date.now()}`;data.schoolId=schoolProfile().id;data.workflowStatus=data.workflowStatus||state.workspace.plans.find((item)=>item.id===data.id)?.workflowStatus||'draft';data.reviewerIds=state.workspace.professionalReviews.filter((item)=>item.planId===data.id).map((item)=>item.reviewerId);
+    const formData=new FormData(event.target);const data={...Object.fromEntries(formData),collaboratingTeacherIds:formData.getAll('collaboratingTeacherIds')};data.assessment=combineAssessment(data);if(data.level==='Ngày/hoạt động')Object.assign(data,combineLessonActivities(data));data.id||=`plan-${Date.now()}`;data.schoolId=schoolProfile().id;data.workflowStatus=data.workflowStatus||state.workspace.plans.find((item)=>item.id===data.id)?.workflowStatus||'draft';data.reviewerIds=state.workspace.professionalReviews.filter((item)=>item.planId===data.id).map((item)=>item.reviewerId);
     if(data.status==='Đã phê duyệt'&&!canApprovePlan(data.id,state.workspace.professionalReviews))return showToast('Không thể phê duyệt: còn yêu cầu chỉnh sửa chưa xử lý.');
     const result=savePlanWithVersion(state.workspace,data);const saved=result.saved;delete result.saved;state.workspace=result;saveWorkspace();renderPlanner(saved.id);showToast(`Đã lưu phiên bản ${saved.version} của kế hoạch.`);
   });
@@ -1282,6 +1312,7 @@ function bindEvents() {
     if (event.target.getAttribute('id') === 'collection-filter') { state.collection = event.target.value; state.page = 1; render(); }
     if (event.target.getAttribute('id') === 'program-age-filter') { state.programAgeFilter = event.target.value; render(); }
     if (event.target.getAttribute('id') === 'objectives-age-filter') { state.objectivesAgeGroup = event.target.value; try { state.objectives = await window.ctgdmnDesktop.listObjectives(state.objectivesAgeGroup); } catch (error) { showToast(error.message); } renderProgramBuilder(); }
+    if (event.target.name === 'lessonType' && event.target.closest('#plan-form')) { const isSteam = event.target.value === 'STEAM/Dự án'; document.querySelector('#lesson-normal-activities')?.classList.toggle('is-hidden', isSteam); document.querySelector('#lesson-steam-activities')?.classList.toggle('is-hidden', !isSteam); }
     if (event.target.getAttribute('id') === 'type-filter') {
       const type = event.target.value;
       if (type === 'all') setRoute('library', { keepFilters: true });
