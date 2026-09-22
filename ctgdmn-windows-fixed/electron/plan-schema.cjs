@@ -21,12 +21,22 @@ const NHA_TRE_DOMAINS = Object.freeze([
   'Giáo dục phát triển tình cảm, kỹ năng xã hội và thẩm mỹ',
 ]);
 
+// Riêng mẫu giáo lớn (5-6 tuổi) có thêm lĩnh vực "Tiếp cận với việc học" (bộ chỉ số phát triển trẻ 5 tuổi),
+// chỉ dùng cho ngân hàng mục tiêu — không ảnh hưởng tới 5 trường themeXxx cố định của kế hoạch chủ đề.
+const MAU_GIAO_LON_EXTRA_DOMAIN = 'Giáo dục phát triển tiếp cận với việc học';
+
 function isNhaTreAgeGroup(ageGroup = '') {
   return /tháng/i.test(String(ageGroup));
 }
 
+function isMauGiaoLonAgeGroup(ageGroup = '') {
+  return /5.{0,2}6.*tuổi/i.test(String(ageGroup));
+}
+
 function domainsForAgeGroup(ageGroup = '') {
-  return isNhaTreAgeGroup(ageGroup) ? NHA_TRE_DOMAINS : DEVELOPMENT_DOMAINS;
+  if (isNhaTreAgeGroup(ageGroup)) return NHA_TRE_DOMAINS;
+  if (isMauGiaoLonAgeGroup(ageGroup)) return Object.freeze([...DEVELOPMENT_DOMAINS, MAU_GIAO_LON_EXTRA_DOMAIN]);
+  return DEVELOPMENT_DOMAINS;
 }
 
 const WEEK_DAYS = Object.freeze([
@@ -256,11 +266,13 @@ function rowsToFormFields(planType, rows = []) {
 module.exports = {
   DEVELOPMENT_DOMAINS,
   NHA_TRE_DOMAINS,
+  MAU_GIAO_LON_EXTRA_DOMAIN,
   PLAN_RESPONSE_SCHEMA,
   PLAN_TYPES,
   WEEK_DAYS,
   domainsForAgeGroup,
   isNhaTreAgeGroup,
+  isMauGiaoLonAgeGroup,
   normalizePlanType,
   parseAnnualRows,
   parsePipeRows,

@@ -71,7 +71,13 @@ const NHA_TRE_DOMAINS = [
   'Giáo dục phát triển ngôn ngữ',
   'Giáo dục phát triển tình cảm, kỹ năng xã hội và thẩm mỹ',
 ];
-function domainsForAgeGroup(ageGroup = '') { return /tháng/i.test(ageGroup) ? NHA_TRE_DOMAINS : DEVELOPMENT_DOMAINS; }
+const MAU_GIAO_LON_EXTRA_DOMAIN = 'Giáo dục phát triển tiếp cận với việc học';
+function isMauGiaoLonAgeGroup(ageGroup = '') { return /5.{0,2}6.*tuổi/i.test(String(ageGroup)); }
+function domainsForAgeGroup(ageGroup = '') {
+  if (/tháng/i.test(ageGroup)) return NHA_TRE_DOMAINS;
+  if (isMauGiaoLonAgeGroup(ageGroup)) return [...DEVELOPMENT_DOMAINS, MAU_GIAO_LON_EXTRA_DOMAIN];
+  return DEVELOPMENT_DOMAINS;
+}
 // Lịch lĩnh vực cố định theo thứ trong tuần — cố định theo 1 trong 3 mẫu đã khảo sát, chọn theo độ tuổi của lớp (không cho tùy chỉnh).
 const WEEKDAY_DOMAIN_SCHEDULES = {
   nhaTre: [['Thứ hai', 'Thể chất'], ['Thứ ba', 'Nhận thức'], ['Thứ tư', 'TCXH-TM (âm nhạc)'], ['Thứ năm', 'Ngôn ngữ'], ['Thứ sáu', 'TCXH-TM (tạo hình)']],
@@ -115,7 +121,7 @@ function openObjectivePicker() {
   const groups = domainsForAgeGroup(ageGroup).map((domain) => ({ domain, items: items.filter((o) => o.domain === domain) })).filter((g) => g.items.length);
   const body = groups.length ? groups.map((g) => {
     const suggested = domainMatches(g.domain, lessonDomain);
-    return `<section class="objective-picker-group${suggested ? ' is-suggested' : ''}"><h4>${escapeHtml(g.domain)}${suggested ? ' <span class="chip teal">Gợi ý</span>' : ''}</h4>${g.items.map((o, index) => `<label class="objective-picker-item"><span class="objective-picker-index">${index + 1}</span><span class="objective-picker-text"><b>${escapeHtml(o.code)}</b> — ${escapeHtml(o.description || '')}</span><input type="checkbox" value="${escapeHtml(o.code)}" ${selected.has(o.code) ? 'checked' : ''}></label>`).join('')}</section>`;
+    return `<section class="objective-picker-group${suggested ? ' is-suggested' : ''}"><h4>${escapeHtml(g.domain)}${suggested ? ' <span class="chip teal">Gợi ý</span>' : ''}</h4>${g.items.map((o, index) => `<label class="objective-picker-item"><span class="objective-picker-index">${index + 1}</span><span class="objective-picker-text">${o.scope === 'system' ? '<span class="chip teal">Chung</span> ' : ''}<b>${escapeHtml(o.code)}</b> — ${escapeHtml(o.description || '')}</span><input type="checkbox" value="${escapeHtml(o.code)}" ${selected.has(o.code) ? 'checked' : ''}></label>`).join('')}</section>`;
   }).join('') : `<div class="empty-state">Chưa có mục tiêu nào cho ${escapeHtml(ageGroup || 'độ tuổi này')} trong ngân hàng mục tiêu. Hãy thêm ở mục "Xây dựng chương trình".</div>`;
   openDrawerPanel(`<header class="drawer-header"><div><span class="chip teal">NGÂN HÀNG MỤC TIÊU</span><h2>Chọn mục tiêu (MT) cho giáo án</h2></div><button class="drawer-close" data-close-drawer>×</button></header><div class="drawer-body"><p class="drawer-intro">Mục tiêu cùng lĩnh vực với ô "Lĩnh vực" của giáo án được đánh dấu Gợi ý. Có thể chọn nhiều mục tiêu.</p><div id="objective-picker-body" class="objective-picker-dialog">${body}</div><div class="objective-picker-footer button-row"><button type="button" class="primary-button" data-save-objective-picker>Lưu</button><button type="button" class="secondary-button" data-close-drawer>Thoát</button></div></div>`);
 }
@@ -337,11 +343,15 @@ function objectivesBankPanel() {
   const ageGroup = state.objectivesAgeGroup || state.data.ageGroups[0]?.label || '';
   const domains = domainsForAgeGroup(ageGroup);
   return `<section class="panel">
-    <div class="panel-title-row"><div><h2>Tầng 1 · Ngân hàng mục tiêu năm học</h2><p class="panel-subtitle">Mã mục tiêu (MT) do chính cô tự xây theo lớp mình — dùng xuyên suốt kế hoạch chủ đề, kế hoạch tuần và giáo án. Không phải nội dung quy định sẵn của chương trình khung.</p></div><button class="primary-button" data-add-objective>Thêm mục tiêu</button></div>
+    <div class="panel-title-row"><div><h2>Tầng 1 · Ngân hàng mục tiêu năm học</h2><p class="panel-subtitle">Gồm bộ mục tiêu (MT) chuẩn "Dùng chung toàn trường" (theo Kết quả mong đợi chương trình GDMN) và các MT do từng cô tự thêm riêng cho lớp mình.${canManageSystemObjectives() ? '' : ' Chỉ hiệu trưởng/quản trị mới sửa được bộ MT dùng chung.'}</p></div><button class="primary-button" data-add-objective>Thêm mục tiêu</button></div>
     <div class="toolbar"><label class="field"><span>Độ tuổi</span><select id="objectives-age-filter" class="select">${state.data.ageGroups.map((age) => `<option value="${escapeHtml(age.label)}" ${ageGroup === age.label ? 'selected' : ''}>${escapeHtml(age.label)}</option>`).join('')}</select></label><div class="result-count">${state.objectives.length} mục tiêu</div></div>
     ${domains.map((domain) => {
       const items = state.objectives.filter((item) => item.domain === domain);
-      return `<div class="objective-domain"><h3>${escapeHtml(domain)}</h3><div class="document-list">${items.map((item) => `<article class="document-card"><div class="doc-mark">${escapeHtml(item.code)}</div><div><h3>${escapeHtml(item.description)}</h3>${item.content ? `<p>${escapeHtml(item.content)}</p>` : ''}${item.appliesTo ? `<p class="panel-subtitle">Áp dụng: ${escapeHtml(item.appliesTo)}</p>` : ''}</div><div class="doc-actions"><button class="small-button" data-edit-objective="${item.id}">Sửa</button><button class="small-button" data-delete-objective="${item.id}">Xóa</button></div></article>`).join('') || '<div class="empty-state">Chưa có mục tiêu ở lĩnh vực này.</div>'}</div></div>`;
+      return `<div class="objective-domain"><h3>${escapeHtml(domain)}</h3><div class="document-list">${items.map((item) => {
+        const isSystem = item.scope === 'system';
+        const canEdit = !isSystem || canManageSystemObjectives();
+        return `<article class="document-card"><div class="doc-mark">${escapeHtml(item.code)}</div><div><h3>${isSystem ? '<span class="chip teal">Dùng chung</span> ' : ''}${escapeHtml(item.description)}</h3>${item.content ? `<p>${escapeHtml(item.content)}</p>` : ''}${item.appliesTo ? `<p class="panel-subtitle">Áp dụng: ${escapeHtml(item.appliesTo)}</p>` : ''}</div><div class="doc-actions">${canEdit ? `<button class="small-button" data-edit-objective="${item.id}">Sửa</button><button class="small-button" data-delete-objective="${item.id}">Xóa</button>` : ''}</div></article>`;
+      }).join('') || '<div class="empty-state">Chưa có mục tiêu ở lĩnh vực này.</div>'}</div></div>`;
     }).join('')}
   </section>`;
 }
@@ -353,6 +363,7 @@ function openObjectiveEditor(objectiveId = '') {
     <input type="hidden" name="id" value="${escapeHtml(item.id || '')}">
     <div class="form-grid"><label class="field"><span>Độ tuổi *</span><select class="select" required name="ageGroup">${state.data.ageGroups.map((age) => `<option value="${escapeHtml(age.label)}" ${item.ageGroup === age.label ? 'selected' : ''}>${escapeHtml(age.label)}</option>`).join('')}</select></label><label class="field"><span>Mã MT *</span><input class="input" required name="code" value="${escapeHtml(item.code || '')}" placeholder="MT1"></label></div>
     <label class="field"><span>Lĩnh vực phát triển *</span><select class="select" required name="domain">${domains.map((domain) => `<option ${item.domain === domain ? 'selected' : ''}>${escapeHtml(domain)}</option>`).join('')}</select></label>
+    ${canManageSystemObjectives() ? `<label class="field"><span>Phạm vi</span><select class="select" name="scope"><option value="custom" ${(item.scope || 'custom') === 'custom' ? 'selected' : ''}>Riêng của tôi</option><option value="system" ${item.scope === 'system' ? 'selected' : ''}>Dùng chung toàn trường</option></select></label>` : ''}
     <label class="field"><span>Mục tiêu (trẻ làm được gì) *</span><textarea required name="description">${escapeHtml(item.description || '')}</textarea></label>
     <label class="field"><span>Nội dung giáo dục/hoạt động gợi ý</span><textarea name="content">${escapeHtml(item.content || '')}</textarea></label>
     <label class="field"><span>Chủ đề áp dụng</span><input class="input" name="appliesTo" value="${escapeHtml(item.appliesTo || '')}" placeholder="Các chủ đề, hoặc tên chủ đề cụ thể"></label>
@@ -441,6 +452,7 @@ function staffName(id, fallback = '') { return state.workspace.staff.find((item)
 function className(id, fallback = '') { return state.workspace.classes.find((item) => item.id === id)?.name || fallback; }
 function activeStaff(role = '') { return state.workspace.staff.filter((item) => item.active !== false && (!role || item.roles.includes(role))); }
 function hasRole(role){return (state.currentUser?.roles||[]).includes(role);}
+function canManageSystemObjectives(){return hasRole('system_admin')||hasRole('principal');}
 
 function settingsTabs() {
   const tabs=[['school','Thông tin nhà trường'],['classes','Danh mục lớp'],['staff','Giáo viên và cán bộ'],['signatures','Chữ ký và người ký'],['templates','Mẫu văn bản'],['ai','Kết nối GenAI']];if(hasRole('system_admin'))tabs.push(['accounts','Tài khoản và hệ thống']);
