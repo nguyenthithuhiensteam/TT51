@@ -135,6 +135,9 @@ app.post('/api/children/:childId/deactivate', handler((req) => repository.deacti
 app.get('/api/assessments', handler((req) => repository.listChildAssessments(currentUser(tokenFromRequest(req)), req.query.childId || '')));
 app.post('/api/assessments', handler((req) => repository.upsertChildAssessment(currentUser(tokenFromRequest(req)), req.body)));
 app.post('/api/assessments/:assessmentId/delete', handler((req) => repository.deleteChildAssessment(currentUser(tokenFromRequest(req)), req.params.assessmentId)));
+app.get('/api/objectives', handler((req) => repository.listObjectives(currentUser(tokenFromRequest(req)), req.query.ageGroup || '')));
+app.post('/api/objectives', handler((req) => repository.upsertObjective(currentUser(tokenFromRequest(req)), req.body)));
+app.post('/api/objectives/:objectiveId/deactivate', handler((req) => repository.deactivateObjective(currentUser(tokenFromRequest(req)), req.params.objectiveId)));
 
 // ---- Kho dữ liệu / kế hoạch ----
 app.post('/api/repository/bootstrap', handler((req) => { currentUser(tokenFromRequest(req)); return repository.bootstrapLegacy(req.body.legacy); }));

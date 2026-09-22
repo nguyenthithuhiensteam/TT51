@@ -13,6 +13,22 @@ const DEVELOPMENT_DOMAINS = Object.freeze([
   'Giáo dục phát triển thẩm mỹ',
 ]);
 
+// Nhóm nhà trẻ (18-36 tháng) dùng khung 4 lĩnh vực (gộp TCXH và thẩm mỹ), khác mẫu giáo (5 lĩnh vực).
+const NHA_TRE_DOMAINS = Object.freeze([
+  'Giáo dục phát triển thể chất',
+  'Giáo dục phát triển nhận thức',
+  'Giáo dục phát triển ngôn ngữ',
+  'Giáo dục phát triển tình cảm, kỹ năng xã hội và thẩm mỹ',
+]);
+
+function isNhaTreAgeGroup(ageGroup = '') {
+  return /tháng/i.test(String(ageGroup));
+}
+
+function domainsForAgeGroup(ageGroup = '') {
+  return isNhaTreAgeGroup(ageGroup) ? NHA_TRE_DOMAINS : DEVELOPMENT_DOMAINS;
+}
+
 const WEEK_DAYS = Object.freeze([
   ['monday', 'Thứ hai'],
   ['tuesday', 'Thứ ba'],
@@ -239,9 +255,12 @@ function rowsToFormFields(planType, rows = []) {
 
 module.exports = {
   DEVELOPMENT_DOMAINS,
+  NHA_TRE_DOMAINS,
   PLAN_RESPONSE_SCHEMA,
   PLAN_TYPES,
   WEEK_DAYS,
+  domainsForAgeGroup,
+  isNhaTreAgeGroup,
   normalizePlanType,
   parseAnnualRows,
   parsePipeRows,

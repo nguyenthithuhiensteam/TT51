@@ -255,6 +255,9 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .checklist { display: grid; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
 .checklist li { position: relative; padding-left: 22px; font-size: 12.5px; color: #795722; line-height: 1.5; }
 .checklist li::before { content: "✓"; position: absolute; left: 0; top: 0; font-weight: 700; color: #0f766e; }
+.objective-domain { margin-top: 18px; }
+.objective-domain:first-of-type { margin-top: 4px; }
+.objective-domain h3 { margin: 0 0 10px; font-size: 13px; color: var(--teal-700); }
 
 .drawer-backdrop { position: fixed; inset: 0; z-index: 20; background: rgba(3,28,32,.3); backdrop-filter: blur(1px); }
 .document-drawer { position: fixed; top: 0; right: 0; bottom: 0; z-index: 21; width: min(720px, 62vw); overflow: auto; background: white; box-shadow: -18px 0 45px rgba(9,49,55,.18); transform: translateX(102%); transition: transform .2s ease; }

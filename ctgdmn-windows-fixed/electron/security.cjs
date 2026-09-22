@@ -3,11 +3,11 @@ const crypto = require('crypto');
 const ROLES = Object.freeze({ ADMIN:'system_admin', PRINCIPAL:'principal', VICE:'vice_principal', LEAD:'team_lead', TEACHER:'teacher', VIEWER:'viewer' });
 const ROLE_LABELS = Object.freeze({ system_admin:'Quản trị hệ thống', principal:'Hiệu trưởng/người phê duyệt', vice_principal:'Phó hiệu trưởng phụ trách chuyên môn', team_lead:'Tổ trưởng chuyên môn', teacher:'Giáo viên', viewer:'Người xem' });
 const PERMISSIONS = Object.freeze({
-  system_admin:['accounts.manage','school.configure','backup.manage','video.manage','audit.view','data.manage','data.read','assessment.manage'],
-  principal:['plan.read','plan.review','plan.approve','report.read','signature.use','document.export','data.read','assessment.manage'],
-  vice_principal:['plan.read','plan.review','plan.submit_approval','plan.approve_configured','report.read','document.export','data.read','assessment.manage'],
-  team_lead:['plan.read','plan.review','plan.request_changes','plan.submit_professional','data.read','assessment.manage'],
-  teacher:['plan.read','plan.create','plan.edit','plan.submit_team','review.respond','data.read','document.export_own','assessment.manage'],
+  system_admin:['accounts.manage','school.configure','backup.manage','video.manage','audit.view','data.manage','data.read','assessment.manage','objectives.manage'],
+  principal:['plan.read','plan.review','plan.approve','report.read','signature.use','document.export','data.read','assessment.manage','objectives.manage'],
+  vice_principal:['plan.read','plan.review','plan.submit_approval','plan.approve_configured','report.read','document.export','data.read','assessment.manage','objectives.manage'],
+  team_lead:['plan.read','plan.review','plan.request_changes','plan.submit_professional','data.read','assessment.manage','objectives.manage'],
+  teacher:['plan.read','plan.create','plan.edit','plan.submit_team','review.respond','data.read','document.export_own','assessment.manage','objectives.manage'],
   viewer:['plan.read_shared','data.read_shared','video.view'],
 });
 

@@ -100,6 +100,9 @@
     listChildAssessments: (childId) => api('GET', `/api/assessments${childId ? `?childId=${encodeURIComponent(childId)}` : ''}`),
     upsertChildAssessment: (data) => api('POST', '/api/assessments', data),
     deleteChildAssessment: (assessmentId) => api('POST', `/api/assessments/${encodeURIComponent(assessmentId)}/delete`),
+    listObjectives: (ageGroup) => api('GET', `/api/objectives${ageGroup ? `?ageGroup=${encodeURIComponent(ageGroup)}` : ''}`),
+    upsertObjective: (data) => api('POST', '/api/objectives', data),
+    deactivateObjective: (objectiveId) => api('POST', `/api/objectives/${encodeURIComponent(objectiveId)}/deactivate`),
 
     bootstrapRepository: (legacy) => api('POST', '/api/repository/bootstrap', { legacy }),
     getRepositoryState: () => api('GET', '/api/repository/state'),

@@ -1,7 +1,7 @@
 const { DatabaseSync } = require('node:sqlite');
 const crypto=require('crypto');
 const { hashPassword,verifyPassword,authorize,sanitizeAuditDetails,scopeAllows,transitionPlan,ROLES }=require('./security.cjs');
-const { DEVELOPMENT_DOMAINS }=require('./plan-schema.cjs');
+const { DEVELOPMENT_DOMAINS,domainsForAgeGroup }=require('./plan-schema.cjs');
 const iso=()=>new Date().toISOString();
 const ASSESSMENT_LEVELS=['Đạt','Chưa đạt','Cần hỗ trợ thêm'];
 
@@ -16,7 +16,10 @@ class Repository {
     CREATE INDEX IF NOT EXISTS idx_children_owner ON children(owner_id);
     CREATE TABLE IF NOT EXISTS child_assessments(id TEXT PRIMARY KEY,owner_id TEXT NOT NULL,child_id TEXT NOT NULL,plan_id TEXT,domain TEXT NOT NULL,period TEXT,level TEXT NOT NULL,observation TEXT,evidence TEXT,adjustment TEXT,created_at TEXT NOT NULL,created_by TEXT);
     CREATE INDEX IF NOT EXISTS idx_child_assessments_owner ON child_assessments(owner_id);
-    CREATE INDEX IF NOT EXISTS idx_child_assessments_child ON child_assessments(child_id);`);this.seedBuiltinResources();}
+    CREATE INDEX IF NOT EXISTS idx_child_assessments_child ON child_assessments(child_id);
+    CREATE TABLE IF NOT EXISTS objectives(id TEXT PRIMARY KEY,owner_id TEXT NOT NULL,age_group TEXT NOT NULL,code TEXT NOT NULL,domain TEXT NOT NULL,description TEXT NOT NULL,content TEXT,applies_to TEXT,active INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL,updated_at TEXT NOT NULL);
+    CREATE INDEX IF NOT EXISTS idx_objectives_owner ON objectives(owner_id,age_group);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_objectives_owner_code ON objectives(owner_id,age_group,code);`);this.seedBuiltinResources();}
   seedBuiltinResources(){const version=Number(this.getJson('builtinResourceVersion',0));if(version>=1)return;this.db.prepare('INSERT OR IGNORE INTO videos(id,title,description,category,audience_json,thumbnail,source_type,url,local_path,duration,sort_order,enabled,context_key,updated_at,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)').run('builtin-video-ctgdmn-guide','Video hướng dẫn sử dụng Trường Mầm non Số','Video hướng dẫn trực tuyến dành cho giáo viên và cán bộ quản lý khi bắt đầu sử dụng ứng dụng.','Bắt đầu sử dụng','[]','','online','https://www.youtube.com/watch?v=P5DgJHPLkDk',null,'',10,1,'',iso(),'system');this.setJson('builtinResourceVersion',1);}
   close(){this.db.close();}
   hasUsers(){return this.db.prepare('SELECT COUNT(*) AS n FROM users').get().n>0;}
@@ -154,6 +157,50 @@ class Repository {
     if(!existing||existing.owner_id!==actor.id)throw new Error('Không tìm thấy bản ghi đánh giá hoặc bạn không có quyền xóa.');
     this.db.prepare('DELETE FROM child_assessments WHERE id=?').run(assessmentId);
     this.audit(actor.id,'child.assessment_delete','child_assessment',assessmentId);
+    return {ok:true};
+  }
+  rowObjective(row){return{id:row.id,ageGroup:row.age_group,code:row.code,domain:row.domain,description:row.description,content:row.content,appliesTo:row.applies_to,active:Boolean(row.active),createdAt:row.created_at,updatedAt:row.updated_at};}
+  listObjectives(actor,ageGroup=''){
+    authorize(actor,'objectives.manage');
+    if(ageGroup)return this.db.prepare('SELECT * FROM objectives WHERE owner_id=? AND age_group=? AND active=1 ORDER BY domain,LENGTH(code),code').all(actor.id,ageGroup).map((row)=>this.rowObjective(row));
+    return this.db.prepare('SELECT * FROM objectives WHERE owner_id=? AND active=1 ORDER BY age_group,domain,LENGTH(code),code').all(actor.id).map((row)=>this.rowObjective(row));
+  }
+  upsertObjective(actor,data){
+    authorize(actor,'objectives.manage');
+    const ageGroup=String(data.ageGroup||'').trim();
+    if(!ageGroup)throw new Error('Nhóm độ tuổi là bắt buộc.');
+    const code=String(data.code||'').trim();
+    if(!code)throw new Error('Mã mục tiêu (MT) là bắt buộc.');
+    const domain=String(data.domain||'').trim();
+    if(!domainsForAgeGroup(ageGroup).includes(domain))throw new Error('Lĩnh vực phát triển không hợp lệ với nhóm độ tuổi đã chọn.');
+    const description=String(data.description||'').trim();
+    if(!description)throw new Error('Nội dung mục tiêu là bắt buộc.');
+    const content=String(data.content||'').trim();
+    const appliesTo=String(data.appliesTo||'').trim();
+    const id=String(data.id||'').trim();
+    const now=iso();
+    if(id){
+      const existing=this.db.prepare('SELECT owner_id FROM objectives WHERE id=?').get(id);
+      if(!existing||existing.owner_id!==actor.id)throw new Error('Không tìm thấy mục tiêu hoặc bạn không có quyền sửa.');
+      try{
+        this.db.prepare('UPDATE objectives SET age_group=?,code=?,domain=?,description=?,content=?,applies_to=?,updated_at=? WHERE id=?').run(ageGroup,code,domain,description,content,appliesTo,now,id);
+      }catch(error){throw new Error(/UNIQUE/.test(error.message)?`Mã ${code} đã tồn tại trong nhóm tuổi này.`:error.message);}
+      this.audit(actor.id,'objective.update','objective',id);
+      return this.rowObjective(this.db.prepare('SELECT * FROM objectives WHERE id=?').get(id));
+    }
+    const newId=`objective-${crypto.randomUUID()}`;
+    try{
+      this.db.prepare('INSERT INTO objectives(id,owner_id,age_group,code,domain,description,content,applies_to,active,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,1,?,?)').run(newId,actor.id,ageGroup,code,domain,description,content,appliesTo,now,now);
+    }catch(error){throw new Error(/UNIQUE/.test(error.message)?`Mã ${code} đã tồn tại trong nhóm tuổi này.`:error.message);}
+    this.audit(actor.id,'objective.create','objective',newId);
+    return this.rowObjective(this.db.prepare('SELECT * FROM objectives WHERE id=?').get(newId));
+  }
+  deactivateObjective(actor,objectiveId){
+    authorize(actor,'objectives.manage');
+    const existing=this.db.prepare('SELECT owner_id FROM objectives WHERE id=?').get(objectiveId);
+    if(!existing||existing.owner_id!==actor.id)throw new Error('Không tìm thấy mục tiêu hoặc bạn không có quyền xóa.');
+    this.db.prepare('UPDATE objectives SET active=0,updated_at=? WHERE id=?').run(iso(),objectiveId);
+    this.audit(actor.id,'objective.deactivate','objective',objectiveId);
     return {ok:true};
   }
 }

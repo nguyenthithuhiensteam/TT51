@@ -53,6 +53,8 @@ const state = {
   children: [],
   selectedChildId: '',
   childAssessments: [],
+  objectives: [],
+  objectivesAgeGroup: '',
 };
 
 const DEVELOPMENT_DOMAINS = [
@@ -62,6 +64,14 @@ const DEVELOPMENT_DOMAINS = [
   'Giáo dục phát triển nhận thức',
   'Giáo dục phát triển thẩm mỹ',
 ];
+// Nhóm nhà trẻ (18-36 tháng) dùng khung 4 lĩnh vực (gộp TCXH và thẩm mỹ), khác mẫu giáo.
+const NHA_TRE_DOMAINS = [
+  'Giáo dục phát triển thể chất',
+  'Giáo dục phát triển nhận thức',
+  'Giáo dục phát triển ngôn ngữ',
+  'Giáo dục phát triển tình cảm, kỹ năng xã hội và thẩm mỹ',
+];
+function domainsForAgeGroup(ageGroup = '') { return /tháng/i.test(ageGroup) ? NHA_TRE_DOMAINS : DEVELOPMENT_DOMAINS; }
 const ASSESSMENT_LEVELS = ['Đạt', 'Chưa đạt', 'Cần hỗ trợ thêm'];
 
 function syncPublicBranding(profile = {}) {
@@ -276,12 +286,41 @@ function themeToPlanSeed(ageGroup, collection) {
   return { ageGroup, level, title: collection, weeklyTheme: level === 'Tuần' ? collection : '', schoolYear: schoolProfile().schoolYear };
 }
 
+function objectivesBankPanel() {
+  const ageGroup = state.objectivesAgeGroup || state.data.ageGroups[0]?.label || '';
+  const domains = domainsForAgeGroup(ageGroup);
+  return `<section class="panel">
+    <div class="panel-title-row"><div><h2>Tầng 1 · Ngân hàng mục tiêu năm học</h2><p class="panel-subtitle">Mã mục tiêu (MT) do chính cô tự xây theo lớp mình — dùng xuyên suốt kế hoạch chủ đề, kế hoạch tuần và giáo án. Không phải nội dung quy định sẵn của chương trình khung.</p></div><button class="primary-button" data-add-objective>Thêm mục tiêu</button></div>
+    <div class="toolbar"><label class="field"><span>Độ tuổi</span><select id="objectives-age-filter" class="select">${state.data.ageGroups.map((age) => `<option value="${escapeHtml(age.label)}" ${ageGroup === age.label ? 'selected' : ''}>${escapeHtml(age.label)}</option>`).join('')}</select></label><div class="result-count">${state.objectives.length} mục tiêu</div></div>
+    ${domains.map((domain) => {
+      const items = state.objectives.filter((item) => item.domain === domain);
+      return `<div class="objective-domain"><h3>${escapeHtml(domain)}</h3><div class="document-list">${items.map((item) => `<article class="document-card"><div class="doc-mark">${escapeHtml(item.code)}</div><div><h3>${escapeHtml(item.description)}</h3>${item.content ? `<p>${escapeHtml(item.content)}</p>` : ''}${item.appliesTo ? `<p class="panel-subtitle">Áp dụng: ${escapeHtml(item.appliesTo)}</p>` : ''}</div><div class="doc-actions"><button class="small-button" data-edit-objective="${item.id}">Sửa</button><button class="small-button" data-delete-objective="${item.id}">Xóa</button></div></article>`).join('') || '<div class="empty-state">Chưa có mục tiêu ở lĩnh vực này.</div>'}</div></div>`;
+    }).join('')}
+  </section>`;
+}
+
+function openObjectiveEditor(objectiveId = '') {
+  const item = state.objectives.find((entry) => entry.id === objectiveId) || { ageGroup: state.objectivesAgeGroup || state.data.ageGroups[0]?.label || '' };
+  const domains = domainsForAgeGroup(item.ageGroup);
+  els.drawerContent.innerHTML = `<header class="drawer-header"><div><span class="chip teal">NGÂN HÀNG MỤC TIÊU</span><h2>${objectiveId ? 'Sửa mục tiêu' : 'Thêm mục tiêu'}</h2></div><button class="drawer-close" data-close-drawer>×</button></header><div class="drawer-body"><form id="objective-form" class="plan-form">
+    <input type="hidden" name="id" value="${escapeHtml(item.id || '')}">
+    <div class="form-grid"><label class="field"><span>Độ tuổi *</span><select class="select" required name="ageGroup">${state.data.ageGroups.map((age) => `<option value="${escapeHtml(age.label)}" ${item.ageGroup === age.label ? 'selected' : ''}>${escapeHtml(age.label)}</option>`).join('')}</select></label><label class="field"><span>Mã MT *</span><input class="input" required name="code" value="${escapeHtml(item.code || '')}" placeholder="MT1"></label></div>
+    <label class="field"><span>Lĩnh vực phát triển *</span><select class="select" required name="domain">${domains.map((domain) => `<option ${item.domain === domain ? 'selected' : ''}>${escapeHtml(domain)}</option>`).join('')}</select></label>
+    <label class="field"><span>Mục tiêu (trẻ làm được gì) *</span><textarea required name="description">${escapeHtml(item.description || '')}</textarea></label>
+    <label class="field"><span>Nội dung giáo dục/hoạt động gợi ý</span><textarea name="content">${escapeHtml(item.content || '')}</textarea></label>
+    <label class="field"><span>Chủ đề áp dụng</span><input class="input" name="appliesTo" value="${escapeHtml(item.appliesTo || '')}" placeholder="Các chủ đề, hoặc tên chủ đề cụ thể"></label>
+    <button class="primary-button" type="submit">Lưu mục tiêu</button>
+  </form></div>`;
+  els.drawerBackdrop.classList.remove('is-hidden'); els.drawer.classList.add('is-open'); els.drawer.setAttribute('aria-hidden', 'false');
+}
+
 function renderProgramBuilder() {
   const themes = programThemes();
   const ageFilter = state.programAgeFilter || 'all';
   const q = normalizeText(state.query);
   const visible = themes.filter((theme) => (ageFilter === 'all' || theme.ageGroup === ageFilter) && (!q || normalizeText(theme.collection).includes(q)));
   els.main.innerHTML = `${pageHead('Giai đoạn 1', 'Ngân hàng chủ đề bài soạn', 'Chủ đề được tổng hợp trực tiếp từ 246 tài liệu nguồn đã lập chỉ mục theo từng độ tuổi — không tự thêm nội dung ngoài nguồn. Chọn một chủ đề để xem tài liệu gốc hoặc bắt đầu soạn kế hoạch mới.')}
+    ${objectivesBankPanel()}
     <section class="panel review-principles"><h2>Nguyên tắc rà soát trước khi dùng chủ đề</h2><ul class="checklist"><li>Phù hợp độ tuổi và khả năng của trẻ trong lớp.</li><li>An toàn về thể chất và tâm lý khi tổ chức hoạt động.</li><li>Khả thi với điều kiện thực tế của lớp/trường (thời gian, học liệu, nhân lực).</li><li>Không dạy trước nội dung của chương trình tiểu học.</li></ul></section>
     <section class="toolbar"><label class="field"><span>Độ tuổi</span><select id="program-age-filter" class="select"><option value="all">Tất cả</option>${state.data.ageGroups.map((age) => `<option value="${escapeHtml(age.label)}" ${ageFilter === age.label ? 'selected' : ''}>${escapeHtml(age.label)}</option>`).join('')}</select></label><div class="result-count">${visible.length} chủ đề</div></section>
     <section class="document-list">${visible.map((theme) => `<article class="document-card"><div class="doc-mark">${escapeHtml(theme.ageGroup)}</div><div><h3>${escapeHtml(theme.collection)}</h3><p>${theme.documents} tài liệu nguồn • ${[...theme.types].map((type) => escapeHtml(type)).join(', ')}</p></div><div class="doc-actions">${theme.objectiveDocId ? `<button class="small-button" data-open-doc="${escapeHtml(theme.objectiveDocId)}">Xem mục tiêu chủ đề</button>` : ''}<button class="small-button" data-view-theme-docs="${escapeHtml(theme.ageGroup)}|||${escapeHtml(theme.collection)}">Xem tài liệu nguồn</button><button class="small-button" data-use-theme="${escapeHtml(theme.ageGroup)}|||${escapeHtml(theme.collection)}">Dùng để soạn kế hoạch</button></div></article>`).join('') || '<div class="empty-state">Không tìm thấy chủ đề phù hợp.</div>'}</section>`;
@@ -1107,6 +1146,7 @@ function bindEvents() {
     if (!button) return;
     const route = button.dataset.route;
     if (route === 'evaluation') { try { state.children = await window.ctgdmnDesktop.listChildren(); state.selectedChildId = ''; state.childAssessments = []; } catch (error) { showToast(error.message); } }
+    if (route === 'program-builder') { state.objectivesAgeGroup = state.objectivesAgeGroup || state.data.ageGroups[0]?.label || ''; try { state.objectives = await window.ctgdmnDesktop.listObjectives(state.objectivesAgeGroup); } catch (error) { showToast(error.message); } }
     setRoute(route);
   });
   els.main.addEventListener('click', async (event) => {
@@ -1130,6 +1170,11 @@ function bindEvents() {
     const useTheme = event.target.closest('[data-use-theme]');
     if (useTheme) { const [ageGroup, collection] = useTheme.dataset.useTheme.split('|||'); state.draftPlanSeed = themeToPlanSeed(ageGroup, collection); showToast('Đã điền sẵn chủ đề vào kế hoạch mới.'); return setRoute('planner'); }
     if (event.target.closest('[data-add-child]')) return openChildEditor();
+    if (event.target.closest('[data-add-objective]')) return openObjectiveEditor();
+    const editObjective = event.target.closest('[data-edit-objective]');
+    if (editObjective) return openObjectiveEditor(editObjective.dataset.editObjective);
+    const deleteObjective = event.target.closest('[data-delete-objective]');
+    if (deleteObjective) { if (window.confirm('Xóa mục tiêu này khỏi ngân hàng? Các kế hoạch đã dùng mã này vẫn giữ nguyên nội dung đã lưu.')) { try { await window.ctgdmnDesktop.deactivateObjective(deleteObjective.dataset.deleteObjective); state.objectives = await window.ctgdmnDesktop.listObjectives(state.objectivesAgeGroup); renderProgramBuilder(); showToast('Đã xóa mục tiêu.'); } catch (error) { showToast(error.message); } } return; }
     if (event.target.closest('[data-pick-theme]')) return openThemePicker();
     const selectChild = event.target.closest('[data-select-child]');
     if (selectChild) { try { state.selectedChildId = selectChild.dataset.selectChild; state.childAssessments = await window.ctgdmnDesktop.listChildAssessments(state.selectedChildId); renderEvaluation(); } catch (error) { showToast(error.message); } return; }
@@ -1236,6 +1281,7 @@ function bindEvents() {
     if (event.target.getAttribute('id') === 'age-filter') { state.ageGroup = event.target.value; state.collection = 'all'; state.page = 1; render(); }
     if (event.target.getAttribute('id') === 'collection-filter') { state.collection = event.target.value; state.page = 1; render(); }
     if (event.target.getAttribute('id') === 'program-age-filter') { state.programAgeFilter = event.target.value; render(); }
+    if (event.target.getAttribute('id') === 'objectives-age-filter') { state.objectivesAgeGroup = event.target.value; try { state.objectives = await window.ctgdmnDesktop.listObjectives(state.objectivesAgeGroup); } catch (error) { showToast(error.message); } renderProgramBuilder(); }
     if (event.target.getAttribute('id') === 'type-filter') {
       const type = event.target.value;
       if (type === 'all') setRoute('library', { keepFilters: true });
@@ -1279,6 +1325,7 @@ function bindEvents() {
     if (event.target.getAttribute('id') === 'import-excel-file') { state.pendingImport.fileIndex = Number(event.target.value); state.pendingImport.sheetIndex = 0; renderImportPreview(); }
     if (event.target.getAttribute('id') === 'import-sheet') { state.pendingImport.sheetIndex = Number(event.target.value); renderImportPreview(); }
     if(event.target.getAttribute('id')==='signature-image-file'&&event.target.files?.[0]){readLocalImage(event.target.files[0],true).then((data)=>{state.pendingImageData=data;document.querySelector('#signature-image-preview').innerHTML=`<img src="${data}" alt="Bản xem trước chữ ký">`;showToast('Đã cắt vùng trắng và tạo bản xem trước.');}).catch((error)=>showToast(error.message));}
+    if(event.target.name==='ageGroup'&&event.target.closest('#objective-form')){const domainSelect=document.querySelector('#objective-form select[name="domain"]');if(domainSelect)domainSelect.innerHTML=domainsForAgeGroup(event.target.value).map((domain)=>`<option>${escapeHtml(domain)}</option>`).join('');}
   });
   els.drawer.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -1289,6 +1336,7 @@ function bindEvents() {
     if(event.target.getAttribute('id')==='class-form'){try{const data=Object.fromEntries(new FormData(event.target));state.workspace.classes=upsertClass(state.workspace.classes,data);saveWorkspace();closeDrawer();renderSettings();showToast('Đã lưu lớp.');}catch(error){showToast(error.message);}return;}
     if(event.target.getAttribute('id')==='staff-form'){try{const formData=new FormData(event.target);const data={...Object.fromEntries(formData),roles:formData.getAll('roles')};state.workspace.staff=upsertStaff(state.workspace.staff,data);saveWorkspace();closeDrawer();renderSettings();showToast('Đã lưu nhân sự.');}catch(error){showToast(error.message);}return;}
     if(event.target.getAttribute('id')==='child-form'){try{const data=Object.fromEntries(new FormData(event.target));await window.ctgdmnDesktop.upsertChild(data);state.children=await window.ctgdmnDesktop.listChildren();closeDrawer();renderEvaluation();showToast('Đã lưu hồ sơ trẻ.');}catch(error){showToast(error.message);}return;}
+    if(event.target.getAttribute('id')==='objective-form'){try{const data=Object.fromEntries(new FormData(event.target));await window.ctgdmnDesktop.upsertObjective(data);state.objectivesAgeGroup=data.ageGroup;state.objectives=await window.ctgdmnDesktop.listObjectives(state.objectivesAgeGroup);closeDrawer();renderProgramBuilder();showToast('Đã lưu mục tiêu.');}catch(error){showToast(error.message);}return;}
     if(event.target.getAttribute('id')==='signature-form'){const formData=new FormData(event.target);const data={...Object.fromEntries(formData),enabled:formData.has('enabled'),imageData:state.pendingImageData,updatedAt:new Date().toISOString()};data.id||=`signature-${Date.now()}`;const person=state.workspace.staff.find((item)=>item.id===data.staffId);if(!person)return showToast('Cần chọn người ký.');data.name=person.name;const index=state.workspace.signatures.findIndex((item)=>item.id===data.id);if(index>=0)state.workspace.signatures[index]={...state.workspace.signatures[index],...data};else state.workspace.signatures.push(data);state.pendingImageData='';saveWorkspace();closeDrawer();renderSettings();showToast('Đã lưu cấu hình chữ ký cục bộ.');return;}
     if(event.target.getAttribute('id')==='review-form'){try{const data=Object.fromEntries(new FormData(event.target));const person=state.workspace.staff.find((item)=>item.id===data.reviewerId);data.reviewerNameSnapshot=person?.name;data.reviewerRoleSnapshot=person?.title;state.workspace.professionalReviews=addProfessionalReview(state.workspace.professionalReviews,data);saveWorkspace();closeDrawer();renderPlanner(data.planId);showToast('Đã ghi nhận nhận xét; nội dung gốc sẽ được giữ nguyên.');}catch(error){showToast(error.message);}return;}
     if(event.target.getAttribute('id')==='resolve-review-form'){try{const data=Object.fromEntries(new FormData(event.target));state.workspace.professionalReviews=resolveProfessionalReview(state.workspace.professionalReviews,data.reviewId,data.response);saveWorkspace();closeDrawer();renderPlanner(data.planId);showToast('Đã ghi nhận phản hồi xử lý.');}catch(error){showToast(error.message);}return;}
