@@ -191,7 +191,39 @@ function weeklyContent(plan) {
       paragraph(plan.objectives, { after: 120 }),
     );
   }
+  const morning = [plan.weeklyWelcome, plan.weeklyCircleTime, plan.weeklyMorningExercise].filter(Boolean).join('\n');
+  if (morning) {
+    children.push(
+      paragraph('ĐÓN TRẺ, TRÒ CHUYỆN, THỂ DỤC SÁNG', { bold: true, size: 25, keepNext: true }),
+      paragraph(morning, { after: 120 }),
+    );
+  }
+  children.push(paragraph('HOẠT ĐỘNG HỌC', { bold: true, size: 25, keepNext: true, before: morning ? 120 : 0 }));
   children.push(table(rows, widths));
+  if (plan.weeklyCornerActivities) {
+    children.push(
+      paragraph('HOẠT ĐỘNG GÓC', { bold: true, size: 25, before: 160, keepNext: true }),
+      paragraph(plan.weeklyCornerActivities),
+    );
+  }
+  if (plan.weeklyOutdoorActivities) {
+    children.push(
+      paragraph('HOẠT ĐỘNG NGOÀI TRỜI', { bold: true, size: 25, before: 160, keepNext: true }),
+      paragraph(plan.weeklyOutdoorActivities),
+    );
+  }
+  if (plan.weeklyMealSleep) {
+    children.push(
+      paragraph('VỆ SINH, ĂN, NGỦ', { bold: true, size: 25, before: 160, keepNext: true }),
+      paragraph(plan.weeklyMealSleep),
+    );
+  }
+  if (plan.weeklyAfternoon) {
+    children.push(
+      paragraph('HOẠT ĐỘNG CHIỀU', { bold: true, size: 25, before: 160, keepNext: true }),
+      paragraph(plan.weeklyAfternoon),
+    );
+  }
   if (plan.assessment) {
     children.push(
       paragraph('ĐÁNH GIÁ VÀ ĐIỀU CHỈNH SAU TUẦN', { bold: true, size: 25, before: 160, keepNext: true }),

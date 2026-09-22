@@ -72,6 +72,21 @@ const NHA_TRE_DOMAINS = [
   'Giáo dục phát triển tình cảm, kỹ năng xã hội và thẩm mỹ',
 ];
 function domainsForAgeGroup(ageGroup = '') { return /tháng/i.test(ageGroup) ? NHA_TRE_DOMAINS : DEVELOPMENT_DOMAINS; }
+// Lịch lĩnh vực cố định theo thứ trong tuần — cố định theo 1 trong 3 mẫu đã khảo sát, chọn theo độ tuổi của lớp (không cho tùy chỉnh).
+const WEEKDAY_DOMAIN_SCHEDULES = {
+  nhaTre: [['Thứ hai', 'Thể chất'], ['Thứ ba', 'Nhận thức'], ['Thứ tư', 'TCXH-TM (âm nhạc)'], ['Thứ năm', 'Ngôn ngữ'], ['Thứ sáu', 'TCXH-TM (tạo hình)']],
+  mgBe: [['Thứ hai', 'Văn học'], ['Thứ ba', 'Toán'], ['Thứ tư', 'Thể dục'], ['Thứ năm', 'KPKH/KPXH'], ['Thứ sáu', 'Âm nhạc/Tạo hình/STEAM']],
+  mgLon: [['Thứ hai', 'KPKH/KPXH'], ['Thứ ba', 'Thơ/Truyện/LQCC'], ['Thứ tư', 'Toán'], ['Thứ năm', 'Thể dục'], ['Thứ sáu', 'Âm nhạc/Tạo hình/STEAM']],
+};
+function weekdayScheduleForAgeGroup(ageGroup = '') {
+  if (/tháng/i.test(ageGroup)) return WEEKDAY_DOMAIN_SCHEDULES.nhaTre;
+  if (/^3/.test(String(ageGroup).trim())) return WEEKDAY_DOMAIN_SCHEDULES.mgBe;
+  return WEEKDAY_DOMAIN_SCHEDULES.mgLon;
+}
+function weekdayScheduleNoticeText(ageGroup = '') {
+  const schedule = weekdayScheduleForAgeGroup(ageGroup).map(([day, domain]) => `${day} — ${domain}`).join(' · ');
+  return `Lịch lĩnh vực cố định theo thứ cho ${escapeHtml(ageGroup || 'độ tuổi đã chọn')}: ${schedule}. Mỗi dòng bên dưới: Nội dung hoạt động | Thứ hai | Thứ ba | Thứ tư | Thứ năm | Thứ sáu.`;
+}
 const ASSESSMENT_LEVELS = ['Đạt', 'Chưa đạt', 'Cần hỗ trợ thêm'];
 
 function syncPublicBranding(profile = {}) {
@@ -823,9 +838,15 @@ function planTemplate(plan = {}) {
       <label class="field"><span>Phát triển thẩm mỹ</span><textarea name="themeAesthetic">${escapeHtml(plan.themeAesthetic||'')}</textarea></label>
       <label class="field"><span>Rèn nền nếp và phối hợp cha mẹ trẻ</span><textarea name="themeFamilyWeeks" placeholder="Tuần 1 | Nội dung phối hợp...">${escapeHtml(plan.themeFamilyWeeks||'')}</textarea></label>
     </details>
-    <details class="template-editor" ${plan.level==='Tuần'?'open':''}><summary>Mẫu kế hoạch giáo dục tuần</summary><div class="notice">Mỗi dòng: Nội dung hoạt động | Thứ hai | Thứ ba | Thứ tư | Thứ năm | Thứ sáu.</div>
+    <details class="template-editor" ${plan.level==='Tuần'?'open':''}><summary>Mẫu kế hoạch giáo dục tuần</summary>
       <div class="form-grid"><label class="field"><span>Số tuần</span><input class="input" name="weekNumber" value="${escapeHtml(plan.weekNumber||'')}"></label><label class="field"><span>Chủ đề nhánh</span><input class="input" name="weeklyTheme" value="${escapeHtml(plan.weeklyTheme||'')}"></label></div>
-      <label class="field"><span>Lịch hoạt động trong tuần</span><textarea class="tall" name="weeklyRows" placeholder="Đón trẻ, chơi, thể dục sáng | ... | ... | ... | ... | ...">${escapeHtml(plan.weeklyRows||'')}</textarea></label>
+      <label class="field"><span>Đón trẻ</span><textarea name="weeklyWelcome">${escapeHtml(plan.weeklyWelcome||'')}</textarea></label>
+      <div class="form-grid"><label class="field"><span>Trò chuyện</span><textarea name="weeklyCircleTime">${escapeHtml(plan.weeklyCircleTime||'')}</textarea></label><label class="field"><span>Thể dục sáng</span><textarea name="weeklyMorningExercise">${escapeHtml(plan.weeklyMorningExercise||'')}</textarea></label></div>
+      <div id="weekday-schedule-notice" class="notice">${weekdayScheduleNoticeText(plan.ageGroup)}</div>
+      <label class="field"><span>Hoạt động học</span><textarea class="tall" name="weeklyRows" placeholder="Hoạt động học | ... | ... | ... | ... | ...">${escapeHtml(plan.weeklyRows||'')}</textarea></label>
+      <label class="field"><span>Hoạt động góc (5 góc cố định: Phân vai – Học tập – Xây dựng – Nghệ thuật – Thiên nhiên)</span><textarea name="weeklyCornerActivities">${escapeHtml(plan.weeklyCornerActivities||'')}</textarea></label>
+      <label class="field"><span>Hoạt động ngoài trời</span><textarea name="weeklyOutdoorActivities">${escapeHtml(plan.weeklyOutdoorActivities||'')}</textarea></label>
+      <div class="form-grid"><label class="field"><span>Vệ sinh, ăn, ngủ</span><textarea name="weeklyMealSleep">${escapeHtml(plan.weeklyMealSleep||'')}</textarea></label><label class="field"><span>Hoạt động chiều</span><textarea name="weeklyAfternoon">${escapeHtml(plan.weeklyAfternoon||'')}</textarea></label></div>
       <label class="field"><span>Ghi chú và điều chỉnh trong tuần</span><textarea name="weeklyNotes">${escapeHtml(plan.weeklyNotes||'')}</textarea></label>
     </details>
     <details class="template-editor" ${plan.level==='Ngày/hoạt động'?'open':''}><summary>Mẫu giáo án/hoạt động giáo dục ngày</summary>
@@ -1313,6 +1334,7 @@ function bindEvents() {
     if (event.target.getAttribute('id') === 'program-age-filter') { state.programAgeFilter = event.target.value; render(); }
     if (event.target.getAttribute('id') === 'objectives-age-filter') { state.objectivesAgeGroup = event.target.value; try { state.objectives = await window.ctgdmnDesktop.listObjectives(state.objectivesAgeGroup); } catch (error) { showToast(error.message); } renderProgramBuilder(); }
     if (event.target.name === 'lessonType' && event.target.closest('#plan-form')) { const isSteam = event.target.value === 'STEAM/Dự án'; document.querySelector('#lesson-normal-activities')?.classList.toggle('is-hidden', isSteam); document.querySelector('#lesson-steam-activities')?.classList.toggle('is-hidden', !isSteam); }
+    if (event.target.name === 'ageGroup' && event.target.closest('#plan-form')) { const notice = document.querySelector('#weekday-schedule-notice'); if (notice) notice.innerHTML = weekdayScheduleNoticeText(event.target.value); }
     if (event.target.getAttribute('id') === 'type-filter') {
       const type = event.target.value;
       if (type === 'all') setRoute('library', { keepFilters: true });

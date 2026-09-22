@@ -56,9 +56,10 @@ function theme(plan) {
 }
 
 function weekly(plan) {
-  return `${plan.objectives ? `<h3>MỤC TIÊU TRỌNG TÂM TRONG TUẦN</h3><p>${escapeHtml(plan.objectives)}</p>` : ''}<table><thead>${row(['Nội dung hoạt động', ...WEEK_DAYS.map(([, label]) => label)], 'th')}</thead><tbody>${
+  const morning = [plan.weeklyWelcome, plan.weeklyCircleTime, plan.weeklyMorningExercise].filter(Boolean).join('\n');
+  return `${plan.objectives ? `<h3>MỤC TIÊU TRỌNG TÂM TRONG TUẦN</h3><p>${escapeHtml(plan.objectives)}</p>` : ''}${morning ? `<h3>ĐÓN TRẺ, TRÒ CHUYỆN, THỂ DỤC SÁNG</h3><p>${escapeHtml(morning)}</p>` : ''}<h3>HOẠT ĐỘNG HỌC</h3><table><thead>${row(['Nội dung hoạt động', ...WEEK_DAYS.map(([, label]) => label)], 'th')}</thead><tbody>${
     parseWeeklyRows(plan).map((item) => row([item.activity, ...WEEK_DAYS.map(([key]) => item[key])])).join('')
-  }</tbody></table>${plan.assessment ? `<h3>ĐÁNH GIÁ VÀ ĐIỀU CHỈNH SAU TUẦN</h3><p>${escapeHtml(plan.assessment)}</p>` : ''}${plan.weeklyNotes ? `<h3>GHI CHÚ VÀ ĐIỀU CHỈNH TRONG TUẦN</h3><p>${escapeHtml(plan.weeklyNotes)}</p>` : ''}`;
+  }</tbody></table>${plan.weeklyCornerActivities ? `<h3>HOẠT ĐỘNG GÓC</h3><p>${escapeHtml(plan.weeklyCornerActivities)}</p>` : ''}${plan.weeklyOutdoorActivities ? `<h3>HOẠT ĐỘNG NGOÀI TRỜI</h3><p>${escapeHtml(plan.weeklyOutdoorActivities)}</p>` : ''}${plan.weeklyMealSleep ? `<h3>VỆ SINH, ĂN, NGỦ</h3><p>${escapeHtml(plan.weeklyMealSleep)}</p>` : ''}${plan.weeklyAfternoon ? `<h3>HOẠT ĐỘNG CHIỀU</h3><p>${escapeHtml(plan.weeklyAfternoon)}</p>` : ''}${plan.assessment ? `<h3>ĐÁNH GIÁ VÀ ĐIỀU CHỈNH SAU TUẦN</h3><p>${escapeHtml(plan.assessment)}</p>` : ''}${plan.weeklyNotes ? `<h3>GHI CHÚ VÀ ĐIỀU CHỈNH TRONG TUẦN</h3><p>${escapeHtml(plan.weeklyNotes)}</p>` : ''}`;
 }
 
 function lesson(plan) {
