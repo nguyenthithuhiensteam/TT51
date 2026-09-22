@@ -94,14 +94,30 @@ function domainMatches(objectiveDomain = '', lessonDomainText = '') {
   if (!a || !b) return false;
   return a.includes(b) || b.includes(a);
 }
-function renderObjectiveCheckboxes(plan = {}) {
-  const selected = (plan.lessonObjectiveCodes && plan.lessonObjectiveCodes.length ? plan.lessonObjectiveCodes : (plan.lessonObjectiveCode ? [plan.lessonObjectiveCode] : []));
-  const items = state.objectives.filter((o) => o.ageGroup === plan.ageGroup);
-  if (!items.length) return '<p class="empty-state">Chưa có mục tiêu nào cho độ tuổi này trong ngân hàng mục tiêu.</p>';
-  const suggested = items.filter((o) => domainMatches(o.domain, plan.lessonDomain));
-  const rest = items.filter((o) => !domainMatches(o.domain, plan.lessonDomain));
-  const row = (o, isSuggested) => `<label class="objective-picker-item"><input type="checkbox" name="lessonObjectiveCodes" value="${escapeHtml(o.code)}" ${selected.includes(o.code) ? 'checked' : ''}><span>${isSuggested ? '<span class="chip teal">Gợi ý</span> ' : ''}<b>${escapeHtml(o.code)}</b> — ${escapeHtml(String(o.description || '').slice(0, 90))}</span></label>`;
-  return `${suggested.map((o) => row(o, true)).join('')}${rest.map((o) => row(o, false)).join('')}`;
+function selectedObjectiveCodesFromPlan(plan = {}) {
+  return plan.lessonObjectiveCodes && plan.lessonObjectiveCodes.length ? plan.lessonObjectiveCodes : (plan.lessonObjectiveCode ? [plan.lessonObjectiveCode] : []);
+}
+function renderObjectiveSummary(codes = []) {
+  if (!codes.length) return '<span class="empty-inline">Chưa chọn mục tiêu nào.</span>';
+  return codes.map((code) => { const obj = state.objectives.find((o) => o.code === code); return `<span class="chip teal" title="${escapeHtml(obj?.description || '')}">${escapeHtml(code)}</span>`; }).join(' ');
+}
+function objectiveHiddenInputs(codes = []) {
+  return codes.map((code) => `<input type="hidden" name="lessonObjectiveCodes" value="${escapeHtml(code)}">`).join('');
+}
+function openObjectivePicker() {
+  const form = document.querySelector('#plan-form');
+  if (!form) return;
+  const formData = new FormData(form);
+  const ageGroup = formData.get('ageGroup') || '';
+  const lessonDomain = formData.get('lessonDomain') || '';
+  const selected = new Set(formData.getAll('lessonObjectiveCodes'));
+  const items = state.objectives.filter((o) => o.ageGroup === ageGroup);
+  const groups = domainsForAgeGroup(ageGroup).map((domain) => ({ domain, items: items.filter((o) => o.domain === domain) })).filter((g) => g.items.length);
+  const body = groups.length ? groups.map((g) => {
+    const suggested = domainMatches(g.domain, lessonDomain);
+    return `<section class="objective-picker-group${suggested ? ' is-suggested' : ''}"><h4>${escapeHtml(g.domain)}${suggested ? ' <span class="chip teal">Gợi ý</span>' : ''}</h4>${g.items.map((o, index) => `<label class="objective-picker-item"><span class="objective-picker-index">${index + 1}</span><span class="objective-picker-text"><b>${escapeHtml(o.code)}</b> — ${escapeHtml(o.description || '')}</span><input type="checkbox" value="${escapeHtml(o.code)}" ${selected.has(o.code) ? 'checked' : ''}></label>`).join('')}</section>`;
+  }).join('') : `<div class="empty-state">Chưa có mục tiêu nào cho ${escapeHtml(ageGroup || 'độ tuổi này')} trong ngân hàng mục tiêu. Hãy thêm ở mục "Xây dựng chương trình".</div>`;
+  openDrawerPanel(`<header class="drawer-header"><div><span class="chip teal">NGÂN HÀNG MỤC TIÊU</span><h2>Chọn mục tiêu (MT) cho giáo án</h2></div><button class="drawer-close" data-close-drawer>×</button></header><div class="drawer-body"><p class="drawer-intro">Mục tiêu cùng lĩnh vực với ô "Lĩnh vực" của giáo án được đánh dấu Gợi ý. Có thể chọn nhiều mục tiêu.</p><div id="objective-picker-body" class="objective-picker-dialog">${body}</div><div class="objective-picker-footer button-row"><button type="button" class="primary-button" data-save-objective-picker>Lưu</button><button type="button" class="secondary-button" data-close-drawer>Thoát</button></div></div>`);
 }
 const ASSESSMENT_LEVELS = ['Đạt', 'Chưa đạt', 'Cần hỗ trợ thêm'];
 
@@ -868,7 +884,7 @@ function planTemplate(plan = {}) {
     <details class="template-editor" ${plan.level==='Ngày/hoạt động'?'open':''}><summary>Mẫu giáo án/hoạt động giáo dục ngày</summary>
       <div class="form-grid"><label class="field"><span>Lĩnh vực</span><input class="input" name="lessonDomain" value="${escapeHtml(plan.lessonDomain||'')}"></label><label class="field"><span>Tên bài/hoạt động</span><input class="input" name="lessonTitle" value="${escapeHtml(plan.lessonTitle||'')}"></label></div>
       <label class="field"><span>Loại giáo án</span><select class="select" name="lessonType">${['Hoạt động thông thường','STEAM/Dự án'].map((v)=>`<option ${(plan.lessonType||'Hoạt động thông thường')===v?'selected':''}>${v}</option>`).join('')}</select></label>
-      <label class="field"><span>Liên kết mục tiêu (MT) từ ngân hàng</span><small>Mục tiêu cùng lĩnh vực với ô "Lĩnh vực" ở trên được đánh dấu Gợi ý; có thể chọn nhiều mục tiêu.</small><div id="lesson-objectives-list" class="objective-picker">${renderObjectiveCheckboxes(plan)}</div></label>
+      <div class="field"><span>Liên kết mục tiêu (MT) từ ngân hàng</span><div id="lesson-objectives-summary" class="objective-summary">${renderObjectiveSummary(selectedObjectiveCodesFromPlan(plan))}</div><div id="lesson-objectives-hidden">${objectiveHiddenInputs(selectedObjectiveCodesFromPlan(plan))}</div><button type="button" class="ghost-button" data-open-objective-picker>Chọn mục tiêu từ ngân hàng</button></div>
       <label class="field"><span>I. Mục đích - yêu cầu</span><textarea name="lessonObjectives">${escapeHtml(plan.lessonObjectives||'')}</textarea></label>
       <label class="field"><span>II. Chuẩn bị</span><textarea name="lessonPreparation">${escapeHtml(plan.lessonPreparation||'')}</textarea></label>
       <div id="lesson-normal-activities" class="${(plan.lessonType||'Hoạt động thông thường')==='STEAM/Dự án'?'is-hidden':''}">
@@ -1243,6 +1259,7 @@ function bindEvents() {
     const deleteObjective = event.target.closest('[data-delete-objective]');
     if (deleteObjective) { if (window.confirm('Xóa mục tiêu này khỏi ngân hàng? Các kế hoạch đã dùng mã này vẫn giữ nguyên nội dung đã lưu.')) { try { await window.ctgdmnDesktop.deactivateObjective(deleteObjective.dataset.deleteObjective); state.objectives = await window.ctgdmnDesktop.listObjectives(state.objectivesAgeGroup); renderProgramBuilder(); showToast('Đã xóa mục tiêu.'); } catch (error) { showToast(error.message); } } return; }
     if (event.target.closest('[data-pick-theme]')) return openThemePicker();
+    if (event.target.closest('[data-open-objective-picker]')) return openObjectivePicker();
     const selectChild = event.target.closest('[data-select-child]');
     if (selectChild) { try { state.selectedChildId = selectChild.dataset.selectChild; state.childAssessments = await window.ctgdmnDesktop.listChildAssessments(state.selectedChildId); renderEvaluation(); } catch (error) { showToast(error.message); } return; }
     const deactivateChild = event.target.closest('[data-deactivate-child]');
@@ -1350,8 +1367,7 @@ function bindEvents() {
     if (event.target.getAttribute('id') === 'program-age-filter') { state.programAgeFilter = event.target.value; render(); }
     if (event.target.getAttribute('id') === 'objectives-age-filter') { state.objectivesAgeGroup = event.target.value; try { state.objectives = await window.ctgdmnDesktop.listObjectives(state.objectivesAgeGroup); } catch (error) { showToast(error.message); } renderProgramBuilder(); }
     if (event.target.name === 'lessonType' && event.target.closest('#plan-form')) { const isSteam = event.target.value === 'STEAM/Dự án'; document.querySelector('#lesson-normal-activities')?.classList.toggle('is-hidden', isSteam); document.querySelector('#lesson-steam-activities')?.classList.toggle('is-hidden', !isSteam); }
-    if (event.target.name === 'ageGroup' && event.target.closest('#plan-form')) { const notice = document.querySelector('#weekday-schedule-notice'); if (notice) notice.innerHTML = weekdayScheduleNoticeText(event.target.value); const list = document.querySelector('#lesson-objectives-list'); if (list) list.innerHTML = renderObjectiveCheckboxes(currentPlanFromForm()); }
-    if (event.target.name === 'lessonDomain' && event.target.closest('#plan-form')) { const list = document.querySelector('#lesson-objectives-list'); if (list) list.innerHTML = renderObjectiveCheckboxes(currentPlanFromForm()); }
+    if (event.target.name === 'ageGroup' && event.target.closest('#plan-form')) { const notice = document.querySelector('#weekday-schedule-notice'); if (notice) notice.innerHTML = weekdayScheduleNoticeText(event.target.value); }
     if (event.target.getAttribute('id') === 'type-filter') {
       const type = event.target.value;
       if (type === 'all') setRoute('library', { keepFilters: true });
@@ -1362,6 +1378,15 @@ function bindEvents() {
   });
   els.drawer.addEventListener('click', (event) => {
     if (event.target.closest('[data-close-drawer]')) return closeDrawer();
+    if (event.target.closest('[data-save-objective-picker]')) {
+      const codes = Array.from(document.querySelectorAll('#objective-picker-body input[type="checkbox"]:checked')).map((el) => el.value);
+      const hidden = document.querySelector('#lesson-objectives-hidden');
+      if (hidden) hidden.innerHTML = objectiveHiddenInputs(codes);
+      const summary = document.querySelector('#lesson-objectives-summary');
+      if (summary) summary.innerHTML = renderObjectiveSummary(codes);
+      closeDrawer();
+      return;
+    }
     if(event.target.closest('[data-apply-ai-result]'))return applyAIResult();
     const applyTheme=event.target.closest('[data-apply-theme]');
     if(applyTheme){
