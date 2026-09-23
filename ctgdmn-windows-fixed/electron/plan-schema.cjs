@@ -201,6 +201,47 @@ const PLAN_RESPONSE_SCHEMA = Object.freeze({
   ],
 });
 
+const LESSON_RESPONSE_SCHEMA = Object.freeze({
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    lessonTitle: { type: 'string' },
+    lessonDomain: { type: 'string' },
+    lessonObjectives: { type: 'string' },
+    lessonPreparation: { type: 'string' },
+    activity1Teacher: { type: 'string' },
+    activity1Child: { type: 'string' },
+    activity2Teacher: { type: 'string' },
+    activity2Child: { type: 'string' },
+    activity3Teacher: { type: 'string' },
+    activity3Child: { type: 'string' },
+    dailyEvaluation: { type: 'string' },
+  },
+  required: [
+    'lessonTitle',
+    'lessonDomain',
+    'lessonObjectives',
+    'lessonPreparation',
+    'activity1Teacher',
+    'activity1Child',
+    'activity2Teacher',
+    'activity2Child',
+    'activity3Teacher',
+    'activity3Child',
+    'dailyEvaluation',
+  ],
+});
+
+function validateLessonResponse(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('AI không trả về một đối tượng JSON hợp lệ.');
+  }
+  for (const field of LESSON_RESPONSE_SCHEMA.required) {
+    if (typeof value[field] !== 'string') throw new Error(`Trường AI "${field}" không hợp lệ.`);
+  }
+  return value;
+}
+
 function validatePlanResponse(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error('AI không trả về một đối tượng JSON hợp lệ.');
@@ -268,6 +309,7 @@ module.exports = {
   NHA_TRE_DOMAINS,
   MAU_GIAO_LON_EXTRA_DOMAIN,
   PLAN_RESPONSE_SCHEMA,
+  LESSON_RESPONSE_SCHEMA,
   PLAN_TYPES,
   WEEK_DAYS,
   domainsForAgeGroup,
@@ -282,4 +324,5 @@ module.exports = {
   rowsToFormFields,
   splitLines,
   validatePlanResponse,
+  validateLessonResponse,
 };

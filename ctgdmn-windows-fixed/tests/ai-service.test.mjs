@@ -11,6 +11,7 @@ const {
   parseJsonText,
   sanitizeForAI,
 } = require('../electron/ai-service.cjs');
+const { LESSON_RESPONSE_SCHEMA, validateLessonResponse } = require('../electron/plan-schema.cjs');
 
 test('accepts JSON returned inside a markdown fence', () => {
   const result = parseJsonText('```json\n{"title":"Tuần 1","templateRows":[]}\n```');
@@ -66,4 +67,39 @@ test('buildPrompt embeds matching reference excerpts as advisory context, not as
 test('buildPrompt has no reference section for a brand-new topic absent from the source PDFs', () => {
   const { instructions } = buildPrompt('generate', { ageGroup: '4–5 tuổi', title: 'Chủ đề hoàn toàn mới chưa có trong nguồn', level: 'Chủ đề' });
   assert.doesNotMatch(instructions, /Tài liệu tham khảo/);
+});
+
+test('buildPrompt gửi các trường riêng của giáo án ngày, không dùng trường chung title/objectives', () => {
+  const plan = {
+    level: 'Ngày/hoạt động',
+    ageGroup: '4–5 tuổi',
+    lessonTitle: 'Khám phá hình khối',
+    lessonDomain: 'Phát triển nhận thức',
+    framework: 'TT51',
+    linkedObjectivesText: 'MT12 (Giáo dục phát triển nhận thức): Trẻ nhận biết được các hình khối cơ bản.',
+    title: 'không nên dùng trường này cho giáo án ngày',
+  };
+  const { input, instructions } = buildPrompt('generate', plan);
+  const sent = JSON.parse(input);
+  assert.equal(sent.lessonTitle, 'Khám phá hình khối');
+  assert.equal(sent.lessonDomain, 'Phát triển nhận thức');
+  assert.equal(sent.title, undefined, 'giáo án ngày không nên gửi trường title chung');
+  assert.match(instructions, /Mục tiêu \(MT\) đã liên kết/);
+  assert.match(instructions, /MT12/);
+  assert.match(instructions, /Thông tư 51\/2020/);
+});
+
+test('buildPrompt nêu đúng cấu trúc 5 bước khi giáo án gắn khung Chuyên đề 388', () => {
+  const { instructions } = buildPrompt('generate', { level: 'Ngày/hoạt động', ageGroup: '4–5 tuổi', lessonTitle: 'Khám phá lá cây', framework: 'TT388' });
+  assert.match(instructions, /Chuyên đề 388/);
+  assert.match(instructions, /lấy trẻ làm trung tâm/);
+  assert.doesNotMatch(instructions, /Thông tư 51\/2020/);
+});
+
+test('validateLessonResponse chấp nhận đủ các trường giáo án ngày và từ chối khi thiếu trường', () => {
+  const full = Object.fromEntries(LESSON_RESPONSE_SCHEMA.required.map((key) => [key, `nội dung ${key}`]));
+  assert.deepEqual(validateLessonResponse(full), full);
+  const missing = { ...full };
+  delete missing.dailyEvaluation;
+  assert.throws(() => validateLessonResponse(missing), /dailyEvaluation/);
 });

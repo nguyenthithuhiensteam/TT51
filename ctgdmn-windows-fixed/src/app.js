@@ -814,9 +814,13 @@ function rowsToEditorFields(level,rows=[]) {
 function openAIResultPreview(payload,action) {
   state.pendingAIResult={...payload,action};
   const result=payload.result;
+  const isLesson=typeof result.lessonTitle==='string';
+  const body=isLesson
+    ? `<h3>${escapeHtml(result.lessonTitle)}</h3><h4>Mục đích - yêu cầu</h4><p>${escapeHtml(result.lessonObjectives)}</p><h4>Hoạt động 2 — Nội dung chính (Cô)</h4><p>${escapeHtml(result.activity2Teacher)}</p><h4>Đánh giá cuối ngày</h4><p>${escapeHtml(result.dailyEvaluation)}</p>`
+    : `<h3>${escapeHtml(result.title)}</h3><h4>Mục tiêu</h4><p>${escapeHtml(result.objectives)}</p><h4>Nội dung và hoạt động</h4><p>${escapeHtml(result.activities)}</p><h4>Đánh giá/rà soát</h4><p>${escapeHtml(result.assessment)}</p><small>${result.templateRows.length} dòng biểu mẫu động</small>`;
   openDrawerPanel(`<header class="drawer-header"><div><span class="chip teal">BẢN NHÁP AI - CHƯA LƯU</span><h2>${action==='validate'?'Kết quả rà soát':'Đề xuất kế hoạch'}</h2></div><button class="drawer-close" data-close-drawer>×</button></header><div class="drawer-body">
     <div class="privacy-warning"><strong>Dữ liệu đã gửi</strong><p>${escapeHtml(Object.keys(payload.sentData||{}).join(', '))}. Không gửi danh sách hoặc thông tin nhận dạng của trẻ.</p></div>
-    <section class="ai-draft-preview"><h3>${escapeHtml(result.title)}</h3><h4>Mục tiêu</h4><p>${escapeHtml(result.objectives)}</p><h4>Nội dung và hoạt động</h4><p>${escapeHtml(result.activities)}</p><h4>Đánh giá/rà soát</h4><p>${escapeHtml(result.assessment)}</p><small>${result.templateRows.length} dòng biểu mẫu động</small></section>
+    <section class="ai-draft-preview">${body}</section>
     <div class="button-row"><button class="primary-button" data-apply-ai-result>Áp dụng vào bản đang soạn</button><button class="secondary-button" data-close-drawer>Giữ nguyên bản hiện tại</button></div>
   </div>`);
 }
@@ -826,7 +830,10 @@ function applyAIResult() {
   const form=document.querySelector('#plan-form');
   if(!payload||!form)return;
   const result=payload.result;
-  const values={title:result.title,context:result.context,objectives:result.objectives,activities:result.activities,materials:result.materials,differentiation:result.differentiation,evidence:result.assessment,family:result.family,...rowsToEditorFields(form.elements.level.value,result.templateRows)};
+  const isLesson=typeof result.lessonTitle==='string';
+  const values=isLesson
+    ? {lessonTitle:result.lessonTitle,lessonDomain:result.lessonDomain,lessonObjectives:result.lessonObjectives,lessonPreparation:result.lessonPreparation,activity1Teacher:result.activity1Teacher,activity1Child:result.activity1Child,activity2Teacher:result.activity2Teacher,activity2Child:result.activity2Child,activity3Teacher:result.activity3Teacher,activity3Child:result.activity3Child,dailyEvaluation:result.dailyEvaluation}
+    : {title:result.title,context:result.context,objectives:result.objectives,activities:result.activities,materials:result.materials,differentiation:result.differentiation,evidence:result.assessment,family:result.family,...rowsToEditorFields(form.elements.level.value,result.templateRows)};
   Object.entries(values).forEach(([name,value])=>{const field=form.elements[name];if(field)field.value=value||'';});
   state.pendingAIResult=null;
   closeDrawer();
@@ -841,8 +848,17 @@ function savePendingAIRequest(plan,action) {
   showToast('Đã lưu yêu cầu. Ứng dụng sẽ không tự gửi khi có mạng.');
 }
 
+function buildLinkedObjectivesText(plan = {}) {
+  const codes = selectedObjectiveCodesFromPlan(plan);
+  if (!codes.length) return '';
+  return codes.map((code) => {
+    const obj = state.objectives.find((o) => o.code === code && o.ageGroup === plan.ageGroup);
+    return obj ? `${obj.code} (${obj.domain}): ${obj.description}` : code;
+  }).join('\n');
+}
 async function runPlanAI(action,plan=currentPlanFromForm()) {
   if(!plan)return;
+  if(plan.level==='Ngày/hoạt động')plan={...plan,linkedObjectivesText:buildLinkedObjectivesText(plan)};
   if(!state.online){
     openDrawerPanel(`<header class="drawer-header"><div><span class="chip amber">NGOẠI TUYẾN</span><h2>Chức năng GenAI đang tạm dừng</h2></div><button class="drawer-close" data-close-drawer>×</button></header><div class="drawer-body"><p>Máy tính hiện chưa kết nối Internet. Cô vẫn có thể tiếp tục soạn, chỉnh sửa, lưu và xuất kế hoạch. Chức năng hỗ trợ GenAI sẽ hoạt động khi có kết nối mạng.</p><div class="button-row"><button class="primary-button" data-close-drawer>Tiếp tục soạn thủ công</button><button class="secondary-button" data-save-pending-ai="${action}">Lưu yêu cầu để thực hiện khi có mạng</button><button class="secondary-button" data-test-ai>Kiểm tra lại kết nối</button></div></div>`);
     state.pendingAIPlan=plan;
