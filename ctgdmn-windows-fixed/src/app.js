@@ -110,20 +110,55 @@ function renderObjectiveSummary(codes = []) {
 function objectiveHiddenInputs(codes = []) {
   return codes.map((code) => `<input type="hidden" name="lessonObjectiveCodes" value="${escapeHtml(code)}">`).join('');
 }
+const OBJECTIVE_STOPWORDS = new Set(['và','là','của','cho','ở','trong','với','để','một','các','những','theo','từ','bài','hoạt','động','học','giờ','trẻ','giáo','viên','được','có','khi','làm','này','đây','kia','hôm','tuần','tháng','năm','hoặc','về','đến','sau','trước','cùng','ngày','cuộc','việc','như','thế','bằng','mọi','tất','cả','toàn','phần','rất','gì','ai','sao','sáng','chiều','tối','buổi','chủ','đề']);
+function lessonTextNormalize(value = '') {
+  return String(value).normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+function lessonKeywordSet(title = '') {
+  const rawTokens = lessonTextNormalize(title).split(/\s+/).filter(Boolean);
+  const words = [...new Set(rawTokens.filter((word) => word.length >= 3 && !OBJECTIVE_STOPWORDS.has(word)))];
+  const bigrams = [];
+  for (let i = 0; i < rawTokens.length - 1; i += 1) {
+    const a = rawTokens[i];
+    const b = rawTokens[i + 1];
+    if (a.length >= 2 && b.length >= 2 && !OBJECTIVE_STOPWORDS.has(a) && !OBJECTIVE_STOPWORDS.has(b)) bigrams.push(`${a} ${b}`);
+  }
+  return { words, bigrams: [...new Set(bigrams)] };
+}
+function objectiveMatchType(objective, { words, bigrams }) {
+  const normalized = lessonTextNormalize(objective.description || '');
+  if (bigrams.some((bigram) => normalized.includes(bigram))) return 'bigram';
+  if (!words.length) return null;
+  const tokens = normalized.split(/\s+/);
+  return words.some((word) => tokens.includes(word)) ? 'word' : null;
+}
 function openObjectivePicker() {
   const form = document.querySelector('#plan-form');
   if (!form) return;
   const formData = new FormData(form);
   const ageGroup = formData.get('ageGroup') || '';
   const lessonDomain = formData.get('lessonDomain') || '';
+  const lessonTitle = formData.get('lessonTitle') || '';
   const selected = new Set(formData.getAll('lessonObjectiveCodes'));
-  const items = state.objectives.filter((o) => o.ageGroup === ageGroup);
+  const keywords = lessonKeywordSet(lessonTitle);
+  const allItems = state.objectives.filter((o) => o.ageGroup === ageGroup);
+  const bigramMatches = allItems.filter((o) => objectiveMatchType(o, keywords) === 'bigram');
+  const wordMatches = allItems.filter((o) => objectiveMatchType(o, keywords) === 'word');
+  const lessonMatches = bigramMatches.length ? bigramMatches : wordMatches;
+  const lessonMatchIds = new Set(lessonMatches.map((o) => o.id));
+  const items = allItems.filter((o) => !lessonMatchIds.has(o.id));
+  const row = (o, index) => `<label class="objective-picker-item"><span class="objective-picker-index">${index + 1}</span><span class="objective-picker-text">${o.scope === 'system' ? '<span class="chip teal">Chung</span> ' : ''}<b>${escapeHtml(o.code)}</b> — ${escapeHtml(o.description || '')}</span><input type="checkbox" value="${escapeHtml(o.code)}" ${selected.has(o.code) ? 'checked' : ''}></label>`;
   const groups = domainsForAgeGroup(ageGroup).map((domain) => ({ domain, items: items.filter((o) => o.domain === domain) })).filter((g) => g.items.length);
-  const body = groups.length ? groups.map((g) => {
+  const lessonSection = lessonMatches.length ? `<section class="objective-picker-group is-suggested"><h4>Gợi ý theo tên bài học <span class="chip teal">Gợi ý</span></h4>${lessonMatches.map((o, index) => row(o, index)).join('')}</section>` : '';
+  const domainSections = groups.map((g) => {
     const suggested = domainMatches(g.domain, lessonDomain);
-    return `<section class="objective-picker-group${suggested ? ' is-suggested' : ''}"><h4>${escapeHtml(g.domain)}${suggested ? ' <span class="chip teal">Gợi ý</span>' : ''}</h4>${g.items.map((o, index) => `<label class="objective-picker-item"><span class="objective-picker-index">${index + 1}</span><span class="objective-picker-text">${o.scope === 'system' ? '<span class="chip teal">Chung</span> ' : ''}<b>${escapeHtml(o.code)}</b> — ${escapeHtml(o.description || '')}</span><input type="checkbox" value="${escapeHtml(o.code)}" ${selected.has(o.code) ? 'checked' : ''}></label>`).join('')}</section>`;
-  }).join('') : `<div class="empty-state">Chưa có mục tiêu nào cho ${escapeHtml(ageGroup || 'độ tuổi này')} trong ngân hàng mục tiêu. Hãy thêm ở mục "Xây dựng chương trình".</div>`;
-  openDrawerPanel(`<header class="drawer-header"><div><span class="chip teal">NGÂN HÀNG MỤC TIÊU</span><h2>Chọn mục tiêu (MT) cho giáo án</h2></div><button class="drawer-close" data-close-drawer>×</button></header><div class="drawer-body"><p class="drawer-intro">Mục tiêu cùng lĩnh vực với ô "Lĩnh vực" của giáo án được đánh dấu Gợi ý. Có thể chọn nhiều mục tiêu.</p><div id="objective-picker-body" class="objective-picker-dialog">${body}</div><div class="objective-picker-footer button-row"><button type="button" class="primary-button" data-save-objective-picker>Lưu</button><button type="button" class="secondary-button" data-close-drawer>Thoát</button></div></div>`);
+    return `<section class="objective-picker-group${suggested ? ' is-suggested' : ''}"><h4>${escapeHtml(g.domain)}${suggested ? ' <span class="chip teal">Gợi ý</span>' : ''}</h4>${g.items.map((o, index) => row(o, index)).join('')}</section>`;
+  }).join('');
+  const body = (lessonSection || domainSections) ? `${lessonSection}${domainSections}` : `<div class="empty-state">Chưa có mục tiêu nào cho ${escapeHtml(ageGroup || 'độ tuổi này')} trong ngân hàng mục tiêu. Hãy thêm ở mục "Xây dựng chương trình".</div>`;
+  const introText = lessonMatches.length
+    ? `Đã tìm thấy ${lessonMatches.length} mục tiêu khớp với tên bài học ở mục "Gợi ý theo tên bài học". Mục tiêu cùng lĩnh vực với ô "Lĩnh vực" cũng được đánh dấu Gợi ý. Có thể chọn nhiều mục tiêu.`
+    : `Điền "Tên bài/hoạt động" trước khi mở mục này để thấy gợi ý mục tiêu khớp theo tên bài học. Mục tiêu cùng lĩnh vực với ô "Lĩnh vực" được đánh dấu Gợi ý. Có thể chọn nhiều mục tiêu.`;
+  openDrawerPanel(`<header class="drawer-header"><div><span class="chip teal">NGÂN HÀNG MỤC TIÊU</span><h2>Chọn mục tiêu (MT) cho giáo án</h2></div><button class="drawer-close" data-close-drawer>×</button></header><div class="drawer-body"><p class="drawer-intro">${introText}</p><div id="objective-picker-body" class="objective-picker-dialog">${body}</div><div class="objective-picker-footer button-row"><button type="button" class="primary-button" data-save-objective-picker>Lưu</button><button type="button" class="secondary-button" data-close-drawer>Thoát</button></div></div>`);
 }
 const ASSESSMENT_LEVELS = ['Đạt', 'Chưa đạt', 'Cần hỗ trợ thêm'];
 
