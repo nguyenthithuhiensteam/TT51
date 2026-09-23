@@ -53,6 +53,7 @@ const state = {
   selectedChildId: '',
   childAssessments: [],
   objectives: [],
+  frameworkLibraryTab: 'TT51',
 };
 
 const DEVELOPMENT_DOMAINS = [
@@ -936,7 +937,7 @@ function planTemplate(plan = {}) {
     </details>
     <details class="template-editor" ${plan.level==='Ngày/hoạt động'?'open':''}><summary>Mẫu giáo án/hoạt động giáo dục ngày</summary>
       <div class="form-grid"><label class="field"><span>Lĩnh vực</span><input class="input" name="lessonDomain" value="${escapeHtml(plan.lessonDomain||'')}"></label><label class="field"><span>Tên bài/hoạt động</span><input class="input" name="lessonTitle" value="${escapeHtml(plan.lessonTitle||'')}"></label></div>
-      <label class="field"><span>Loại giáo án</span><select class="select" name="lessonType">${['Hoạt động thông thường','STEAM/Dự án'].map((v)=>`<option ${(plan.lessonType||'Hoạt động thông thường')===v?'selected':''}>${v}</option>`).join('')}</select></label>
+      <div class="form-grid"><label class="field"><span>Loại giáo án</span><select class="select" name="lessonType">${['Hoạt động thông thường','STEAM/Dự án'].map((v)=>`<option ${(plan.lessonType||'Hoạt động thông thường')===v?'selected':''}>${v}</option>`).join('')}</select></label><label class="field"><span>Khung chương trình</span><select class="select" name="framework"><option value="" ${!plan.framework?'selected':''}>— Chưa gắn —</option><option value="TT51" ${plan.framework==='TT51'?'selected':''}>Thông tư 51/2020/TT-BGDĐT (chuẩn)</option><option value="TT388" ${plan.framework==='TT388'?'selected':''}>Chuyên đề 388 (lấy trẻ làm trung tâm)</option></select></label></div>
       <div class="field"><span>Liên kết mục tiêu (MT) từ ngân hàng</span><div id="lesson-objectives-summary" class="objective-summary">${renderObjectiveSummary(selectedObjectiveCodesFromPlan(plan))}</div><div id="lesson-objectives-hidden">${objectiveHiddenInputs(selectedObjectiveCodesFromPlan(plan))}</div><small>Gợi ý tự động theo Lớp, Lĩnh vực và Tên bài/hoạt động — tích chọn ngay bên dưới:</small><div id="lesson-objectives-suggest" class="objective-inline-suggest">${renderInlineSuggestions(plan)}</div><button type="button" class="ghost-button" data-open-objective-picker>Xem tất cả mục tiêu</button></div>
       <label class="field"><span>I. Mục đích - yêu cầu</span><textarea name="lessonObjectives">${escapeHtml(plan.lessonObjectives||'')}</textarea></label>
       <label class="field"><span>II. Chuẩn bị</span><textarea name="lessonPreparation">${escapeHtml(plan.lessonPreparation||'')}</textarea></label>
@@ -970,6 +971,71 @@ function renderPlanner(editId = '') {
   const reviews = state.workspace.professionalReviews.filter((item)=>item.planId===plan.id && (!state.showPendingReviewsOnly || !item.resolved)).sort((a,b)=>a.createdAt.localeCompare(b.createdAt));
   els.main.innerHTML = `${pageHead('Công cụ chuyên môn', 'Xây dựng kế hoạch 2026–2027', 'Soạn theo cấu trúc mở; có thể tiếp tục chỉnh sửa, sao lưu và chuyển sang máy khác.','<button class="ghost-button" data-guide-context="planner">Xem hướng dẫn</button>')}${workflowActions(plan)}
     <section class="planner-layout"><div><article class="panel">${planTemplate(plan)}</article>${plan.id?`<article class="panel professional-reviews"><div class="panel-title-row"><div><h2>Nhận xét chuyên môn</h2><p class="panel-subtitle">Dòng thời gian bất biến theo từng phiên bản kế hoạch.</p></div><div class="button-row"><button class="secondary-button" data-filter-reviews>${state.showPendingReviewsOnly?'Hiện tất cả':'Chỉ chưa xử lý'}</button><button class="primary-button" data-add-review="${plan.id}">Thêm nhận xét</button></div></div><div class="review-timeline">${reviews.map((item)=>`<article class="${item.resolved?'is-resolved':''}"><i></i><header><strong>${escapeHtml(item.reviewerNameSnapshot||staffName(item.reviewerId))}</strong><span class="chip ${item.type==='Yêu cầu chỉnh sửa'?'amber':'teal'}">${escapeHtml(item.type)}</span></header><small>${escapeHtml(item.reviewerRoleSnapshot)} • Phiên bản ${item.planVersion} • ${new Date(item.createdAt).toLocaleString('vi-VN')}</small><p>${escapeHtml(item.content)}</p>${item.resolved?`<div class="review-response"><b>Đã xử lý:</b> ${escapeHtml(item.response)}</div>`:`<button class="small-button" data-resolve-review="${item.id}">Ghi nhận đã xử lý</button>`}</article>`).join('')||'<div class="empty-state">Chưa có nhận xét chuyên môn.</div>'}</div></article>`:''}</div><aside class="panel plan-list"><div class="panel-title-row"><div><h2>Kế hoạch đã lưu</h2><p class="panel-subtitle">${state.workspace.plans.length} kế hoạch trên máy</p></div></div>${state.workspace.plans.map(p=>`<button class="saved-plan" data-edit-plan="${p.id}"><strong>${escapeHtml(p.title)}</strong><span>Phiên bản ${p.version||1} • ${escapeHtml(className(p.classId,p.ageGroup))} • ${escapeHtml(p.schoolYear)}</span></button>`).join('') || '<div class="empty-state">Chưa có kế hoạch.</div>'}</aside></section>`;
+}
+
+function frameworkLibraryLessons(framework) {
+  return (state.workspace.plans || []).filter((p) => p.level === 'Ngày/hoạt động' && p.framework === framework);
+}
+function frameworkLibraryCard(plan, framework) {
+  const highlightLabel = framework === 'TT51' ? 'Mục đích - yêu cầu' : 'Trọng tâm năng lực';
+  const highlight = String(plan.lessonObjectives || '').split('\n').find((line) => line.trim()) || '';
+  const evalText = String(plan.dailyEvaluation || '').split('\n').find((line) => line.trim()) || '';
+  const otherLabel = framework === 'TT51' ? 'Chuyên đề 388' : 'Thông tư 51';
+  return `<article class="document-card framework-card ${framework === 'TT51' ? 'is-tt51' : 'is-tt388'}">
+    <div class="doc-mark">${escapeHtml(plan.ageGroup || '')}</div>
+    <div>
+      <div class="chip-row">
+        <span class="chip ${framework === 'TT51' ? '' : 'teal'}">${framework === 'TT51' ? 'TT 51/2020' : 'Chuyên đề 388'}</span>
+        ${plan.lessonDomain ? `<span class="chip amber">${escapeHtml(plan.lessonDomain)}</span>` : ''}
+        <span class="chip">${escapeHtml(className(plan.classId, plan.ageGroup))}</span>
+      </div>
+      <h3>${escapeHtml(plan.lessonTitle || plan.title || 'Chưa đặt tên')}</h3>
+      ${highlight ? `<p class="panel-subtitle"><strong>${highlightLabel}:</strong> ${escapeHtml(highlight.slice(0, 140))}</p>` : ''}
+      ${evalText ? `<p class="panel-subtitle"><strong>Đánh giá cuối ngày:</strong> ${escapeHtml(evalText.slice(0, 140))}</p>` : ''}
+    </div>
+    <div class="doc-actions">
+      <button class="small-button" data-edit-plan="${plan.id}">Xem chi tiết</button>
+      <button class="small-button" data-library-export-word="${plan.id}">Word</button>
+      <button class="small-button" data-library-export-pdf="${plan.id}">PDF</button>
+      <button class="small-button" data-convert-framework="${plan.id}">Đổi sang ${escapeHtml(otherLabel)}</button>
+    </div>
+  </article>`;
+}
+function renderFrameworkLibrary() {
+  const tab = state.frameworkLibraryTab || 'TT51';
+  const q = normalizeText(state.query);
+  const lessons = frameworkLibraryLessons(tab).filter((p) => !q || normalizeText(`${p.lessonTitle || p.title || ''} ${p.lessonDomain || ''}`).includes(q));
+  const bannerTT51 = `<div class="framework-banner is-tt51">
+    <span class="chip">Mục 1 · Chuẩn chương trình GDMN quốc gia</span>
+    <h2>Soạn bài theo Thông tư 51/2020/TT-BGDĐT</h2>
+    <p>Cấu trúc bài dạy chuẩn mực theo 5 lĩnh vực phát triển, bám sát bộ chuẩn kiến thức – kỹ năng – thái độ theo từng lứa tuổi Nhà trẻ và Mẫu giáo.</p>
+    <div class="framework-pillars">
+      <div><b>I. Mục đích - Yêu cầu</b><span>Kiến thức • Kỹ năng • Thái độ</span></div>
+      <div><b>II. Chuẩn bị</b><span>Đồ dùng cô • Đồ dùng trẻ • Môi trường</span></div>
+      <div><b>III. Cách tiến hành</b><span>Ổn định • Trọng tâm • Kết thúc</span></div>
+      <div><b>IV. Đánh giá trẻ</b><span>Tỷ lệ đạt • Trẻ cần rèn luyện thêm</span></div>
+    </div>
+  </div>`;
+  const bannerTT388 = `<div class="framework-banner is-tt388">
+    <span class="chip teal">Mục 2 · Chương trình GDMN thí điểm (Quyết định 388/QĐ-BGDĐT)</span>
+    <h2>Soạn bài theo Quyết định 388/QĐ-BGDĐT</h2>
+    <p>Thiết kế bài dạy theo 4 phẩm chất cốt lõi (Yêu thương, Tôn trọng, Trung thực, Trách nhiệm) và 5 năng lực nền tảng (Giao tiếp, Hợp tác, Thích ứng, Tự lực, Giải quyết vấn đề). Trẻ học qua trải nghiệm thực tế; cô đóng vai trò gợi mở, tổ chức môi trường mở.</p>
+    <div class="framework-pillars is-five">
+      <div><b>B1: Khởi động</b><span>Tình huống có vấn đề</span></div>
+      <div><b>B2: Khám phá – Trải nghiệm</b><span>Trẻ tự thử nghiệm</span></div>
+      <div><b>B3: Chia sẻ – Thảo luận</b><span>Chuẩn hóa sau trải nghiệm</span></div>
+      <div><b>B4: Thực hành – Vận dụng</b><span>Tình huống mới/mở rộng</span></div>
+      <div><b>B5: Đánh giá – Điều chỉnh</b><span>Tự đánh giá &amp; tiến bộ</span></div>
+    </div>
+  </div>`;
+  els.main.innerHTML = `${pageHead('Khung chương trình', 'Thư viện giáo án theo Thông tư 51 / Chuyên đề 388', 'Phân loại giáo án "Ngày/hoạt động" đã soạn theo 2 khung chương trình để tra cứu, xuất file và chuyển đổi khi cần. Gắn khung chương trình cho giáo án ngay trong ô "Khung chương trình" của Xây dựng kế hoạch.')}
+    <div class="framework-tabs">
+      <button class="framework-tab ${tab === 'TT51' ? 'is-active' : ''}" data-framework-tab="TT51">Mục 1 · Thông tư 51</button>
+      <button class="framework-tab ${tab === 'TT388' ? 'is-active' : ''}" data-framework-tab="TT388">Mục 2 · Chuyên đề 388</button>
+    </div>
+    ${tab === 'TT51' ? bannerTT51 : bannerTT388}
+    <div class="toolbar"><label class="field"><span>Tìm kiếm</span><input class="input" id="framework-library-query" placeholder="Tìm theo tên bài, lĩnh vực..." value="${escapeHtml(state.query || '')}"></label><div class="result-count">${lessons.length} giáo án</div><button class="primary-button" data-new-framework-lesson="${tab}">Soạn bài mới chuẩn ${tab === 'TT51' ? 'TT51' : '388'}</button></div>
+    <div class="document-list">${lessons.map((p) => frameworkLibraryCard(p, tab)).join('') || `<div class="empty-state">Chưa có giáo án nào gắn khung ${tab === 'TT51' ? 'Thông tư 51' : 'Chuyên đề 388'}. Mở một giáo án "Ngày/hoạt động" trong Xây dựng kế hoạch và chọn khung chương trình, hoặc bấm "Soạn bài mới" ở trên.</div>`}</div>`;
 }
 
 function openRecordEditor(id = '') {
@@ -1145,6 +1211,7 @@ function render() {
   else if (state.route === 'dashboard') renderDashboard();
   else if (state.route === 'open-data') renderOpenData();
   else if (state.route === 'planner') renderPlanner();
+  else if (state.route === 'framework-library') renderFrameworkLibrary();
   else if (['library', 'objectives', 'monthly', 'weekly'].includes(state.route)) renderLibrary(state.route);
   else if (state.route === 'review') renderReview();
   else if (state.route === 'reports') renderReports();
@@ -1365,6 +1432,27 @@ function bindEvents() {
     }
     const editPlan = event.target.closest('[data-edit-plan]');
     if (editPlan) return renderPlanner(editPlan.dataset.editPlan);
+    const frameworkTab = event.target.closest('[data-framework-tab]');
+    if (frameworkTab) { state.frameworkLibraryTab = frameworkTab.dataset.frameworkTab; state.query = ''; return renderFrameworkLibrary(); }
+    const newFrameworkLesson = event.target.closest('[data-new-framework-lesson]');
+    if (newFrameworkLesson) { state.draftPlanSeed = { level: 'Ngày/hoạt động', framework: newFrameworkLesson.dataset.newFrameworkLesson, schoolYear: schoolProfile().schoolYear }; showToast('Đã điền sẵn khung chương trình vào giáo án mới.'); return setRoute('planner'); }
+    const libraryExportWord = event.target.closest('[data-library-export-word]');
+    if (libraryExportWord) { const plan = state.workspace.plans.find((item) => item.id === libraryExportWord.dataset.libraryExportWord); if (plan) openWordExportPreview(plan); return; }
+    const libraryExportPdf = event.target.closest('[data-library-export-pdf]');
+    if (libraryExportPdf) { const plan = state.workspace.plans.find((item) => item.id === libraryExportPdf.dataset.libraryExportPdf); if (plan) exportPlanPdf(plan); return; }
+    const convertFramework = event.target.closest('[data-convert-framework]');
+    if (convertFramework) {
+      const source = state.workspace.plans.find((item) => item.id === convertFramework.dataset.convertFramework);
+      if (source) {
+        const otherFramework = source.framework === 'TT51' ? 'TT388' : 'TT51';
+        const copy = { ...source, id: `plan-${Date.now()}`, framework: otherFramework, version: 1, workflowStatus: 'draft', title: `${source.title} (bản ${otherFramework === 'TT51' ? 'TT51' : '388'})` };
+        state.workspace.plans.unshift(copy);
+        saveWorkspace();
+        showToast(`Đã tạo bản sao gắn khung ${otherFramework === 'TT51' ? 'Thông tư 51' : 'Chuyên đề 388'}. Nội dung giữ nguyên như bản gốc — hãy rà soát và điều chỉnh lại theo cấu trúc khung mới.`);
+        renderFrameworkLibrary();
+      }
+      return;
+    }
     const planAI=event.target.closest('[data-plan-ai]');if(planAI)return runPlanAI(planAI.dataset.planAi);
     if (event.target.closest('[data-export-plan-word]')) {
       const form = document.querySelector('#plan-form');
@@ -1384,6 +1472,7 @@ function bindEvents() {
     if (event.target.getAttribute('id') === 'library-query') { state.query = event.target.value; state.page = 1; window.clearTimeout(bindEvents.queryTimer); bindEvents.queryTimer = window.setTimeout(render, 180); }
     if (event.target.getAttribute('id') === 'open-query') { state.query = event.target.value; window.clearTimeout(bindEvents.openTimer); bindEvents.openTimer = window.setTimeout(renderOpenData, 180); }
     if ((event.target.name === 'lessonTitle' || event.target.name === 'lessonDomain') && event.target.closest('#plan-form')) { window.clearTimeout(bindEvents.lessonSuggestTimer); bindEvents.lessonSuggestTimer = window.setTimeout(refreshInlineSuggestions, 300); }
+    if (event.target.getAttribute('id') === 'framework-library-query') { state.query = event.target.value; window.clearTimeout(bindEvents.frameworkLibraryTimer); bindEvents.frameworkLibraryTimer = window.setTimeout(renderFrameworkLibrary, 180); }
   });
   els.main.addEventListener('submit', async (event) => {
     event.preventDefault();
