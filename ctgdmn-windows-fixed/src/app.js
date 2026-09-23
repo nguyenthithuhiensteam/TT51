@@ -130,6 +130,60 @@ function objectiveMatchType(objective, { words, bigrams }) {
   const tokens = normalized.split(/\s+/);
   return words.some((word) => tokens.includes(word)) ? 'word' : null;
 }
+function computeQuickSuggestions(ageGroup = '', lessonTitle = '', lessonDomain = '', limit = 8) {
+  if (!ageGroup) return [];
+  const allItems = state.objectives.filter((o) => o.ageGroup === ageGroup);
+  const keywords = lessonKeywordSet(lessonTitle);
+  const bigramMatches = allItems.filter((o) => objectiveMatchType(o, keywords) === 'bigram');
+  const wordMatches = allItems.filter((o) => objectiveMatchType(o, keywords) === 'word');
+  const domainOnly = allItems.filter((o) => domainMatches(o.domain, lessonDomain));
+  const seen = new Set();
+  const result = [];
+  for (const list of [bigramMatches, wordMatches, domainOnly]) {
+    for (const item of list) {
+      if (seen.has(item.id)) continue;
+      seen.add(item.id);
+      result.push(item);
+      if (result.length >= limit) return result;
+    }
+  }
+  return result;
+}
+function renderInlineSuggestions(plan = {}) {
+  const ageGroup = plan.ageGroup || '';
+  if (!ageGroup) return '<p class="empty-inline">Chọn Lớp trước để xem gợi ý mục tiêu.</p>';
+  const selected = new Set(selectedObjectiveCodesFromPlan(plan));
+  const items = computeQuickSuggestions(ageGroup, plan.lessonTitle || '', plan.lessonDomain || '');
+  if (!items.length) return '<p class="empty-inline">Chưa có gợi ý — điền "Tên bài/hoạt động" hoặc "Lĩnh vực" ở trên, hoặc bấm "Xem tất cả mục tiêu" bên dưới.</p>';
+  return items.map((o) => `<label class="objective-picker-item"><span class="objective-picker-text">${o.scope === 'system' ? '<span class="chip teal">Chung</span> ' : ''}<b>${escapeHtml(o.code)}</b> — ${escapeHtml((o.description || '').slice(0, 120))}</span><input type="checkbox" value="${escapeHtml(o.code)}" ${selected.has(o.code) ? 'checked' : ''}></label>`).join('');
+}
+function readPlanFormSnapshot() {
+  const form = document.querySelector('#plan-form');
+  if (!form) return null;
+  const formData = new FormData(form);
+  return {
+    ageGroup: formData.get('ageGroup') || '',
+    lessonTitle: formData.get('lessonTitle') || '',
+    lessonDomain: formData.get('lessonDomain') || '',
+    lessonObjectiveCodes: formData.getAll('lessonObjectiveCodes'),
+  };
+}
+function refreshInlineSuggestions() {
+  const box = document.querySelector('#lesson-objectives-suggest');
+  const snapshot = readPlanFormSnapshot();
+  if (!box || !snapshot) return;
+  box.innerHTML = renderInlineSuggestions(snapshot);
+}
+function toggleQuickSuggestion(code, checked) {
+  const hidden = document.querySelector('#lesson-objectives-hidden');
+  const summaryEl = document.querySelector('#lesson-objectives-summary');
+  if (!hidden || !summaryEl) return;
+  const current = new Set(Array.from(hidden.querySelectorAll('input[name="lessonObjectiveCodes"]')).map((el) => el.value));
+  if (checked) current.add(code); else current.delete(code);
+  const codes = [...current];
+  hidden.innerHTML = objectiveHiddenInputs(codes);
+  summaryEl.innerHTML = renderObjectiveSummary(codes);
+}
 function openObjectivePicker() {
   const form = document.querySelector('#plan-form');
   if (!form) return;
@@ -883,7 +937,7 @@ function planTemplate(plan = {}) {
     <details class="template-editor" ${plan.level==='Ngày/hoạt động'?'open':''}><summary>Mẫu giáo án/hoạt động giáo dục ngày</summary>
       <div class="form-grid"><label class="field"><span>Lĩnh vực</span><input class="input" name="lessonDomain" value="${escapeHtml(plan.lessonDomain||'')}"></label><label class="field"><span>Tên bài/hoạt động</span><input class="input" name="lessonTitle" value="${escapeHtml(plan.lessonTitle||'')}"></label></div>
       <label class="field"><span>Loại giáo án</span><select class="select" name="lessonType">${['Hoạt động thông thường','STEAM/Dự án'].map((v)=>`<option ${(plan.lessonType||'Hoạt động thông thường')===v?'selected':''}>${v}</option>`).join('')}</select></label>
-      <div class="field"><span>Liên kết mục tiêu (MT) từ ngân hàng</span><div id="lesson-objectives-summary" class="objective-summary">${renderObjectiveSummary(selectedObjectiveCodesFromPlan(plan))}</div><div id="lesson-objectives-hidden">${objectiveHiddenInputs(selectedObjectiveCodesFromPlan(plan))}</div><button type="button" class="ghost-button" data-open-objective-picker>Chọn mục tiêu từ ngân hàng</button></div>
+      <div class="field"><span>Liên kết mục tiêu (MT) từ ngân hàng</span><div id="lesson-objectives-summary" class="objective-summary">${renderObjectiveSummary(selectedObjectiveCodesFromPlan(plan))}</div><div id="lesson-objectives-hidden">${objectiveHiddenInputs(selectedObjectiveCodesFromPlan(plan))}</div><small>Gợi ý tự động theo Lớp, Lĩnh vực và Tên bài/hoạt động — tích chọn ngay bên dưới:</small><div id="lesson-objectives-suggest" class="objective-inline-suggest">${renderInlineSuggestions(plan)}</div><button type="button" class="ghost-button" data-open-objective-picker>Xem tất cả mục tiêu</button></div>
       <label class="field"><span>I. Mục đích - yêu cầu</span><textarea name="lessonObjectives">${escapeHtml(plan.lessonObjectives||'')}</textarea></label>
       <label class="field"><span>II. Chuẩn bị</span><textarea name="lessonPreparation">${escapeHtml(plan.lessonPreparation||'')}</textarea></label>
       <div id="lesson-normal-activities" class="${(plan.lessonType||'Hoạt động thông thường')==='STEAM/Dự án'?'is-hidden':''}">
@@ -1329,6 +1383,7 @@ function bindEvents() {
   els.main.addEventListener('input', (event) => {
     if (event.target.getAttribute('id') === 'library-query') { state.query = event.target.value; state.page = 1; window.clearTimeout(bindEvents.queryTimer); bindEvents.queryTimer = window.setTimeout(render, 180); }
     if (event.target.getAttribute('id') === 'open-query') { state.query = event.target.value; window.clearTimeout(bindEvents.openTimer); bindEvents.openTimer = window.setTimeout(renderOpenData, 180); }
+    if ((event.target.name === 'lessonTitle' || event.target.name === 'lessonDomain') && event.target.closest('#plan-form')) { window.clearTimeout(bindEvents.lessonSuggestTimer); bindEvents.lessonSuggestTimer = window.setTimeout(refreshInlineSuggestions, 300); }
   });
   els.main.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -1357,7 +1412,9 @@ function bindEvents() {
     if (event.target.getAttribute('id') === 'age-filter') { state.ageGroup = event.target.value; state.collection = 'all'; state.page = 1; render(); }
     if (event.target.getAttribute('id') === 'collection-filter') { state.collection = event.target.value; state.page = 1; render(); }
     if (event.target.name === 'lessonType' && event.target.closest('#plan-form')) { const isSteam = event.target.value === 'STEAM/Dự án'; document.querySelector('#lesson-normal-activities')?.classList.toggle('is-hidden', isSteam); document.querySelector('#lesson-steam-activities')?.classList.toggle('is-hidden', !isSteam); }
-    if (event.target.name === 'ageGroup' && event.target.closest('#plan-form')) { const notice = document.querySelector('#weekday-schedule-notice'); if (notice) notice.innerHTML = weekdayScheduleNoticeText(event.target.value); }
+    if (event.target.name === 'ageGroup' && event.target.closest('#plan-form')) { const notice = document.querySelector('#weekday-schedule-notice'); if (notice) notice.innerHTML = weekdayScheduleNoticeText(event.target.value); refreshInlineSuggestions(); }
+    if (event.target.name === 'lessonDomain' && event.target.closest('#plan-form')) refreshInlineSuggestions();
+    if (event.target.closest('#lesson-objectives-suggest') && event.target.type === 'checkbox') toggleQuickSuggestion(event.target.value, event.target.checked);
     if (event.target.getAttribute('id') === 'type-filter') {
       const type = event.target.value;
       if (type === 'all') setRoute('library', { keepFilters: true });
