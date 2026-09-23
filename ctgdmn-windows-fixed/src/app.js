@@ -1216,6 +1216,20 @@ function renderAbout() {
     </article>`;
 }
 
+function withFocusPreserved(renderFn) {
+  const active = document.activeElement;
+  const id = active && active.id;
+  const selStart = active && typeof active.selectionStart === 'number' ? active.selectionStart : null;
+  const selEnd = active && typeof active.selectionEnd === 'number' ? active.selectionEnd : null;
+  renderFn();
+  if (!id) return;
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.focus();
+  if (selStart !== null && el.setSelectionRange) {
+    try { el.setSelectionRange(selStart, selEnd); } catch (error) { /* not a text-selectable input */ }
+  }
+}
 function render() {
   document.querySelectorAll('[data-route]').forEach((button) => button.classList.toggle('is-active', button.dataset.route === state.route));
   if (state.route === 'work-center') renderWorkCenter();
@@ -1485,10 +1499,10 @@ function bindEvents() {
     }
   });
   els.main.addEventListener('input', (event) => {
-    if (event.target.getAttribute('id') === 'library-query') { state.query = event.target.value; state.page = 1; window.clearTimeout(bindEvents.queryTimer); bindEvents.queryTimer = window.setTimeout(render, 180); }
-    if (event.target.getAttribute('id') === 'open-query') { state.query = event.target.value; window.clearTimeout(bindEvents.openTimer); bindEvents.openTimer = window.setTimeout(renderOpenData, 180); }
+    if (event.target.getAttribute('id') === 'library-query') { state.query = event.target.value; state.page = 1; window.clearTimeout(bindEvents.queryTimer); bindEvents.queryTimer = window.setTimeout(() => withFocusPreserved(render), 180); }
+    if (event.target.getAttribute('id') === 'open-query') { state.query = event.target.value; window.clearTimeout(bindEvents.openTimer); bindEvents.openTimer = window.setTimeout(() => withFocusPreserved(renderOpenData), 180); }
     if ((event.target.name === 'lessonTitle' || event.target.name === 'lessonDomain') && event.target.closest('#plan-form')) { window.clearTimeout(bindEvents.lessonSuggestTimer); bindEvents.lessonSuggestTimer = window.setTimeout(refreshInlineSuggestions, 300); }
-    if (event.target.getAttribute('id') === 'framework-library-query') { state.query = event.target.value; window.clearTimeout(bindEvents.frameworkLibraryTimer); bindEvents.frameworkLibraryTimer = window.setTimeout(renderFrameworkLibrary, 180); }
+    if (event.target.getAttribute('id') === 'framework-library-query') { state.query = event.target.value; window.clearTimeout(bindEvents.frameworkLibraryTimer); bindEvents.frameworkLibraryTimer = window.setTimeout(() => withFocusPreserved(renderFrameworkLibrary), 180); }
   });
   els.main.addEventListener('submit', async (event) => {
     event.preventDefault();
