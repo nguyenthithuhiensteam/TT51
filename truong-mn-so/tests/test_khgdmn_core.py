@@ -140,7 +140,7 @@ def test_restore_accepts_node_backup_users(client):
 
 
 def test_not_ported_routes_and_frontend(client):
-    response = client.post("/api/imports/commit-pdf")
+    response = client.post("/api/ai/test")
     assert response.status_code == 501
     assert client.get("/api/health").json() == {"ok": True}
     home = client.get("/")

@@ -152,6 +152,16 @@ template_files = Table(
 )
 
 
+# PDF nguồn do người dùng thêm (bản Node lưu ở /data/program-documents-added).
+added_documents = Table(
+    "kh_added_documents", metadata,
+    Column("filename", String, primary_key=True),
+    Column("data", LargeBinary, nullable=False),
+    Column("size", Integer, nullable=False),
+    Column("created_at", String, nullable=False),
+)
+
+
 def data_dir() -> Path:
     path = Path(os.environ.get("CTGDMN_DATA_DIR") or PROJECT_ROOT / "data").resolve()
     path.mkdir(parents=True, exist_ok=True)

@@ -7,14 +7,17 @@ from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import APIRouter, Request, Response
+from fastapi.responses import FileResponse
 
 from .db import data_dir
+from .documents import ADDED_PREFIX, AddedDocuments, PendingImports, added_filename, resolve_guide, resolve_program_document, trusted_resource_url
 from .errors import AppError
+from .imports import parse_excel_buffer, parse_word_buffer
 from .export_excel import create_directory_workbook, create_professional_workbook
 from .export_html import create_plan_html
 from .export_word import create_plan_docx, create_review_docx
 from .pdf import render_plan_pdf
-from .validation import safe_export_name
+from .validation import safe_export_name, validate_import_file
 from .repository import Repository, dumps, iso, s
 from .security import ADMIN, authorize, safe_https_url
 from .templates import TemplateManager
@@ -23,13 +26,16 @@ router = APIRouter()
 ENCODE_URI_COMPONENT_SAFE = "-_.!~*'()"
 _repository: Repository | None = None
 _templates: TemplateManager | None = None
+_added_documents: AddedDocuments | None = None
+_pending_imports = PendingImports()
 _frontend_dir: Path | None = None
 
 
 def configure(repository: Repository, frontend_dir: Path) -> None:
-    global _repository, _templates, _frontend_dir
+    global _repository, _templates, _added_documents, _frontend_dir
     _repository = repository
     _templates = TemplateManager(repository)
+    _added_documents = AddedDocuments(repository)
     _frontend_dir = frontend_dir
 
 
@@ -270,6 +276,97 @@ def backup(request: Request):
 async def restore(request: Request):
     repo().restore_backup(current_user(request), await body(request))
     return True
+
+
+# ---- Tài liệu chương trình / hướng dẫn / tài nguyên ngoài ----
+@router.get("/api/documents/file")
+def document_file(request: Request):
+    user = current_user(request)
+    authorize(user, "data.read")
+    relative_path = str(request.query_params.get("relativePath", ""))
+    added = added_filename(relative_path)
+    if added:
+        return Response(_added_documents.read(added), media_type="application/pdf")
+    path = resolve_program_document(relative_path)
+    if not path.is_file():
+        raise AppError("Không tìm thấy tài liệu PDF.")
+    return FileResponse(path, media_type="application/pdf")
+
+
+@router.get("/api/guides/{format_name}")
+def guide_file(format_name: str, request: Request):
+    user = current_user(request)
+    authorize(user, "video.view")
+    path = resolve_guide(format_name)
+    if not path.is_file():
+        raise AppError("Không tìm thấy tài liệu hướng dẫn đi kèm ứng dụng.")
+    repo().audit(user["id"], "guide.open", "guide", format_name, 0, "success", {"format": format_name})
+    return FileResponse(path, media_type="application/pdf" if format_name == "pdf" else DOCX_TYPE, filename=path.name, content_disposition_type="inline")
+
+
+@router.get("/api/resources/trusted/{resource_id}")
+def trusted_resource(resource_id: str, request: Request):
+    user = current_user(request)
+    authorize(user, "video.view")
+    url = trusted_resource_url(resource_id)
+    repo().audit(user["id"], "resource.open", "online_resource", resource_id)
+    return {"url": url}
+
+
+# ---- Nhập dữ liệu ----
+@router.post("/api/imports/choose-files")
+async def choose_import_files(request: Request):
+    user = current_user(request)
+    authorize(user, "data.manage" if ADMIN in (user.get("roles") or []) else "data.read")
+    form = await request.form()
+    kind = form.get("kind")
+    if kind not in ("word", "excel", "pdf"):
+        raise AppError("Loại nhập không hợp lệ.")
+    files = []
+    for upload in form.getlist("files"):
+        if isinstance(upload, str):
+            continue
+        content = await upload.read()
+        name = upload.filename or ""
+        validate_import_file(name, len(content), kind)
+        token = _pending_imports.put(name, content, kind)
+        preview = {"filename": name}
+        if kind == "word":
+            preview = parse_word_buffer(content, name)
+        elif kind == "excel":
+            preview = parse_excel_buffer(content, name)
+        files.append({"token": token, "name": name, "size": len(content), "preview": preview})
+    return {"canceled": not files, "kind": kind, "files": files}
+
+
+@router.post("/api/imports/commit-pdf")
+async def commit_pdf_import(request: Request):
+    user = current_user(request)
+    authorize(user, "data.manage")
+    data = await body(request)
+    tokens = data.get("tokens") or []
+    files = [item for item in (_pending_imports.get(token) for token in tokens) if item and item["kind"] == "pdf"]
+    if not files:
+        raise AppError("Không còn tệp PDF hợp lệ để thêm.")
+    imported = _added_documents.add(files, data.get("actor"))
+    for token in tokens:
+        _pending_imports.discard(token)
+    repo().audit(user["id"], "pdf.import", "source", "multiple", 0, "success", {"count": len(imported)})
+    return imported
+
+
+@router.post("/api/imports/undo-pdf")
+async def undo_pdf_import(request: Request):
+    user = current_user(request)
+    authorize(user, "data.manage")
+    removed = []
+    for relative_path in (await body(request)).get("relativePaths") or []:
+        if not isinstance(relative_path, str) or not relative_path.replace("\\", "/").startswith(ADDED_PREFIX):
+            raise AppError("Chỉ có thể hoàn tác PDF nguồn bổ sung.")
+        if _added_documents.remove(added_filename(relative_path)):
+            removed.append(relative_path)
+    repo().audit(user["id"], "pdf.undo", "source", "multiple", 0, "success", {"count": len(removed)})
+    return {"ok": True, "removed": removed}
 
 
 # ---- Xuất tài liệu ----

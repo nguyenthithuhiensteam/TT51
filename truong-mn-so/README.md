@@ -27,9 +27,8 @@ python -m venv .venv
 | Video trực tuyến | Xong |
 | Cấu hình AI | Chỉ đọc (trả về "chưa cấu hình") |
 | Xuất Word (kể cả mẫu tùy chỉnh), Excel, PDF | Xong — nội dung Word khớp bản Node |
-| Nhập Word/Excel/PDF | Chưa |
+| Nhập Word/Excel/PDF, kho PDF chương trình, hướng dẫn | Xong — PDF bổ sung lưu trong CSDL |
 | AI (lưu cấu hình, gọi mô hình), video MP4 ngoại tuyến | Chưa |
-| Tài liệu chương trình (PDF), hướng dẫn | Chưa |
 | CT388 gắn tại `/ct388` | Chưa |
 | Dockerfile + Render | Chưa |
 
