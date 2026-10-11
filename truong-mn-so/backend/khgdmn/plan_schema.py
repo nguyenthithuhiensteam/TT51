@@ -97,6 +97,56 @@ def parse_weekly_rows(plan: dict) -> list[dict]:
     return rows
 
 
+_ROW_KEYS = ("category", "period", "theme", "objective", "content", "activity", "monday", "tuesday", "wednesday",
+             "thursday", "friday", "teacherActivity", "childActivity")
+GENERIC_ROW_SCHEMA = {
+    "type": "object", "additionalProperties": False,
+    "properties": {key: {"type": "string"} for key in _ROW_KEYS}, "required": list(_ROW_KEYS),
+}
+_PLAN_FIELDS = ("title", "context", "objectives", "activities", "materials", "differentiation", "assessment", "family")
+PLAN_RESPONSE_SCHEMA = {
+    "type": "object", "additionalProperties": False,
+    "properties": {**{key: {"type": "string"} for key in _PLAN_FIELDS}, "templateRows": {"type": "array", "items": GENERIC_ROW_SCHEMA}},
+    "required": [*_PLAN_FIELDS, "templateRows"],
+}
+_LESSON_FIELDS = ("lessonTitle", "lessonDomain", "lessonObjectives", "lessonPreparation", "activity1Teacher", "activity1Child",
+                  "activity2Teacher", "activity2Child", "activity3Teacher", "activity3Child", "dailyEvaluation")
+LESSON_RESPONSE_SCHEMA = {
+    "type": "object", "additionalProperties": False,
+    "properties": {key: {"type": "string"} for key in _LESSON_FIELDS}, "required": list(_LESSON_FIELDS),
+}
+
+
+def validate_lesson_response(value):
+    from .errors import AppError
+
+    if not isinstance(value, dict):
+        raise AppError("AI không trả về một đối tượng JSON hợp lệ.")
+    for field in _LESSON_FIELDS:
+        if not isinstance(value.get(field), str):
+            raise AppError(f'Trường AI "{field}" không hợp lệ.')
+    return value
+
+
+def validate_plan_response(value):
+    from .errors import AppError
+
+    if not isinstance(value, dict):
+        raise AppError("AI không trả về một đối tượng JSON hợp lệ.")
+    for field in _PLAN_FIELDS:
+        if not isinstance(value.get(field), str):
+            raise AppError(f'Trường AI "{field}" không hợp lệ.')
+    if not isinstance(value.get("templateRows"), list):
+        raise AppError("Danh sách dòng biểu mẫu do AI trả về không hợp lệ.")
+    for row in value["templateRows"]:
+        if not isinstance(row, dict):
+            raise AppError("Một dòng biểu mẫu AI không hợp lệ.")
+        for key in _ROW_KEYS:
+            if not isinstance(row.get(key), str):
+                raise AppError(f'Trường dòng AI "{key}" không hợp lệ.')
+    return value
+
+
 def normalize_plan_type(level="") -> str:
     value = str(level or "").strip().lower()
     if value in PLAN_TYPES:

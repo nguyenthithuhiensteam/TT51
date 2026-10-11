@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import uuid
 from pathlib import Path
 from urllib.parse import quote
@@ -9,6 +10,7 @@ from urllib.parse import quote
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import FileResponse
 
+from .ai import AIConfigStore, AIService, SecretBox, set_program_index_path
 from .db import data_dir
 from .documents import ADDED_PREFIX, AddedDocuments, PendingImports, added_filename, resolve_guide, resolve_program_document, trusted_resource_url
 from .errors import AppError
@@ -27,16 +29,27 @@ ENCODE_URI_COMPONENT_SAFE = "-_.!~*'()"
 _repository: Repository | None = None
 _templates: TemplateManager | None = None
 _added_documents: AddedDocuments | None = None
+_ai_service: AIService | None = None
 _pending_imports = PendingImports()
 _frontend_dir: Path | None = None
 
 
 def configure(repository: Repository, frontend_dir: Path) -> None:
-    global _repository, _templates, _added_documents, _frontend_dir
+    global _repository, _templates, _added_documents, _ai_service, _frontend_dir
     _repository = repository
     _templates = TemplateManager(repository)
     _added_documents = AddedDocuments(repository)
     _frontend_dir = frontend_dir
+    set_program_index_path(frontend_dir / "data" / "program-index.json")
+    store = AIConfigStore(repository, SecretBox(os.environ.get("AI_CONFIG_ENCRYPTION_KEY", "")))
+    store.seed_from_env()
+    _ai_service = AIService(store, audit=lambda action, details: None)
+
+
+def ai_service() -> AIService:
+    if _ai_service is None:
+        raise RuntimeError("AIService chưa được khởi tạo.")
+    return _ai_service
 
 
 def repo() -> Repository:
@@ -558,9 +571,55 @@ def delete_video(video_id: str, request: Request):
     return True
 
 
-# ---- AI (tạm thời: chỉ đọc cấu hình; lưu cấu hình và gọi AI sẽ chuyển ở bước sau) ----
+# ---- AI ----
 @router.get("/api/ai/config")
 def ai_config(request: Request):
     current_user(request)
-    return {"provider": "", "model": "", "baseUrl": "", "timeoutMs": 60000, "retries": 1, "keyMode": "none",
-            "maskedKey": "", "consentAccepted": False, "lastTest": None}
+    return ai_service().store.get_public_config()
+
+
+@router.post("/api/ai/config")
+async def save_ai_config(request: Request):
+    user = current_user(request)
+    authorize(user, "data.manage")
+    saved = ai_service().store.save(await body(request))
+    repo().audit(user["id"], "ai.config_save", "ai", saved["provider"], 0, "success", {"model": saved["model"], "keyMode": saved["keyMode"]})
+    return saved
+
+
+@router.delete("/api/ai/config")
+def clear_ai_config(request: Request):
+    user = current_user(request)
+    authorize(user, "data.manage")
+    ai_service().store.clear()
+    repo().audit(user["id"], "ai.config_clear", "ai", "local")
+    return True
+
+
+@router.post("/api/ai/test")
+async def test_ai(request: Request):
+    user = current_user(request)
+    result = await ai_service().test_connection()
+    repo().audit(user["id"], "ai.connection_test", "ai", ai_service().store.get_public_config()["provider"], 0,
+                 "success" if result["ok"] else "failure", {"status": result["status"]})
+    return result
+
+
+@router.post("/api/ai/generate")
+async def generate_ai(request: Request):
+    user = current_user(request)
+    data = await body(request)
+    action = data.get("action")
+    if action not in ("generate", "improve", "validate"):
+        raise AppError("Thao tác AI không hợp lệ.")
+    plan = data.get("plan") or {}
+    result = await ai_service().run(action, plan, data.get("requestId"))
+    repo().audit(user["id"], f"ai.{action}", "plan", plan.get("id") or "", plan.get("version") or 0, "success",
+                 {"provider": ai_service().store.get_public_config()["provider"]})
+    return result
+
+
+@router.post("/api/ai/cancel")
+async def cancel_ai(request: Request):
+    current_user(request)
+    return ai_service().cancel((await body(request)).get("requestId"))

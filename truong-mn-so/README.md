@@ -6,7 +6,7 @@ Gộp KH GDMN (bản Node ở `../ctgdmn-windows-fixed`) và CT388 thành một 
 
 ```bash
 python -m venv .venv
-.venv/Scripts/python -m pip install -r requirements.txt
+.venv/Scripts/python -m pip install -r requirements-dev.txt
 .venv/Scripts/python -m uvicorn backend.main:app --port 8787
 ```
 
@@ -25,10 +25,10 @@ python -m venv .venv
 | Kho kế hoạch, quy trình duyệt, cấu hình, nhật ký, sao lưu/khôi phục | Xong |
 | Mẫu DOCX (danh sách, nhập, mặc định, sao lưu) — lưu trong CSDL | Xong |
 | Video trực tuyến | Xong |
-| Cấu hình AI | Chỉ đọc (trả về "chưa cấu hình") |
+| AI (cấu hình, thử kết nối, soạn/cải thiện/rà soát) | Xong — Claude qua thư viện `anthropic`, structured outputs |
 | Xuất Word (kể cả mẫu tùy chỉnh), Excel, PDF | Xong — nội dung Word khớp bản Node |
 | Nhập Word/Excel/PDF, kho PDF chương trình, hướng dẫn | Xong — PDF bổ sung lưu trong CSDL |
-| AI (lưu cấu hình, gọi mô hình), video MP4 ngoại tuyến | Chưa |
+| Video MP4 ngoại tuyến | Chưa |
 | CT388 gắn tại `/ct388` | Chưa |
 | Dockerfile + Render | Chưa |
 
