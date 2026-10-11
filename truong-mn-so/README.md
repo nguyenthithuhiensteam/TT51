@@ -13,6 +13,8 @@ python -m venv .venv
 - Không đặt `DATABASE_URL` → dữ liệu lưu ở `data/truong-mn-so.sqlite`.
 - Có `DATABASE_URL` (Postgres trên Render) → dùng chung CSDL với CT388; bảng KH GDMN có tiền tố `kh_`.
 - Kiểm thử: `.venv/Scripts/python -m pytest -q`
+- Xuất PDF trên Windows: đặt `PLAYWRIGHT_CHANNEL=msedge` để dùng Edge có sẵn (Docker dùng Chromium kèm Playwright).
+- Đối chiếu Word với bản Node cần `npm ci --omit=dev --ignore-scripts` trong `../ctgdmn-windows-fixed`.
 
 ## Tiến độ chuyển từ Node
 
@@ -24,7 +26,8 @@ python -m venv .venv
 | Mẫu DOCX (danh sách, nhập, mặc định, sao lưu) — lưu trong CSDL | Xong |
 | Video trực tuyến | Xong |
 | Cấu hình AI | Chỉ đọc (trả về "chưa cấu hình") |
-| Xuất Word/Excel/PDF, nhập Word/Excel/PDF | Chưa |
+| Xuất Word (kể cả mẫu tùy chỉnh), Excel, PDF | Xong — nội dung Word khớp bản Node |
+| Nhập Word/Excel/PDF | Chưa |
 | AI (lưu cấu hình, gọi mô hình), video MP4 ngoại tuyến | Chưa |
 | Tài liệu chương trình (PDF), hướng dẫn | Chưa |
 | CT388 gắn tại `/ct388` | Chưa |

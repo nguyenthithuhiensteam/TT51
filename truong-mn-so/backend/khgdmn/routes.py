@@ -4,16 +4,23 @@ from __future__ import annotations
 import json
 import uuid
 from pathlib import Path
+from urllib.parse import quote
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Response
 
 from .db import data_dir
 from .errors import AppError
+from .export_excel import create_directory_workbook, create_professional_workbook
+from .export_html import create_plan_html
+from .export_word import create_plan_docx, create_review_docx
+from .pdf import render_plan_pdf
+from .validation import safe_export_name
 from .repository import Repository, dumps, iso, s
 from .security import ADMIN, authorize, safe_https_url
 from .templates import TemplateManager
 
 router = APIRouter()
+ENCODE_URI_COMPONENT_SAFE = "-_.!~*'()"
 _repository: Repository | None = None
 _templates: TemplateManager | None = None
 _frontend_dir: Path | None = None
@@ -263,6 +270,77 @@ def backup(request: Request):
 async def restore(request: Request):
     repo().restore_backup(current_user(request), await body(request))
     return True
+
+
+# ---- Xuất tài liệu ----
+DOCX_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+def file_response(content: bytes, filename: str, content_type: str) -> Response:
+    disposition = f"attachment; filename*=UTF-8''{quote(filename, safe=ENCODE_URI_COMPONENT_SAFE)}"
+    return Response(content, media_type=content_type, headers={"Content-Disposition": disposition})
+
+
+def authorize_export(user: dict, payload: dict) -> None:
+    own = payload.get("authorTeacherId") == user.get("staffId")
+    authorize(user, "document.export_own" if own else "document.export", payload)
+
+
+@router.post("/api/exports/word")
+async def export_word(request: Request):
+    user = current_user(request)
+    data = await body(request)
+    payload = data.get("payload") or {}
+    school = data.get("school") or {}
+    authorize_export(user, payload)
+    signers = payload.get("signers") or []
+    for signer in signers:
+        if signer.get("mode") == "image":
+            authorize(user, "signature.use", {**payload, "ownerStaffId": signer.get("staffId")})
+    safe_name = safe_export_name(data.get("filename"), ".docx")
+    is_review = data.get("type") == "review"
+    content = None if is_review else templates().render_custom(payload.get("templateId"), payload, school)
+    if content is None:
+        content = create_review_docx(payload, school) if is_review else create_plan_docx(payload, school)
+    repo().audit(user["id"], "document.export_word", data.get("type") or "plan", payload.get("id") or "", payload.get("version") or 0, "success",
+                 {"signed": any(s.get("mode") == "image" for s in signers)})
+    return file_response(content, safe_name, DOCX_TYPE)
+
+
+@router.post("/api/exports/pdf")
+async def export_pdf(request: Request):
+    user = current_user(request)
+    data = await body(request)
+    payload = data.get("payload") or {}
+    authorize_export(user, payload)
+    safe_name = safe_export_name(data.get("filename"), ".pdf")
+    content = await render_plan_pdf(create_plan_html(payload, data.get("school") or {}), payload)
+    repo().audit(user["id"], "document.export_pdf", "plan", payload.get("id") or "", payload.get("version") or 0)
+    return file_response(content, safe_name, "application/pdf")
+
+
+@router.post("/api/exports/excel")
+async def export_excel(request: Request):
+    user = current_user(request)
+    authorize(user, "data.manage" if ADMIN in (user.get("roles") or []) else "document.export")
+    data = await body(request)
+    safe_name = safe_export_name(data.get("filename"), ".xlsx")
+    content = create_professional_workbook(data.get("payload") or {})
+    repo().audit(user["id"], "document.export_excel", "workbook", data.get("filename"))
+    return file_response(content, safe_name, XLSX_TYPE)
+
+
+@router.post("/api/exports/directory")
+async def export_directory(request: Request):
+    user = current_user(request)
+    authorize(user, "data.manage")
+    data = await body(request)
+    safe_name = safe_export_name(data.get("filename"), ".xlsx")
+    if data.get("kind") not in ("classes", "staff", "videos"):
+        raise AppError("Loại danh mục không hợp lệ.")
+    content = create_directory_workbook(data["kind"], data.get("rows") or [], bool(data.get("template")), data.get("school") or {})
+    return file_response(content, safe_name, XLSX_TYPE)
 
 
 # ---- Mẫu DOCX ----

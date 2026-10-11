@@ -1,0 +1,17 @@
+{
+  "school": {"name": "Trường Mầm non Hướng Dương", "schoolYear": "2026–2027"},
+  "plans": [
+    {"id": "p-annual", "level": "annual", "title": "Kế hoạch năm lớp Lá", "period": "9/2026 – 5/2027", "className": "Lá 1", "author": "Cô Hoa",
+     "annualRows": "Tháng 9 | Trường mầm non | Trẻ biết tên trường | Tham quan trường | Dạo quanh sân\nTháng 10 | Bản thân | Trẻ nói tên mình | Giới thiệu bản thân | Trò chơi gọi tên"},
+    {"id": "p-theme", "level": "Kế hoạch chủ đề/tháng", "title": "Chủ đề Gia đình", "period": "Tháng 11", "ageGroup": "4–5 tuổi",
+     "themePhysical": "Trẻ đi thăng bằng | Đi trên ghế | Vận động\nTrẻ ném xa | Ném túi cát | Trò chơi",
+     "themeLanguage": "Trẻ kể chuyện | Truyện gia đình | Kể chuyện", "themeFamilyWeeks": "Tuần 1 | Rửa tay đúng cách\nTuần 2 | Chào hỏi"},
+    {"id": "p-weekly", "level": "weekly", "title": "Tuần 3 – Gia đình", "weekNumber": 3, "objectives": "Trẻ biết các thành viên",
+     "weeklyWelcome": "Đón trẻ", "weeklyMorningExercise": "Thể dục sáng",
+     "weeklyRows": "Hoạt động học | Toán | Văn học | Âm nhạc | Tạo hình | Thể dục", "weeklyCornerActivities": "Góc phân vai", "assessment": "Trẻ hứng thú"},
+    {"id": "p-lesson", "level": "lesson", "title": "Giáo án", "lessonDomain": "Phát triển ngôn ngữ", "lessonTitle": "Truyện Ba cô gái",
+     "lessonObjectives": "Trẻ nhớ tên truyện", "lessonPreparation": "Tranh truyện", "teacherActivities": "Cô kể chuyện\nCô hỏi trẻ",
+     "childActivities": "Trẻ lắng nghe", "signers": [{"displayTitle": "Hiệu trưởng", "name": "Nguyễn Thị A", "mode": "text"},
+     {"role": "Giáo viên", "name": "Cô Hoa", "mode": "image", "imageData": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="}]}
+  ]
+}

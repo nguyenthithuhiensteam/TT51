@@ -140,7 +140,7 @@ def test_restore_accepts_node_backup_users(client):
 
 
 def test_not_ported_routes_and_frontend(client):
-    response = client.post("/api/exports/word")
+    response = client.post("/api/imports/commit-pdf")
     assert response.status_code == 501
     assert client.get("/api/health").json() == {"ok": True}
     home = client.get("/")
@@ -148,12 +148,15 @@ def test_not_ported_routes_and_frontend(client):
 
 
 def _docx_bytes(paragraph_text: str) -> bytes:
+    """Tệp Word thật (tạo bằng python-docx) có một đoạn chứa nội dung cho trước."""
     import io
-    import zipfile
 
+    from docx import Document
+
+    document = Document()
+    document.add_paragraph(paragraph_text)
     buffer = io.BytesIO()
-    with zipfile.ZipFile(buffer, "w") as archive:
-        archive.writestr("word/document.xml", f'<w:document><w:body><w:p><w:r><w:t>{paragraph_text}</w:t></w:r></w:p></w:body></w:document>')
+    document.save(buffer)
     return buffer.getvalue()
 
 

@@ -14,7 +14,7 @@ import zipfile
 from sqlalchemy import text
 
 from .errors import AppError
-from .plan_schema import PLAN_TYPES, normalize_plan_type
+from .plan_schema import PLAN_TYPES, js_str, normalize_plan_type, parse_annual_rows, parse_theme_rows, parse_weekly_rows
 from .repository import Repository, iso
 
 BUILT_INS = [{"id": f"builtin-{key}", "name": f"{name} - mẫu chuẩn", "type": key, "builtIn": True} for key, name in PLAN_TYPES.items()]
@@ -27,6 +27,45 @@ _SAFE_FILENAME_RE = re.compile(r"^custom-[a-f0-9-]+\.docx$", re.IGNORECASE)
 def paragraph_text(paragraph_xml: str = "") -> str:
     joined = "".join(_TEXT_RE.findall(paragraph_xml))
     return joined.replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&").replace("&quot;", '"').replace("&apos;", "'")
+
+
+def xml_escape(value="") -> str:
+    return js_str(value).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;").replace("'", "&apos;")
+
+
+def _text_paragraph(value="", bold=False) -> str:
+    properties = "<w:rPr><w:b/></w:rPr>" if bold else ""
+    return f'<w:p><w:r>{properties}<w:t xml:space="preserve">{xml_escape(value)}</w:t></w:r></w:p>'
+
+
+def _table_row(values, widths, header=False) -> str:
+    cells = "".join(f'<w:tc><w:tcPr><w:tcW w:w="{width}" w:type="dxa"/><w:vAlign w:val="center"/></w:tcPr>{_text_paragraph(value, header)}</w:tc>'
+                    for value, width in zip(values, widths))
+    return f"<w:tr>{'<w:trPr><w:tblHeader/></w:trPr>' if header else ''}{cells}</w:tr>"
+
+
+def plan_table_xml(plan: dict) -> str:
+    plan_type = normalize_plan_type(plan.get("level"))
+    if plan_type == "annual":
+        widths = [520, 1120, 1800, 2400, 2400, 2440]
+        header = ["STT", "Thời gian", "Chủ đề", "Mục tiêu", "Nội dung", "Hoạt động"]
+        rows = [[i + 1, r["period"], r["theme"], r["objective"], r["content"], r["activity"]] for i, r in enumerate(parse_annual_rows(plan))]
+    elif plan_type == "theme":
+        widths = [560, 3360, 3240, 3240]
+        header = ["STT", "Mục tiêu", "Nội dung", "Hoạt động"]
+        rows = [[i + 1, f"{r['domain']}\n{r['objective']}", r["content"], r["activity"]] for i, r in enumerate(parse_theme_rows(plan))]
+    elif plan_type == "weekly":
+        widths = [1600, 1848, 1848, 1848, 1848, 1848]
+        header = ["Nội dung hoạt động", "Thứ hai", "Thứ ba", "Thứ tư", "Thứ năm", "Thứ sáu"]
+        rows = [[r["activity"], r["monday"], r["tuesday"], r["wednesday"], r["thursday"], r["friday"]] for r in parse_weekly_rows(plan)]
+    else:
+        widths = [5000, 5000]
+        header = ["Hoạt động của cô", "Hoạt động của trẻ"]
+        rows = [[plan.get("teacherActivities") or plan.get("activities") or "", plan.get("childActivities") or ""]]
+    borders = "".join(f'<w:{side} w:val="single" w:sz="4"/>' for side in ("top", "left", "bottom", "right", "insideH", "insideV"))
+    grid = "".join(f'<w:gridCol w:w="{width}"/>' for width in widths)
+    body = _table_row(header, widths, True) + "".join(_table_row(values, widths) for values in rows)
+    return f'<w:tbl><w:tblPr><w:tblW w:w="{sum(widths)}" w:type="dxa"/><w:tblBorders>{borders}</w:tblBorders></w:tblPr><w:tblGrid>{grid}</w:tblGrid>{body}</w:tbl>'
 
 
 class TemplateManager:
@@ -89,6 +128,43 @@ class TemplateManager:
         if not row:
             raise AppError("Không tìm thấy tệp mẫu DOCX.")
         return bytes(row["data"])
+
+    def render_custom(self, template_id, plan: dict, school: dict) -> bytes | None:
+        template = self.resolve(template_id, plan)
+        if not template:
+            return None
+        source = self.file_bytes(template["filename"])
+        with zipfile.ZipFile(io.BytesIO(source)) as archive:
+            if "word/document.xml" not in archive.namelist():
+                raise AppError("Mẫu DOCX không có nội dung Word hợp lệ.")
+            entries = [(info, archive.read(info.filename)) for info in archive.infolist()]
+        xml = next(data for info, data in entries if info.filename == "word/document.xml").decode("utf-8")
+        tokens = {
+            "{{SCHOOL_NAME}}": school.get("name"), "{{SCHOOL_YEAR}}": school.get("schoolYear"), "{{PLAN_TITLE}}": plan.get("title"),
+            "{{PLAN_PERIOD}}": plan.get("period"), "{{PLAN_CLASS}}": plan.get("className") or plan.get("ageGroup"),
+            "{{PLAN_AUTHOR}}": plan.get("author"), "{{PLAN_OBJECTIVES}}": plan.get("objectives"), "{{PLAN_ACTIVITIES}}": plan.get("activities"),
+            "{{PLAN_MATERIALS}}": plan.get("materials"), "{{PLAN_ASSESSMENT}}": plan.get("assessment"),
+        }
+        for token, value in tokens.items():
+            xml = xml.replace(token, xml_escape(value or ""))
+        table_xml = plan_table_xml(plan)
+        replaced = False
+
+        def swap(match):
+            nonlocal replaced
+            if paragraph_text(match.group(0)).strip() != "{{PLAN_TABLE}}":
+                return match.group(0)
+            replaced = True
+            return table_xml
+
+        xml = _PARAGRAPH_RE.sub(swap, xml)
+        if not replaced:
+            raise AppError("Mẫu DOCX tùy chỉnh cần có biến {{PLAN_TABLE}} trong một dòng riêng.")
+        output = io.BytesIO()
+        with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as archive:
+            for info, data in entries:
+                archive.writestr(info.filename, xml.encode("utf-8") if info.filename == "word/document.xml" else data)
+        return output.getvalue()
 
     def backup_payload(self) -> dict:
         registry = self.read_registry()
