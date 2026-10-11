@@ -168,10 +168,8 @@ def data_dir() -> Path:
     return path
 
 
-def database_url() -> str:
-    url = os.environ.get("DATABASE_URL", "").strip()
-    if not url:
-        return f"sqlite:///{data_dir() / 'truong-mn-so.sqlite'}"
+def normalize_url(url: str) -> str:
+    """Render/Heroku đưa `postgres://...`; SQLAlchemy cần chỉ rõ driver psycopg (v3)."""
     if url.startswith("postgres://"):
         return "postgresql+psycopg://" + url[len("postgres://"):]
     if url.startswith("postgresql://"):
@@ -179,8 +177,13 @@ def database_url() -> str:
     return url
 
 
+def database_url() -> str:
+    url = os.environ.get("DATABASE_URL", "").strip()
+    return normalize_url(url) if url else f"sqlite:///{data_dir() / 'truong-mn-so.sqlite'}"
+
+
 def make_engine(url: str | None = None) -> Engine:
-    url = url or database_url()
+    url = normalize_url(url) if url else database_url()
     if url.startswith("sqlite"):
         engine = create_engine(url, connect_args={"check_same_thread": False}, future=True)
 

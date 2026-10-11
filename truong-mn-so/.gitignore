@@ -1,4 +1,7 @@
-data/
+/data/
 __pycache__/
 *.pyc
 .venv/
+ct388/config/
+ct388/database/
+ct388/license/

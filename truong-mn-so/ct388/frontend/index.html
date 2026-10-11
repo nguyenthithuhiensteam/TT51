@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Chương trình GDMN Thí điểm 2026 – Nguyễn Thị Thu Hiền</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="styles/variables.css">
+<link rel="stylesheet" href="styles/layout.css">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="styles/responsive.css">
+<link rel="stylesheet" href="styles/print.css">
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div id="topbar-tagline">
+  <span>✦</span> Lấy trẻ làm trung tâm
+  <span>·</span> Học qua chơi
+  <span>·</span> Học qua trải nghiệm
+  <span>·</span> Giáo dục hạnh phúc
+  <span>✦</span>
+</div>
+<div id="topbar">
+  <div class="tb-logo"><img class="app-logo" src="assets/logo.ico" alt="" aria-hidden="true"></div>
+  <div class="tb-brand">
+    <div class="t1">CHƯƠNG TRÌNH GIÁO DỤC MẦM NON</div>
+    <div class="tb-author">
+      <span class="tb-author-name">Nguyễn Thị Thu Hiền</span>
+      <span class="tb-author-sep">·</span>
+      <span class="tb-qd">Theo QĐ 388/QĐ-BGDĐT</span>
+      <span class="tb-author-sep">·</span>
+      <span class="tb-badge license-badge demo" id="license-badge">DEMO – chưa kích hoạt</span>
+    </div>
+  </div>
+  <div class="tb-actions">
+    <div class="tb-search-inline">
+      <i class="ti ti-search"></i>
+      <input id="tb-search-in" placeholder="Tìm kiếm nội dung..." onkeydown="if(event.key==='Enter'&&this.value.trim()) doSearch(this.value)">
+    </div>
+    <span class="tb-save-status" id="tb-save-status" title="Trạng thái lưu dữ liệu"><i class="ti ti-cloud-check"></i> <span id="tb-save-status-text">Đã đồng bộ</span></span>
+    <button class="tb-icon-btn" id="btn-notify" onclick="toggleNotifications()" title="Thông báo hoạt động gần đây"><i class="ti ti-bell"></i><span class="tb-notify-dot" id="tb-notify-dot" style="display:none"></span></button>
+    <div id="tb-notify-panel" class="tb-notify-panel" style="display:none"></div>
+    <button class="tbtn" onclick="openPrint()"><i class="ti ti-printer"></i> In KH</button>
+    <button class="tb-icon-btn" id="btn-donate" onclick="toggleDonatePanel()" title="Ủng hộ tác giả"><i class="ti ti-heart"></i></button>
+    <div id="tb-donate-panel" class="tb-notify-panel" style="display:none"></div>
+    <div class="tb-user" onclick="goPage('settings')" title="Vào Cài đặt">
+      <span class="tb-avatar" id="tb-user-avatar">?</span>
+      <span class="tb-user-name" id="tb-user-name">Đang tải...</span>
+    </div>
+    <button class="tb-icon-btn" onclick="doLogout()" title="Đăng xuất"><i class="ti ti-logout"></i></button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="wrap">
+
+<!-- SIDEBAR (12 mục theo yêu cầu thiết kế lại, GĐ2) -->
+<nav id="sidebar">
+  <div class="srch-wrap" id="srch-box" style="display:none">
+    <div class="srch"><i class="ti ti-search"></i><input id="srch-in" placeholder="Tìm kiếm nội dung..." oninput="doSearch(this.value)"></div>
+  </div>
+    <div id="sidebar-scroll">
+    <div class="nav-sec">Điều hướng chính</div>
+    <div class="nav-a on" data-navid="home" onclick="nav(this,'home')"><i class="ti ti-home"></i>Trang chủ</div>
+    <div class="nav-a" data-navid="curriculum" onclick="nav(this,'ct')"><i class="ti ti-books"></i>Chương trình GDMN</div>
+    <div class="nav-a" data-navid="school-program" onclick="nav(this,'overview-ct388')"><i class="ti ti-building"></i>Chương trình nhà trường</div>
+    <div class="nav-a" data-navid="planning" onclick="nav(this,'kh')"><i class="ti ti-calendar-event"></i>Lập kế hoạch giáo dục</div>
+    <div class="nav-a" data-navid="gdmn-pilot" onclick="nav(this,'gdmn-pilot')"><i class="ti ti-route"></i>Trợ lý 5B &amp; Truy xuất nguồn</div>
+    <div class="nav-a" data-navid="library" onclick="nav(this,'baihoc')"><i class="ti ti-puzzle"></i>Thư viện hoạt động</div>
+    <div class="nav-a" data-navid="children" onclick="nav(this,'tracker')"><i class="ti ti-user-check"></i>Trẻ và lớp học</div>
+    <div class="nav-a" data-navid="assessment" onclick="nav(this,'observation-log')"><i class="ti ti-eye-check"></i>Quan sát – đánh giá</div>
+    <div class="nav-a" data-navid="portfolio" onclick="nav(this,'portfolio')"><i class="ti ti-photo"></i>Portfolio</div>
+    <div class="nav-a" data-navid="inclusion" onclick="nav(this,'inclusion')"><i class="ti ti-heart-handshake"></i>Giáo dục hòa nhập</div>
+    <div class="nav-a" data-navid="reports" onclick="nav(this,'dashboard')"><i class="ti ti-chart-bar"></i>Báo cáo – Dashboard</div>
+    <div class="nav-a" data-navid="ai" onclick="nav(this,'gaiaoan')"><i class="ti ti-robot"></i>Trợ lý AI</div>
+    <div class="nav-a" data-navid="settings" onclick="nav(this,'settings')"><i class="ti ti-settings"></i>Cài đặt</div>
+  </div>
+</nav>
+
+<!-- CONTENT -->
+<div id="content">
+
+<!-- ──────────────── HOME ──────────────── -->
+<div class="page on" id="p-home">
+
+  <!-- Bàn làm việc (GĐ2) — chào mừng, tổng quan, tiến trình kế hoạch, việc cần làm, hoạt động gần đây -->
+  <div class="card wd-welcome" id="home-welcome-card">
+    <div class="card-body" id="home-welcome-body">Đang tải...</div>
+  </div>
+
+  <div class="wd-cards" id="home-overview-cards"></div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-hdr"><div class="card-ttl"><i class="ti ti-route"></i>Tiến trình lập kế hoạch giáo dục liên thông</div></div>
+    <div class="card-body">
+      <div class="note info" style="margin-bottom:12px"><i class="ti ti-info-circle"></i><div>Dữ liệu minh họa – trạng thái từng bước sẽ cập nhật thật khi có màn hình thao tác kế hoạch (giai đoạn tiếp theo).</div></div>
+      <div class="wd-stepper" id="home-stepper"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-hdr"><div class="card-ttl"><i class="ti ti-checklist"></i>Công việc cần hoàn thành</div></div>
+    <div class="card-body">
+      <div class="note info" style="margin-bottom:10px"><i class="ti ti-info-circle"></i><div>Dữ liệu minh họa – chưa nối bảng công việc thật.</div></div>
+      <div id="home-todo"></div>
+    </div>
+  </div>
+  <!-- "Hoạt động gần đây" không còn hiện thành khối cố định trên trang chủ —
+       thay bằng thông báo popup nhỏ (toast) khi có hoạt động mới + chuông
+       thông báo trên topbar. Lịch sử đầy đủ vẫn xem được qua chuông đó. -->
+</div>
+
+<!-- ──────────────── CT ──────────────── -->
+<div class="page" id="p-ct">
+  <div class="pg-h"><div class="pg-title">Chương trình GDMN thí điểm 2026</div><div class="pg-sub">4 phẩm chất · 5 năng lực · 5 lĩnh vực · So sánh CT cũ/mới</div></div>
+  <div class="tabs" id="ct-tabs">
+    <button class="tab on" onclick="ctTab(this,'ct-pc')">4 Phẩm chất</button>
+    <button class="tab" onclick="ctTab(this,'ct-nl')">5 Năng lực</button>
+    <button class="tab" onclick="ctTab(this,'ct-lv')">5 Lĩnh vực</button>
+    <button class="tab" onclick="ctTab(this,'ct-ss')">So sánh</button>
+  </div>
+  <div id="ct-pc"></div>
+  <div id="ct-nl" style="display:none"></div>
+  <div id="ct-lv" style="display:none"></div>
+  <div id="ct-ss" style="display:none"></div>
+</div>
+
+<!-- ──────────────── NEWS ──────────────── -->
+<div class="page" id="p-news">
+  <div class="pg-h"><div class="pg-title">Điểm mới cốt lõi QĐ 388/QĐ-BGDĐT</div><div class="pg-sub">12/02/2026 · 6 chuyển dịch lớn từ CT hiện hành sang CT thí điểm</div></div>
+  <div id="news-content"></div>
+</div>
+
+<!-- ──────────────── KH NĂM ──────────────── -->
+<!-- Nội dung trang này được renderKH() trong main.js dựng động (mục tiêu năm
+     + phiên chế 35 tuần, đọc/ghi thật qua /api/plans/*) — không còn khung
+     demo tĩnh như trước. -->
+<div class="page" id="p-kh">
+  <div class="pg-h"><div class="pg-title">Lập kế hoạch giáo dục</div><div class="pg-sub">Đang tải...</div></div>
+</div>
+
+<!-- ──────────────── GDMN PILOT ASSISTANT (plugin) ──────────────── -->
+<!-- Nội dung dựng động bởi renderGdmnPilot() trong main.js. Đây là plugin
+     "gdmn_pilot_plugin" (5B phân giải mục tiêu, mục tiêu năm/tháng, soạn bài
+     7 bước, rà soát, truy xuất nguồn) — dùng dữ liệu YCCĐ thật, không tạo ID
+     nguồn mới, xem GDMN_PILOT_PLUGIN.md. -->
+<div class="page" id="p-gdmn-pilot">
+  <div class="pg-h"><div class="pg-title">Trợ lý 5B &amp; Truy xuất nguồn</div><div class="pg-sub">Đang tải...</div></div>
+</div>
+
+<!-- ──────────────── KH TUẦN ──────────────── -->
+<div class="page" id="p-tuan">
+  <div class="pg-h"><div class="pg-title">Kế hoạch giáo dục tuần</div><div class="pg-sub">Tuần mẫu · Tích hợp STEAM + SEL · Tháng 9 – Chủ đề Trường MN</div></div>
+  <div class="note warn"><i class="ti ti-info-circle"></i><div>🔬 <strong>Ô vàng = STEAM</strong> · 💚 <strong>Ô xanh = SEL</strong> · Ô thường = HĐ học thông thường. <strong>GV điều chỉnh linh hoạt</strong> theo hứng thú thực tế của trẻ mỗi tuần.</div></div>
+  <div class="card"><div class="card-body"><div class="wt-wrap"><table class="wt" id="wk-tbl"></table></div></div></div>
+  <div class="card">
+    <div class="card-hdr"><div class="card-ttl"><i class="ti ti-arrows-exchange"></i>Thay đổi so với KH tuần truyền thống</div></div>
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div style="background:var(--or-lt);border-radius:10px;padding:12px"><div style="font-weight:700;font-size:11.5px;color:var(--or);margin-bottom:6px">CT cũ – Những điểm đã thay đổi</div><div style="font-size:11.5px;color:var(--muted);line-height:1.6">✗ Không ghi mục tiêu NL trọng tâm<br>✗ Bài học 3 bước: Ổn định → ND → Kết thúc<br>✗ GV hỏi câu đóng có đáp án cố định<br>✗ Trẻ thụ động nhận kiến thức từ GV</div></div>
+        <div style="background:var(--gn-lt);border-radius:10px;padding:12px"><div style="font-weight:700;font-size:11.5px;color:var(--gn);margin-bottom:6px">CT mới 2026 – Đã áp dụng trong bảng</div><div style="font-size:11.5px;color:var(--muted);line-height:1.6">✓ Mỗi HĐ học có [NL trọng tâm] rõ ràng<br>✓ 4 giai đoạn: Hứng thú→Khám phá→Chia sẻ→Mở rộng<br>✓ Câu hỏi mở: "Con nghĩ thế nào? Tại sao?"<br>✓ GV quan sát + ghi chép; trẻ chủ động</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ──────────────── BÀI HỌC ──────────────── -->
+<div class="page" id="p-baihoc">
+  <div class="pg-h">
+    <div class="pg-title">Kế hoạch Hoạt động Thực tiễn</div>
+    <div class="pg-sub">Soạn theo CT GDMN thí điểm 2026 · 9 thành phần đầy đủ · STEAM · SEL · EDP · 4C · Hòa nhập</div>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+    <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;flex-shrink:0">Lọc:</div>
+    <div id="kh-filter-age" style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="kh-ft on" onclick="khFilter('age','all')">Tất cả</button>
+      <button class="kh-ft" onclick="khFilter('age','nt')">Nhà trẻ 12-36T</button>
+      <button class="kh-ft" onclick="khFilter('age','mg3')">3–4T</button>
+      <button class="kh-ft" onclick="khFilter('age','mg4')">4–5T</button>
+      <button class="kh-ft" onclick="khFilter('age','mg5')">5–6T</button>
+    </div>
+    <div style="width:1px;height:20px;background:var(--border);flex-shrink:0"></div>
+    <div id="kh-filter-domain" style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="kh-ft kh-ft-dom on" onclick="khFilter('dom','all')">Tất cả LV</button>
+      <button class="kh-ft kh-ft-dom" onclick="khFilter('dom','steam')">🔬 STEAM</button>
+      <button class="kh-ft kh-ft-dom" onclick="khFilter('dom','sel')">💚 SEL</button>
+      <button class="kh-ft kh-ft-dom" onclick="khFilter('dom','nk')">🎨 Nghệ thuật</button>
+      <button class="kh-ft kh-ft-dom" onclick="khFilter('dom','tc')">🏃 Thể chất</button>
+      <button class="kh-ft kh-ft-dom" onclick="khFilter('dom','nn')">📖 Ngôn ngữ</button>
+    </div>
+  </div>
+
+  <div id="lesson-list"></div>
+</div>
+
+<!-- ──────────────── BUILDER ──────────────── -->
+<div class="page" id="p-builder">
+  <div class="pg-h"><div class="pg-title">Xây kế hoạch tuần nhanh</div><div class="pg-sub">Chọn hoạt động → Tự động tạo bảng KH tuần phù hợp với CT thí điểm 2026</div></div>
+  <div class="note info"><i class="ti ti-settings"></i><div>Bước 1: Chọn chủ đề tháng · Bước 2: Tích hoạt động cần tích hợp · Bước 3: Bấm "Tạo KH tuần"</div></div>
+  <div class="card">
+    <div class="card-hdr"><div class="card-ttl"><i class="ti ti-calendar"></i>Bước 1: Chọn chủ đề</div></div>
+    <div class="card-body"><div id="bld-themes"></div></div>
+  </div>
+  <div class="card">
+    <div class="card-hdr"><div class="card-ttl"><i class="ti ti-check"></i>Bước 2: Chọn hoạt động tích hợp</div></div>
+    <div class="card-body"><div class="sb-grid" id="bld-acts"></div></div>
+  </div>
+  <div style="text-align:center;margin-bottom:14px">
+    <button onclick="buildPlan()" style="background:linear-gradient(90deg,#2563EB,#1d4ed8);color:#fff;border:none;padding:10px 28px;border-radius:22px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit"><i class="ti ti-wand" style="font-size:15px"></i> Tạo KH tuần</button>
+  </div>
+  <div id="bld-result"></div>
+</div>
+
+<!-- ──────────────── RUBRIC ──────────────── -->
+<div class="page" id="p-rubric">
+  <div class="pg-h"><div class="pg-title">Rubric đánh giá năng lực</div><div class="pg-sub">I = Khởi đầu (cần hỗ trợ) · H = Hình thành (quen, nhắc nhẹ) · V = Vững chắc (tự làm nhiều bối cảnh)</div></div>
+  <div class="note ok"><i class="ti ti-heart"></i><div><strong>Nguyên tắc:</strong> Đánh giá VÌ SỰ TIẾN BỘ – không xếp loại – không so sánh trẻ với trẻ. Minh chứng = ảnh · video · câu nói nguyên văn · sản phẩm.</div></div>
+  <div id="rubric-list"></div>
+</div>
+
+<!-- ──────────────── TRACKER ──────────────── -->
+<div class="page" id="p-tracker">
+  <div class="pg-h"><div class="pg-title">Theo dõi & đánh giá trẻ</div><div class="pg-sub">Ghi nhận mức I/H/V theo từng năng lực · Dữ liệu lưu trong phiên làm việc</div></div>
+  <div class="note info"><i class="ti ti-user-check"></i><div>Bấm vào ô mức độ để ghi nhận. Bảng tự tính % lớp đạt mức H/V cho mỗi năng lực.</div></div>
+  <div class="card">
+    <div class="card-hdr">
+      <div class="card-ttl"><i class="ti ti-users"></i>Danh sách lớp – <span id="tracker-age">Nhà trẻ</span></div>
+      <div style="display:flex;gap:6px"><button onclick="addStudent()" style="background:var(--gn-lt);color:var(--gn);border:none;padding:5px 12px;border-radius:14px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit"><i class="ti ti-user-plus" style="font-size:13px"></i> Thêm trẻ</button><button onclick="exportTracker()" style="background:var(--pu-lt);color:var(--pu);border:none;padding:5px 12px;border-radius:14px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit"><i class="ti ti-download" style="font-size:13px"></i> Xuất CSV</button></div>
+    </div>
+    <div class="card-body" id="tracker-body"></div>
+  </div>
+  <div class="card">
+    <div class="card-hdr"><div class="card-ttl"><i class="ti ti-chart-bar"></i>Thống kê lớp theo năng lực</div></div>
+    <div class="card-body" id="tracker-stat"></div>
+  </div>
+</div>
+
+<!-- ──────────────── NL ──────────────── -->
+<div class="page" id="p-nl">
+  <div class="pg-h"><div class="pg-title">Năng lực & Phẩm chất theo độ tuổi</div><div class="pg-sub">Mức độ phát triển tăng dần: Nhà trẻ → MG Bé → MG Nhỡ → MG Lớn</div></div>
+  <div id="nl-wrap"></div>
+</div>
+
+<!-- ──────────────── STEAM ──────────────── -->
+<div class="page" id="p-steam">
+  <div class="pg-h"><div class="pg-title">Ngân hàng hoạt động STEAM / SEL</div><div class="pg-sub">Tích hợp xuyên suốt · Phù hợp điều kiện trường MN Việt Nam</div></div>
+  <div class="tabs" id="steam-tabs">
+    <button class="tab on" onclick="steamTab(this,'st-all')">Tất cả</button>
+    <button class="tab" onclick="steamTab(this,'st-steam')">🔬 STEAM</button>
+    <button class="tab" onclick="steamTab(this,'st-sel')">💚 SEL</button>
+    <button class="tab" onclick="steamTab(this,'st-nhanthu')">🧠 Nhận thức</button>
+    <button class="tab" onclick="steamTab(this,'st-xahoi')">🤝 TC-XH</button>
+  </div>
+  <div class="st-grid" id="steam-grid"></div>
+</div>
+
+<!-- ──────────────── CALENDAR ──────────────── -->
+<div class="page" id="p-calendar">
+  <div class="pg-h"><div class="pg-title">Lịch hoạt động tháng</div><div class="pg-sub">Xem các sự kiện đặc biệt · Ngày hội · Đánh giá định kỳ · Tích hợp văn hóa</div></div>
+  <div class="card">
+    <div class="card-hdr">
+      <div class="card-ttl"><i class="ti ti-calendar"></i><span id="cal-month">Tháng 9/2026</span></div>
+      <div style="display:flex;gap:8px">
+        <button onclick="calNav(-1)" style="background:var(--pu-lt);color:var(--pu);border:none;padding:5px 10px;border-radius:8px;cursor:pointer;font-family:inherit"><i class="ti ti-chevron-left"></i></button>
+        <button onclick="calNav(1)" style="background:var(--pu-lt);color:var(--pu);border:none;padding:5px 10px;border-radius:8px;cursor:pointer;font-family:inherit"><i class="ti ti-chevron-right"></i></button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="cal-grid" id="cal-days-hdr"></div>
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-hdr"><div class="card-ttl"><i class="ti ti-list"></i>Sự kiện tháng này</div></div>
+    <div class="card-body" id="cal-events"></div>
+  </div>
+</div>
+
+<!-- ──────────────── DOWNLOAD ──────────────── -->
+<div class="page" id="p-download">
+  <div class="pg-h"><div class="pg-title">Hồ sơ chuyên môn & Tài nguyên CTGDMN</div><div class="pg-sub">Quản lý bộ tài liệu nguồn, hồ sơ kế hoạch, biểu mẫu đánh giá và ngân hàng hoạt động theo 2 bộ Nhà trẻ - Mẫu giáo.</div></div>
+  <div class="note info"><i class="ti ti-info-circle"></i><div>Dữ liệu minh họa – sẽ thay bằng dữ liệu từ Excel sau khi import.</div></div>
+  <div id="dl-grid"></div>
+</div>
+
+<!-- ──────────────── GUIDE ──────────────── -->
+<div class="page" id="p-guide">
+  <div class="pg-h"><div class="pg-title">Hướng dẫn sử dụng Thư viện số CTGDMN</div><div class="pg-sub">Dành cho CBQL, tổ trưởng chuyên môn và giáo viên mầm non khi xây dựng kế hoạch, tổ chức hoạt động, theo dõi tiến bộ và quản lý hồ sơ theo Chương trình GDMN thí điểm.</div></div>
+  <div class="note info"><i class="ti ti-info-circle"></i><div>Dữ liệu minh họa – sẽ thay bằng dữ liệu từ Excel sau khi import.</div></div>
+</div>
+<!-- ──────────────── TRỢ LÝ TẠO GIÁO ÁN ──────────────── -->
+<div class="page" id="p-gaiaoan">
+  <div class="pg-h">
+    <div class="pg-title">🤖 Trợ lý AI</div>
+    <div class="pg-sub">Hỗ trợ soạn giáo án, gợi ý hoạt động, tư vấn tình huống và viết nhận xét trẻ theo CT thí điểm 2026 (QĐ 388)</div>
+  </div>
+
+  <div class="tabs" id="ai-tabs">
+    <button class="tab on" onclick="setAiTab(this,'giaoan')">📝 Soạn giáo án</button>
+    <button class="tab" onclick="setAiTab(this,'hoatdong')">🧩 Gợi ý hoạt động</button>
+    <button class="tab" onclick="setAiTab(this,'tinhhuong')">💬 Tư vấn tình huống</button>
+    <button class="tab" onclick="setAiTab(this,'nhanxet')">📋 Nhận xét tiến bộ trẻ</button>
+  </div>
+
+  <div id="ai-tab-giaoan">
+  <!-- FORM -->
+  <div class="card" id="ga-form-card">
+    <div class="card-hdr">
+      <div class="card-ttl"><i class="ti ti-settings"></i>Thông tin giáo án</div>
+      <div id="ga-status" style="font-size:11.5px;color:var(--muted)">Điền thông tin → Bấm Tạo giáo án</div>
+    </div>
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px">
+        <div>
+          <div class="ga-lbl">Độ tuổi</div>
+          <select id="ga-age" class="ga-sel">
+            <option value="Nhà trẻ 24-36 tháng">Nhà trẻ 24-36 tháng</option>
+            <option value="Mẫu giáo Bé 3-4 tuổi">MG Bé 3-4 tuổi</option>
+            <option value="Mẫu giáo Nhỡ 4-5 tuổi" selected>MG Nhỡ 4-5 tuổi</option>
+            <option value="Mẫu giáo Lớn 5-6 tuổi">MG Lớn 5-6 tuổi</option>
+          </select>
+        </div>
+        <div>
+          <div class="ga-lbl">Môn / Lĩnh vực</div>
+          <select id="ga-mon" class="ga-sel">
+            <option>Khám phá khoa học</option>
+            <option>Tạo hình</option>
+            <option>Thể dục</option>
+            <option>Làm quen văn học</option>
+            <option>Âm nhạc</option>
+            <option>Làm quen với toán</option>
+            <option>Giáo dục thể chất</option>
+            <option>Hoạt động góc</option>
+          </select>
+        </div>
+        <div>
+          <div class="ga-lbl">Chủ đề</div>
+          <select id="ga-chude" class="ga-sel">
+            <option>Trường Mầm non</option>
+            <option>Bản thân</option>
+            <option>Gia đình</option>
+            <option>Nghề nghiệp</option>
+            <option>Động vật</option>
+            <option>Thực vật</option>
+            <option>Giao thông</option>
+            <option>Nước và HTTN</option>
+            <option>Quê hương – Đất nước</option>
+            <option>Trường Tiểu học</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <div>
+          <div class="ga-lbl">Tên hoạt động / Bài học</div>
+          <input id="ga-tenbai" class="ga-inp" placeholder="VD: Tìm hiểu về các loại cây xanh" />
+        </div>
+        <div>
+          <div class="ga-lbl">Thời gian (phút)</div>
+          <select id="ga-tg" class="ga-sel">
+            <option value="25-30">25-30 phút</option>
+            <option value="30-35" selected>30-35 phút</option>
+            <option value="35-40">35-40 phút</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom:14px">
+        <div class="ga-lbl">Năng lực trọng tâm (chọn 1-3)</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px" id="ga-nl-pick">
+          <label class="ga-nl-opt"><input type="checkbox" value="Giao tiếp" checked> 💬 Giao tiếp</label>
+          <label class="ga-nl-opt"><input type="checkbox" value="Hợp tác"> 🤝 Hợp tác</label>
+          <label class="ga-nl-opt"><input type="checkbox" value="Giải quyết vấn đề"> 🧩 GQVĐ</label>
+          <label class="ga-nl-opt"><input type="checkbox" value="Thích ứng"> 🌱 Thích ứng</label>
+          <label class="ga-nl-opt"><input type="checkbox" value="Tự lực"> ⚡ Tự lực</label>
+          <label class="ga-nl-opt"><input type="checkbox" value="Khám phá KH"> 🔬 Khám phá KH</label>
+          <label class="ga-nl-opt"><input type="checkbox" value="Sáng tạo NT"> 🎨 Sáng tạo NT</label>
+        </div>
+      </div>
+      <div style="margin-bottom:14px">
+        <div class="ga-lbl">Tích hợp (tuỳ chọn)</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px" id="ga-tk-pick">
+          <label class="ga-nl-opt"><input type="checkbox" value="STEAM" id="chk-steam"> 🔬 STEAM</label>
+          <label class="ga-nl-opt"><input type="checkbox" value="SEL" id="chk-sel"> 💚 SEL</label>
+          <label class="ga-nl-opt"><input type="checkbox" value="Tái chế/Thân thiện MT"> ♻️ Tái chế/MT</label>
+          <label class="ga-nl-opt"><input type="checkbox" value="Văn hóa địa phương"> 🏘️ Văn hoá ĐP</label>
+        </div>
+      </div>
+      <div style="margin-bottom:14px">
+        <div class="ga-lbl">📎 Đính kèm tài liệu tham khảo (tuỳ chọn)</div>
+        <div class="upload-zone" id="ga-upload-zone" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleFileDrop(event)">
+          <input type="file" id="ga-file-input" multiple accept=".pdf,.docx,.doc,.txt,.xlsx,.xls" onchange="handleFileSelect(this.files)">
+          <div class="uz-icon">📂</div>
+          <div class="uz-text">Kéo thả hoặc bấm để chọn file</div>
+          <div class="uz-sub">PDF · Word · Excel · TXT – tối đa 5 file, mỗi file &lt;5MB</div>
+        </div>
+        <div class="uploaded-files" id="ga-uploaded-list"></div>
+      </div>
+      <div style="margin-bottom:14px">
+        <div class="ga-lbl">Yêu cầu đặc biệt / Ghi chú thêm (tuỳ chọn)</div>
+        <textarea id="ga-note" class="ga-inp" rows="2" placeholder="VD: Lớp có 2 trẻ hoà nhập, GV có nam châm và bột màu, muốn tích hợp bài hát..."></textarea>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <button id="ga-btn" onclick="generateGiaoAn()" class="ga-main-btn">
+          <i class="ti ti-wand" style="font-size:16px"></i> Tạo giáo án ngay
+        </button>
+        <button onclick="clearGiaoAn()" class="ga-sec-btn">
+          <i class="ti ti-refresh" style="font-size:14px"></i> Làm mới
+        </button>
+        <div id="ga-loading" style="display:none;align-items:center;gap:7px;color:var(--pu);font-size:12.5px;font-weight:600">
+          <div class="ga-spinner"></div> Đang soạn giáo án...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div id="ga-result" style="display:none">
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-ttl" id="ga-res-title"><i class="ti ti-file-text"></i>Giáo án</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button onclick="downloadGiaoAnDocx()" class="ga-dl-btn" id="ga-dl-btn"><i class="ti ti-file-download" style="font-size:13px"></i> Tải DOCX</button>
+          <button onclick="copyGiaoAn()" class="ga-sec-btn"><i class="ti ti-copy" style="font-size:13px"></i> Copy</button>
+          <button onclick="printGiaoAn()" class="ga-sec-btn"><i class="ti ti-printer" style="font-size:13px"></i> In</button>
+        </div>
+      </div>
+      <div class="card-body" id="ga-res-body" style="font-size:13px;line-height:1.7"></div>
+    </div>
+    <!-- Quick actions -->
+    <div class="card">
+      <div class="card-hdr"><div class="card-ttl"><i class="ti ti-messages"></i>Hỏi thêm về giáo án này</div></div>
+      <div class="card-body">
+        <div id="ga-chat-history" style="max-height:260px;overflow-y:auto;margin-bottom:12px;display:none"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px" id="ga-quick-btns">
+          <button class="ga-q-btn" onclick="askFollowup('Viết thêm 3 câu hỏi gợi mở sâu hơn theo phong cách Socratic')">💬 Thêm câu hỏi gợi mở</button>
+          <button class="ga-q-btn" onclick="askFollowup('Viết phần điều chỉnh cho trẻ hoà nhập và trẻ nổi trội chi tiết hơn')">♿ Điều chỉnh hoà nhập</button>
+          <button class="ga-q-btn" onclick="askFollowup('Gợi ý thêm 5 hoạt động mở rộng STEAM/SEL liên quan')">🔬 Thêm HĐ mở rộng</button>
+          <button class="ga-q-btn" onclick="askFollowup('Viết phần minh chứng đánh giá chi tiết: ảnh/video/sản phẩm cụ thể')">📊 Chi tiết minh chứng</button>
+          <button class="ga-q-btn" onclick="askFollowup('Đề xuất vật liệu tái chế thay thế đồ dùng dạy học trong bài này')">♻️ Vật liệu tái chế</button>
+        </div>
+        <div style="display:flex;gap:8px">
+          <input id="ga-ask-inp" class="ga-inp" style="flex:1" placeholder="Hỏi thêm về giáo án... VD: Viết lại GĐ2 ngắn hơn / Thêm bài hát phù hợp / Điều chỉnh cho 3 tuổi..." />
+          <button onclick="sendFollowup()" class="ga-main-btn" style="padding:8px 16px;flex-shrink:0"><i class="ti ti-send" style="font-size:14px"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div id="ga-history-wrap" style="display:none">
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-ttl"><i class="ti ti-history"></i>Giáo án đã tạo (<span id="ga-hist-count">0</span>)</div>
+        <button onclick="clearHistory()" class="ga-sec-btn" style="font-size:11px">Xoá tất cả</button>
+      </div>
+      <div class="card-body" id="ga-history-list"></div>
+    </div>
+  </div>
+  </div><!-- end ai-tab-giaoan -->
+
+  <!-- GỢI Ý HOẠT ĐỘNG -->
+  <div id="ai-tab-hoatdong" style="display:none">
+    <div class="card">
+      <div class="card-hdr"><div class="card-ttl"><i class="ti ti-bulb"></i>Gợi ý hoạt động học qua chơi</div></div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+          <div>
+            <div class="ga-lbl">Độ tuổi</div>
+            <select id="ai-hd-age" class="ga-sel">
+              <option value="Nhà trẻ 24-36 tháng">Nhà trẻ 24-36 tháng</option>
+              <option value="Mẫu giáo Bé 3-4 tuổi">MG Bé 3-4 tuổi</option>
+              <option value="Mẫu giáo Nhỡ 4-5 tuổi" selected>MG Nhỡ 4-5 tuổi</option>
+              <option value="Mẫu giáo Lớn 5-6 tuổi">MG Lớn 5-6 tuổi</option>
+            </select>
+          </div>
+          <div>
+            <div class="ga-lbl">Số lượng gợi ý</div>
+            <select id="ai-hd-count" class="ga-sel">
+              <option value="3">3 hoạt động</option>
+              <option value="5" selected>5 hoạt động</option>
+              <option value="8">8 hoạt động</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-bottom:14px">
+          <div class="ga-lbl">Lĩnh vực / chủ đề quan tâm</div>
+          <input id="ai-hd-linhvuc" class="ga-inp" placeholder="VD: Khám phá khoa học, chủ đề Động vật" />
+        </div>
+        <div style="margin-bottom:14px">
+          <div class="ga-lbl">Bối cảnh hiện tại (tuỳ chọn)</div>
+          <textarea id="ai-hd-boicanh" class="ga-inp" rows="2" placeholder="VD: Trời mưa không ra sân được, lớp có 2 trẻ hoà nhập, chỉ có vật liệu tái chế..."></textarea>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button id="ai-hd-btn" onclick="generateActivitySuggestions()" class="ga-main-btn"><i class="ti ti-wand" style="font-size:16px"></i> Gợi ý hoạt động</button>
+          <div id="ai-hd-loading" style="display:none;align-items:center;gap:7px;color:var(--pu);font-size:12.5px;font-weight:600"><div class="ga-spinner"></div> Đang gợi ý...</div>
+        </div>
+      </div>
+    </div>
+    <div class="card" id="ai-hd-result" style="display:none">
+      <div class="card-hdr"><div class="card-ttl"><i class="ti ti-list-check"></i>Gợi ý hoạt động</div></div>
+      <div class="card-body" id="ai-hd-body" style="font-size:13px;line-height:1.7"></div>
+    </div>
+  </div>
+
+  <!-- TƯ VẤN TÌNH HUỐNG -->
+  <div id="ai-tab-tinhhuong" style="display:none">
+    <div class="card">
+      <div class="card-hdr"><div class="card-ttl"><i class="ti ti-message-circle"></i>Tư vấn tình huống lớp học</div></div>
+      <div class="card-body">
+        <div style="margin-bottom:14px">
+          <div class="ga-lbl">Độ tuổi</div>
+          <select id="ai-th-age" class="ga-sel">
+            <option value="Nhà trẻ 24-36 tháng">Nhà trẻ 24-36 tháng</option>
+            <option value="Mẫu giáo Bé 3-4 tuổi">MG Bé 3-4 tuổi</option>
+            <option value="Mẫu giáo Nhỡ 4-5 tuổi" selected>MG Nhỡ 4-5 tuổi</option>
+            <option value="Mẫu giáo Lớn 5-6 tuổi">MG Lớn 5-6 tuổi</option>
+          </select>
+        </div>
+        <div style="margin-bottom:14px">
+          <div class="ga-lbl">Mô tả tình huống</div>
+          <textarea id="ai-th-mota" class="ga-inp" rows="4" placeholder="VD: Trẻ hay tranh giành đồ chơi và đánh bạn khi không được như ý, đã nhắc nhở nhiều lần nhưng chưa cải thiện..."></textarea>
+          <div class="note info" style="margin-top:8px"><i class="ti ti-shield-lock"></i><div>Không cần ghi tên trẻ trong mô tả — chỉ cần mô tả hành vi/bối cảnh để giữ kín thông tin cá nhân của trẻ.</div></div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button id="ai-th-btn" onclick="generateSituationAdvice()" class="ga-main-btn"><i class="ti ti-wand" style="font-size:16px"></i> Xin tư vấn</button>
+          <div id="ai-th-loading" style="display:none;align-items:center;gap:7px;color:var(--pu);font-size:12.5px;font-weight:600"><div class="ga-spinner"></div> Đang phân tích...</div>
+        </div>
+      </div>
+    </div>
+    <div class="card" id="ai-th-result" style="display:none">
+      <div class="card-hdr"><div class="card-ttl"><i class="ti ti-heart-handshake"></i>Gợi ý xử lý</div></div>
+      <div class="card-body" id="ai-th-body" style="font-size:13px;line-height:1.7"></div>
+    </div>
+  </div>
+
+  <!-- NHẬN XÉT TIẾN BỘ TRẺ -->
+  <div id="ai-tab-nhanxet" style="display:none">
+    <div class="card">
+      <div class="card-hdr"><div class="card-ttl"><i class="ti ti-notes"></i>Viết nhận xét tiến bộ của trẻ</div></div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+          <div>
+            <div class="ga-lbl">Tên trẻ (tuỳ chọn — chỉ hiện ở tiêu đề, không gửi cho AI)</div>
+            <input id="ai-nx-ten" class="ga-inp" placeholder="VD: Bé An" />
+          </div>
+          <div>
+            <div class="ga-lbl">Độ tuổi</div>
+            <select id="ai-nx-age" class="ga-sel">
+              <option value="Nhà trẻ 24-36 tháng">Nhà trẻ 24-36 tháng</option>
+              <option value="Mẫu giáo Bé 3-4 tuổi">MG Bé 3-4 tuổi</option>
+              <option value="Mẫu giáo Nhỡ 4-5 tuổi" selected>MG Nhỡ 4-5 tuổi</option>
+              <option value="Mẫu giáo Lớn 5-6 tuổi">MG Lớn 5-6 tuổi</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-bottom:14px">
+          <div class="ga-lbl">Ghi chú/quan sát thô</div>
+          <textarea id="ai-nx-ghichu" class="ga-inp" rows="4" placeholder="VD: Tuần này tự xúc ăn không cần nhắc, chủ động rủ bạn chơi xếp hình, còn nhút nhát khi phát biểu trước lớp..."></textarea>
+          <div class="note info" style="margin-top:8px"><i class="ti ti-shield-lock"></i><div>Chỉ mô tả biểu hiện quan sát được, không cần ghi tên trẻ trong ô này — thông tin gửi tới AI được giữ ẩn danh.</div></div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button id="ai-nx-btn" onclick="generateChildComment()" class="ga-main-btn"><i class="ti ti-wand" style="font-size:16px"></i> Viết nhận xét</button>
+          <div id="ai-nx-loading" style="display:none;align-items:center;gap:7px;color:var(--pu);font-size:12.5px;font-weight:600"><div class="ga-spinner"></div> Đang viết...</div>
+        </div>
+      </div>
+    </div>
+    <div class="card" id="ai-nx-result" style="display:none">
+      <div class="card-hdr"><div class="card-ttl" id="ai-nx-res-title"><i class="ti ti-file-text"></i>Nhận xét</div></div>
+      <div class="card-body" id="ai-nx-body" style="font-size:13px;line-height:1.7"></div>
+    </div>
+  </div>
+</div>
+
+
+<div class="page" id="p-overview-ct388">
+  <div class="pg-h"><div class="pg-title">Tổng quan sử dụng CTGDMN</div><div class="pg-sub">Hub chung để chọn bộ tài liệu, xem bản đồ dữ liệu, nắm quy trình lập kế hoạch và rà soát độ khớp CTGDMN.</div></div>
+  <div class="note info"><i class="ti ti-info-circle"></i><div>Dữ liệu minh họa – sẽ thay bằng dữ liệu từ Excel sau khi import.</div></div>
+</div>
+<!-- PLACEHOLDER PAGES - CT388 DATA WORKSPACES -->
+<div class="page" id="p-doc-select">
+  <div class="pg-h"><div class="pg-title">Chọn bộ tài liệu</div><div class="pg-sub">Chọn nhanh giữa Bộ Nhà trẻ 12-36 tháng và Bộ Mẫu giáo 3-6 tuổi.</div></div>
+  <div class="note info"><i class="ti ti-info-circle"></i><div>Dữ liệu minh họa – sẽ thay bằng dữ liệu từ Excel sau khi import.</div></div>
+  <div class="placeholder-grid">
+    <div class="placeholder-card nt"><div class="placeholder-icon"><i class="ti ti-baby-carriage"></i></div><div><h3>Bộ Nhà trẻ 12-36 tháng</h3><p>Mốc phát triển, giáo dục trong sinh hoạt, hoạt động, rubric và hồ sơ nhà trẻ.</p></div></div>
+    <div class="placeholder-card mg"><div class="placeholder-icon"><i class="ti ti-school"></i></div><div><h3>Bộ Mẫu giáo 3-6 tuổi</h3><p>Khung năng lực, mốc phát triển, kế hoạch năm, phiên chế 35 tuần, hoạt động và rubric mẫu giáo.</p></div></div>
+  </div>
+</div>
+
+<div class="page" id="p-data-map">
+  <div class="pg-h"><div class="pg-title">Bản đồ dữ liệu</div><div class="pg-sub">Tổng quan các nhóm sheet Excel và phân hệ dự kiến trong app.</div></div>
+  <div class="note info"><i class="ti ti-info-circle"></i><div>Dữ liệu minh họa – sẽ thay bằng dữ liệu từ Excel sau khi import.</div></div>
+  <div class="placeholder-grid">
+    <div class="placeholder-card"><h3>Nhóm dữ liệu lõi</h3><p>Khung năng lực, phẩm chất, YCCĐ, mốc phát triển, hoạt động, rubric, kế hoạch năm.</p></div>
+    <div class="placeholder-card"><h3>Nhóm hồ sơ</h3><p>Bảng kiểm lớp, nhật ký quan sát, phiếu cá nhân, portfolio, phiếu trao đổi cha mẹ.</p></div>
+  </div>
+</div>
+
+<div class="page" id="p-planning-flow">
+  <div class="pg-h"><div class="pg-title">Quy trình lập kế hoạch</div><div class="pg-sub">Luồng đề xuất: chọn bộ tài liệu, chọn độ tuổi, chọn mục tiêu/YCCĐ, chọn hoạt động, lập kế hoạch.</div></div>
+  <div class="note info"><i class="ti ti-info-circle"></i><div>Dữ liệu minh họa – sẽ thay bằng dữ liệu từ Excel sau khi import.</div></div>
+  <div class="placeholder-steps"><span>1. Chọn bộ</span><span>2. Chọn tuổi</span><span>3. Chọn YCCĐ</span><span>4. Chọn hoạt động</span><span>5. Điều chỉnh kế hoạch</span></div>
+</div>
+
+<div class="page" id="p-ct388-check">
+  <div class="pg-h"><div class="pg-title">Kiểm tra độ khớp CTGDMN</div><div class="pg-sub">Không dùng để xếp hạng; chỉ hỗ trợ giáo viên rà soát kế hoạch có bám dữ liệu CTGDMN hay chưa.</div></div>
+  <div class="note warn"><i class="ti ti-alert-circle"></i><div>Dữ liệu minh họa – sẽ thay bằng dữ liệu từ Excel sau khi import.</div></div>
+</div>
+
+<div class="page" id="p-nt-overview">
+  <div class="pg-h"><div class="pg-title">Tổng quan nhà trẻ</div><div class="pg-sub">Không gian làm việc cho Bộ Nhà trẻ 12-36 tháng.</div></div>
+  <div class="note info"><i class="ti ti-info-circle"></i><div>Dữ liệu minh họa – sẽ thay bằng dữ liệu từ Excel sau khi import.</div></div>
+</div>
+<div class="page" id="p-nt-milestones"><div class="pg-h"><div class="pg-title">Mốc phát triển 12-36 tháng</div><div class="pg-sub">Tra cứu mốc phát triển theo nhóm tuổi nhà trẻ.</div></div><div class="note info"><i class="ti ti-info-circle"></i><div>Dữ liệu minh họa – sẽ thay bằng dữ liệu từ Excel sau khi import.</div></div></div>
+<div class="page" id="p-nt-daily"><div class="pg-h"><div class="pg-title">Giáo dục trong sinh hoạt</div><div class="pg-sub">Không gian cho dữ liệu sinh hoạt hằng ngày của Bộ Nhà trẻ.</div></div><div class="note info"><i class="ti ti-info-circle"></i><div>Dữ liệu minh họa – sẽ thay bằng dữ liệu từ Excel sau khi import.</div></div></div>
+<div class="page" id="p-nt-activities"><div class="pg-h"><div class="pg-title">Hoạt động nhà trẻ</div><div class="pg-sub">Ngân hàng hoạt động qua chơi dành cho nhà trẻ.</div></div><div class="note info"><i class="ti ti-info-circle"></i><div>Dữ liệu minh họa – sẽ thay bằng dữ liệu từ Excel sau khi import.</div></div></div>
+<div class="page" id="p-nt-rubric"><div class="pg-h"><div class="pg-title">Rubric nhà trẻ</div><div class="pg-sub">Rubric quan sát tiến bộ, không quy đổi thành điểm số.</div></div><div class="note ok"><i class="ti ti-heart"></i><div>Dữ liệu minh họa – sẽ thay bằng dữ liệu từ Excel sau khi import.</div></div></div>
+<div class="page" id="p-nt-records"><div class="pg-h"><div class="pg-title">Hồ sơ nhà trẻ</div><div class="pg-sub">Phiếu cá nhân, portfolio, bảng kiểm lớp và nhật ký quan sát nhà trẻ.</div></div><div class="note info"><i class="ti ti-info-circle"></i><div>Dữ liệu minh họa – sẽ thay bằng dữ liệu từ Excel sau khi import.</div></div></div>
+
+<div class="page" id="p-mg-overview"><div class="pg-h"><div class="pg-title">Tổng quan mẫu giáo</div><div class="pg-sub">Không gian làm việc cho Bộ Mẫu giáo 3-6 tuổi.</div></div><div class="note info"><i class="ti ti-info-circle"></i><div>Dữ liệu minh họa – sẽ thay bằng dữ liệu từ Excel sau khi import.</div></div></div>
+<div class="page" id="p-mg-framework"><div class="pg-h"><div class="pg-title">Khung năng lực mẫu giáo</div><div class="pg-sub">Tra cứu khung năng lực, phẩm chất và liên hệ mốc phát triển.</div></div><div class="note info"><i class="ti ti-info-circle"></i><div>Dữ liệu minh họa – sẽ thay bằng dữ liệu từ Excel sau khi import.</div></div></div>
+<div class="page" id="p-mg-milestones"><div class="pg-h"><div class="pg-title">Mốc phát triển mẫu giáo</div><div class="pg-sub">Mốc phát triển theo các nhóm 3-4, 4-5, 5-6 tuổi.</div></div><div class="note info"><i class="ti ti-info-circle"></i><div>Dữ liệu minh họa – sẽ thay bằng dữ liệu từ Excel sau khi import.</div></div></div>
+<div class="page" id="p-mg-year-plan"><div class="pg-h"><div class="pg-title">Kế hoạch năm mẫu giáo</div><div class="pg-sub">Kế hoạch năm theo từng độ tuổi mẫu giáo.</div></div><div class="note info"><i class="ti ti-info-circle"></i><div>Dữ liệu minh họa – sẽ thay bằng dữ liệu từ Excel sau khi import.</div></div></div>
+<div class="page" id="p-mg-35-weeks"><div class="pg-h"><div class="pg-title">Phiên chế 35 tuần</div><div class="pg-sub">Phân bổ tuần/chủ đề làm bối cảnh trải nghiệm, không phải mục tiêu trung tâm.</div></div><div class="note info"><i class="ti ti-info-circle"></i><div>Dữ liệu minh họa – sẽ thay bằng dữ liệu từ Excel sau khi import.</div></div></div>
+<div class="page" id="p-mg-activities"><div class="pg-h"><div class="pg-title">Hoạt động mẫu giáo</div><div class="pg-sub">Ngân hàng hoạt động mẫu giáo theo độ tuổi, lĩnh vực và mục tiêu quan sát được.</div></div><div class="note info"><i class="ti ti-info-circle"></i><div>Dữ liệu minh họa – sẽ thay bằng dữ liệu từ Excel sau khi import.</div></div></div>
+<div class="page" id="p-mg-rubric"><div class="pg-h"><div class="pg-title">Rubric mẫu giáo</div><div class="pg-sub">Rubric I/H/V theo hướng quan sát tiến bộ, không dùng để xếp loại.</div></div><div class="note ok"><i class="ti ti-heart"></i><div>Dữ liệu minh họa – sẽ thay bằng dữ liệu từ Excel sau khi import.</div></div></div>
+<div class="page" id="p-mg-records"><div class="pg-h"><div class="pg-title">Hồ sơ mẫu giáo</div><div class="pg-sub">Bảng kiểm lớp, nhật ký quan sát, phiếu cá nhân, portfolio và phiếu cha mẹ.</div></div><div class="note info"><i class="ti ti-info-circle"></i><div>Dữ liệu minh họa – sẽ thay bằng dữ liệu từ Excel sau khi import.</div></div></div>
+
+<div class="page" id="p-plan-from-data"><div class="pg-h"><div class="pg-title">Tạo kế hoạch từ dữ liệu</div><div class="pg-sub">Luồng tạo kế hoạch từ dữ liệu Excel sau khi import lõi hoàn tất.</div></div><div class="note info"><i class="ti ti-info-circle"></i><div>Dữ liệu minh họa – sẽ thay bằng dữ liệu từ Excel sau khi import.</div></div></div>
+<div class="page" id="p-observation-log"><div class="pg-h"><div class="pg-title">Nhật ký quan sát</div><div class="pg-sub">Ghi nhận minh chứng cụ thể, nhận xét tiến bộ và hỗ trợ tiếp theo.</div></div><div class="note info"><i class="ti ti-info-circle"></i><div>Dữ liệu minh họa – sẽ thay bằng dữ liệu từ Excel sau khi import.</div></div></div>
+<div class="page" id="p-child-profile"><div class="pg-h"><div class="pg-title">Phiếu cá nhân</div><div class="pg-sub">Theo dõi tiến bộ của từng trẻ qua các thời điểm trong năm học.</div></div><div class="note info"><i class="ti ti-info-circle"></i><div>Dữ liệu minh họa – sẽ thay bằng dữ liệu từ Excel sau khi import.</div></div></div>
+<div class="page" id="p-portfolio"><div class="pg-h"><div class="pg-title">Portfolio</div><div class="pg-sub">Lưu minh chứng học tập, sản phẩm, câu nói và nhận xét của giáo viên.</div></div><div class="note info"><i class="ti ti-info-circle"></i><div>Dữ liệu minh họa – sẽ thay bằng dữ liệu từ Excel sau khi import.</div></div></div>
+<div class="page" id="p-parent-sheet"><div class="pg-h"><div class="pg-title">Phiếu cha mẹ</div><div class="pg-sub">Mẫu trao đổi với cha mẹ theo hướng đồng hành, không so sánh trẻ.</div></div><div class="note info"><i class="ti ti-info-circle"></i><div>Dữ liệu minh họa – sẽ thay bằng dữ liệu từ Excel sau khi import.</div></div></div>
+<div class="page" id="p-dashboard"><div class="pg-h"><div class="pg-title">Dashboard</div><div class="pg-sub">Dashboard chuyên môn để hỗ trợ điều chỉnh hoạt động, không phục vụ thi đua/xếp hạng.</div></div><div class="note warn"><i class="ti ti-alert-circle"></i><div>Dữ liệu minh họa – sẽ thay bằng dữ liệu từ Excel sau khi import.</div></div></div>
+<div class="page" id="p-data-admin"><div class="pg-h"><div class="pg-title">Quản lý dữ liệu CTGDMN</div><div class="pg-sub">Theo dõi trạng thái backend, database, file Excel nguồn và tiến độ import dữ liệu vào app. Trang này chỉ kiểm tra trạng thái, không chỉnh sửa dữ liệu giáo dục.</div></div><div class="note info"><i class="ti ti-info-circle"></i><div>Dữ liệu minh họa – sẽ thay bằng dữ liệu từ Excel sau khi import.</div></div></div>
+
+<!-- Giáo dục hoà nhập (mục mới, GĐ2 – khung, nội dung thật ở giai đoạn sau) -->
+<div class="page" id="p-inclusion">
+  <div class="pg-h"><div class="pg-title">Giáo dục hòa nhập</div><div class="pg-sub">Hỗ trợ trẻ có nhu cầu đặc biệt: kế hoạch cá nhân hóa, mục tiêu điều chỉnh, ghi nhận tiến bộ riêng.</div></div>
+  <div class="note info"><i class="ti ti-info-circle"></i><div>Dữ liệu minh họa – tính năng đang được xây dựng ở giai đoạn tiếp theo.</div></div>
+  <div class="placeholder-grid">
+    <div class="placeholder-card"><div class="placeholder-icon"><i class="ti ti-heart-handshake"></i></div><div><h3>Kế hoạch giáo dục cá nhân (IEP)</h3><p>Mục tiêu riêng, điều chỉnh nội dung/hoạt động theo nhu cầu từng trẻ.</p></div></div>
+    <div class="placeholder-card"><div class="placeholder-icon"><i class="ti ti-users-group"></i></div><div><h3>Phối hợp hỗ trợ</h3><p>Ghi nhận phối hợp giữa giáo viên, gia đình và chuyên gia hỗ trợ (nếu có).</p></div></div>
+  </div>
+</div>
+
+<!-- Cài đặt (mục mới, GĐ2 – gộp Cài đặt trường + Cài đặt AI đã có + quản lý giáo viên qua /api/auth/teachers) -->
+<div class="page" id="p-settings">
+  <div class="pg-h"><div class="pg-title">Cài đặt</div><div class="pg-sub">Thông tin tài khoản, cài đặt trường, cài đặt Trợ lý AI và quản lý tài khoản giáo viên.</div></div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-hdr"><div class="card-ttl"><i class="ti ti-user-circle"></i>Tài khoản đang đăng nhập</div></div>
+    <div class="card-body" id="settings-account-info">Đang tải...</div>
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-hdr"><div class="card-ttl"><i class="ti ti-settings"></i>Cài đặt chung</div></div>
+    <div class="card-body" style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="ga-sec-btn" onclick="openSchoolSetup()"><i class="ti ti-school"></i> Cài đặt trường</button>
+      <button class="ga-sec-btn" onclick="openAiSettings()"><i class="ti ti-key"></i> Cài đặt Trợ lý AI</button>
+      <button class="ga-sec-btn" onclick="goPage('data-admin')"><i class="ti ti-database"></i> Quản lý dữ liệu CTGDMN</button>
+      <button class="ga-sec-btn" onclick="goPage('download')"><i class="ti ti-download"></i> Tải hồ sơ</button>
+      <button class="ga-sec-btn" onclick="doLogout()"><i class="ti ti-logout"></i> Đăng xuất</button>
+    </div>
+  </div>
+  <div class="card" id="settings-teachers-card" style="display:none">
+    <div class="card-hdr"><div class="card-ttl"><i class="ti ti-users"></i>Tài khoản giáo viên</div></div>
+    <div class="card-body">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <input id="settings-teacher-name" class="setup-inp" placeholder="Họ tên giáo viên" style="flex:1;min-width:140px">
+        <input id="settings-teacher-email" class="setup-inp" type="email" placeholder="Email đăng nhập" style="flex:1;min-width:160px">
+        <input id="settings-teacher-password" class="setup-inp" type="password" placeholder="Mật khẩu (tối thiểu 6 ký tự)" style="flex:1;min-width:160px">
+        <button class="ga-sec-btn" onclick="addTeacherAccount()"><i class="ti ti-user-plus"></i> Thêm giáo viên</button>
+      </div>
+      <div id="settings-teacher-error" style="color:var(--brand-red,#E84545);font-size:12px;margin-bottom:8px"></div>
+      <div id="settings-teacher-list">Đang tải...</div>
+    </div>
+  </div>
+</div>
+
+<!-- Quản trị hệ thống: duyệt trường đăng ký (chỉ hiện khi đăng nhập bằng tài khoản superadmin) -->
+<div class="page" id="p-superadmin">
+  <div class="pg-h"><div class="pg-title">Duyệt trường đăng ký</div><div class="pg-sub">Duyệt để trường có thể đăng nhập và sử dụng app. Từ chối sẽ khoá đăng nhập của trường đó (có thể duyệt lại sau).</div></div>
+  <div class="card">
+    <div class="card-body">
+      <div class="tabs" id="superadmin-tabs">
+        <button class="tab on" onclick="setSuperadminTab(this,'pending')">Chờ duyệt</button>
+        <button class="tab" onclick="setSuperadminTab(this,'approved')">Đã duyệt</button>
+        <button class="tab" onclick="setSuperadminTab(this,'rejected')">Từ chối</button>
+        <button class="tab" onclick="setSuperadminTab(this,'all')">Tất cả</button>
+      </div>
+      <div class="overview-table-wrap"><div id="superadmin-schools-wrap">Đang tải...</div></div>
+    </div>
+  </div>
+</div>
+</div><!-- end content -->
+</div><!-- end wrap -->
+
+<!-- STATUS BAR (mới, GĐ2) -->
+<div id="status-bar">
+  <span class="sb-item" id="sb-offline-note" style="display:none"><span class="sb-dot"></span>Dữ liệu được lưu cục bộ · Có thể làm việc không cần Internet</span>
+  <span class="sb-sep">|</span>
+  <span class="sb-item" id="sb-last-saved"><i class="ti ti-device-floppy"></i>Chưa có thay đổi</span>
+  <span class="sb-sep">|</span>
+  <span class="sb-item" id="sb-backend-status"><span class="sb-dot off"></span>Đang kiểm tra backend...</span>
+  <span class="sb-spacer"></span>
+  <span class="sb-item sb-footer">NGUYỄN THU HIỀN – HỌC BẰNG CHIA SẺ</span>
+  <span class="sb-sep">|</span>
+  <span class="sb-item" id="sb-app-version">v1.2.1</span>
+</div>
+
+<!-- AUTH OVERLAY (đăng nhập / đăng ký trường) -->
+<div id="auth-overlay" style="display:none">
+  <div id="auth-box" class="setup-box">
+    <div class="setup-logo">🎓</div>
+    <div class="setup-title">Chương trình GDMN Thí điểm 2026</div>
+    <div class="setup-sub">Thư viện số CTGDMN · Mỗi trường một tài khoản riêng</div>
+
+    <div id="auth-login-form">
+      <div class="setup-lbl">Email</div>
+      <input id="auth-login-email" class="setup-inp" type="email" placeholder="email@truong.vn" />
+      <div class="setup-lbl">Mật khẩu</div>
+      <input id="auth-login-password" class="setup-inp" type="password" placeholder="Mật khẩu" />
+      <div id="auth-login-error" style="color:var(--rd,#C62828);font-size:12px;margin:4px 0"></div>
+      <button class="setup-btn" onclick="doLogin()">🔐 Đăng nhập</button>
+      <span class="setup-skip" onclick="showAuthForm('register')">Trường chưa có tài khoản? Đăng ký</span>
+    </div>
+
+    <div id="auth-register-form" style="display:none">
+      <div class="setup-lbl">Tên trường</div>
+      <input id="auth-reg-school" class="setup-inp" placeholder="VD: Trường MN Hoa Sen" maxlength="80" />
+      <div class="setup-lbl">Tỉnh / Thành phố</div>
+      <input id="auth-reg-city" class="setup-inp" placeholder="VD: Hà Nội" maxlength="50" />
+      <div class="setup-lbl">Họ tên hiệu trưởng/quản trị</div>
+      <input id="auth-reg-name" class="setup-inp" placeholder="Họ và tên" maxlength="80" />
+      <div class="setup-lbl">Email quản trị</div>
+      <input id="auth-reg-email" class="setup-inp" type="email" placeholder="email@truong.vn" />
+      <div class="setup-lbl">Mật khẩu (tối thiểu 6 ký tự)</div>
+      <input id="auth-reg-password" class="setup-inp" type="password" placeholder="Mật khẩu" />
+      <div id="auth-register-error" style="color:var(--rd,#C62828);font-size:12px;margin:4px 0"></div>
+      <button class="setup-btn" onclick="doRegisterSchool()">🚀 Đăng ký trường</button>
+      <span class="setup-skip" onclick="showAuthForm('login')">Đã có tài khoản? Đăng nhập</span>
+    </div>
+  </div>
+</div>
+
+<!-- SCHOOL SETUP OVERLAY -->
+<div id="setup-overlay" style="display:none">
+  <div id="setup-box">
+    <div class="setup-logo">🎓</div>
+    <div class="setup-title">Chương trình GDMN Thí điểm 2026</div>
+    <div class="setup-sub">QĐ 388/QĐ-BGDĐT · Nguyễn Thị Thu Hiền · Áp dụng toàn quốc</div>
+    <div class="setup-lbl">Tên trường của bạn</div>
+    <input id="setup-school" class="setup-inp" placeholder="VD: Trường MN Hoa Sen, Trường MN Hướng Dương..." maxlength="80" />
+    <div class="setup-lbl">Tỉnh / Thành phố</div>
+    <input id="setup-city" class="setup-inp" placeholder="VD: Hà Nội, TP. Hồ Chí Minh, Đà Nẵng..." maxlength="50" />
+    <button class="setup-btn" onclick="saveSchoolSetup()">🚀 Bắt đầu sử dụng</button>
+    <span class="setup-skip" onclick="skipSchoolSetup()">Dùng ngay không cần điền tên trường</span>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="modal-bg" onclick="closeModal(event)">
+  <div id="modal">
+    <div class="modal-hdr"><div class="modal-ttl" id="modal-title">Chi tiết</div><button class="close-btn" onclick="closeModalBtn()"><i class="ti ti-x"></i></button></div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script src="js/api.js"></script>
+<script src="js/state.js"></script>
+<script src="main.js"></script>
+</body>
+</html>

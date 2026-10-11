@@ -1,0 +1,13 @@
+# Dùng cho truong-mn-so/Dockerfile (build từ gốc repo): chỉ gửi những gì ảnh cần.
+*
+!truong-mn-so/requirements.txt
+!truong-mn-so/backend
+!truong-mn-so/ct388
+!ctgdmn-windows-fixed/src
+!ctgdmn-windows-fixed/assets
+!ctgdmn-windows-fixed/guides
+!ctgdmn-windows-fixed/program-documents
+**/__pycache__
+truong-mn-so/ct388/config/
+truong-mn-so/ct388/database/
+truong-mn-so/ct388/license/

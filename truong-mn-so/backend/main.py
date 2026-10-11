@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.khgdmn import routes as khgdmn_routes
@@ -27,7 +27,7 @@ KHGDMN_FRONTEND = Path(os.environ.get("KHGDMN_FRONTEND_DIR") or PROJECT_ROOT.par
 KHGDMN_ASSETS = Path(os.environ.get("KHGDMN_ASSETS_DIR") or KHGDMN_FRONTEND.parent / "assets").resolve()
 
 
-def create_app(database_url: str | None = None) -> FastAPI:
+def create_app(database_url: str | None = None, mount_ct388: bool = True) -> FastAPI:
     app = FastAPI(title="Trường Mầm non Số", version="0.1.0")
 
     @app.exception_handler(AppError)
@@ -47,6 +47,21 @@ def create_app(database_url: str | None = None) -> FastAPI:
     @app.get("/api/health")
     def health():
         return {"ok": True}
+
+    # CT388 (thư viện chương trình 388) chạy nguyên khối dưới /ct388. Ứng dụng con được mount thì
+    # Starlette không gọi sự kiện startup của nó, nên khởi tạo CSDL CT388 ở đây.
+    if mount_ct388:
+        from ct388.backend import main as ct388_main
+
+        @app.on_event("startup")
+        def ct388_startup():
+            ct388_main.on_startup()
+
+        @app.get("/ct388", include_in_schema=False)
+        def ct388_root():
+            return RedirectResponse("/ct388/")
+
+        app.mount("/ct388", ct388_main.app, name="ct388")
 
     @app.api_route("/api/{rest:path}", methods=["GET", "POST", "PUT", "DELETE"])
     def not_ported_yet(rest: str):

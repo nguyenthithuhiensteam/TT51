@@ -16,7 +16,15 @@ NODE_HASH = (Path(__file__).with_name("node_hash.txt")).read_text(encoding="utf-
 
 @pytest.fixture()
 def client(tmp_path):
-    app = create_app(f"sqlite:///{tmp_path / 'test.sqlite'}")
+    # TEST_DATABASE_URL=postgresql://... → chạy trên Postgres (xóa sạch bảng kh_ trước mỗi bài); mặc định SQLite tạm.
+    url = os.environ.get("TEST_DATABASE_URL") or f"sqlite:///{tmp_path / 'test.sqlite'}"
+    if os.environ.get("TEST_DATABASE_URL"):
+        from backend.khgdmn.db import make_engine, metadata
+
+        engine = make_engine(url)
+        metadata.drop_all(engine)
+        engine.dispose()
+    app = create_app(url)
     with TestClient(app) as test_client:
         yield test_client
 

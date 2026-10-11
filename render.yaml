@@ -1,0 +1,24 @@
+# Render Blueprint cho service gộp "Trường Mầm non Số" (KH GDMN + CT388).
+# Tạo service MỚI, không đụng tới hai service đang chạy (KH GDMN, ct388-app).
+services:
+  - type: web
+    name: truong-mn-so
+    runtime: docker
+    plan: free
+    region: oregon
+    branch: claude/hop-nhat-python
+    dockerfilePath: ./truong-mn-so/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      # Dùng CHUNG Postgres với ct388-app (bảng KH GDMN có tiền tố kh_, không trùng bảng CT388).
+      - key: DATABASE_URL
+        sync: false
+      - key: CT388_AUTH_SECRET
+        sync: false
+      # Khóa Claude của CT388 — KH GDMN cũng tự dùng khóa này khi chưa cấu hình AI riêng.
+      - key: CT388_ANTHROPIC_API_KEY
+        sync: false
+      # Mã hóa khóa API nhập từ màn hình Cài đặt AI (openssl rand -base64 32).
+      - key: AI_CONFIG_ENCRYPTION_KEY
+        sync: false
