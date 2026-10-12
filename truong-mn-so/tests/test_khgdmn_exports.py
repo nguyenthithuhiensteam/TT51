@@ -15,7 +15,7 @@ from test_khgdmn_core import _docx_bytes, client, login, setup_admin  # noqa: F4
 
 
 def setup_principal(client):
-    """Quản trị hệ thống không có quyền xuất tài liệu (giống bản Node), nên xuất bằng tài khoản hiệu trưởng."""
+    """Quản trị và một giáo viên (vai trò khác như hiệu trưởng nay quy về giáo viên)."""
     admin = setup_admin(client)
     client.post("/api/accounts", headers=admin, json={"username": "hieutruong", "fullName": "Hiệu trưởng", "password": "matkhau123",
                                                       "roles": ["principal"], "mustChangePassword": False})
@@ -59,8 +59,7 @@ def test_word_export_matches_node_text(tmp_path):
 def test_export_routes(client):
     admin, principal = setup_principal(client)
     plan = DATA["plans"][0]
-    denied = client.post("/api/exports/word", headers=admin, json={"filename": "k.docx", "payload": plan})
-    assert denied.json()["error"] == "Bạn không có quyền thực hiện thao tác này."
+    assert client.post("/api/exports/word", headers=admin, json={"filename": "k.docx", "payload": plan}).status_code == 200
     word = client.post("/api/exports/word", headers=principal, json={"filename": "Kế hoạch năm.docx", "payload": plan, "school": DATA["school"]})
     assert word.status_code == 200, word.text
     assert word.headers["content-disposition"] == "attachment; filename*=UTF-8''K%E1%BA%BF%20ho%E1%BA%A1ch%20n%C4%83m.docx"

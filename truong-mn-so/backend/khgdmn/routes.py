@@ -31,16 +31,16 @@ _templates: TemplateManager | None = None
 _added_documents: AddedDocuments | None = None
 _ai_service: AIService | None = None
 _pending_imports = PendingImports()
-_frontend_dir: Path | None = None
+_program_data_dir: Path | None = None
 
 
-def configure(repository: Repository, frontend_dir: Path) -> None:
-    global _repository, _templates, _added_documents, _ai_service, _frontend_dir
+def configure(repository: Repository, program_data_dir: Path) -> None:
+    global _repository, _templates, _added_documents, _ai_service, _program_data_dir
     _repository = repository
     _templates = TemplateManager(repository)
     _added_documents = AddedDocuments(repository)
-    _frontend_dir = frontend_dir
-    set_program_index_path(frontend_dir / "data" / "program-index.json")
+    _program_data_dir = program_data_dir
+    set_program_index_path(program_data_dir / "program-index.json")
     store = AIConfigStore(repository, SecretBox(os.environ.get("AI_CONFIG_ENCRYPTION_KEY", "")))
     store.seed_from_env()
     _ai_service = AIService(store, audit=lambda action, details: None)
@@ -93,7 +93,7 @@ def current_user(request: Request) -> dict:
 # ---- Công khai (không cần đăng nhập) ----
 @router.get("/api/data/index")
 def data_index():
-    return json.loads((_frontend_dir / "data" / "program-index.json").read_text(encoding="utf-8"))
+    return json.loads((_program_data_dir / "program-index.json").read_text(encoding="utf-8"))
 
 
 @router.get("/api/branding/public")
@@ -228,8 +228,7 @@ def deactivate_objective(objective_id: str, request: Request):
 # ---- Kho dữ liệu / kế hoạch ----
 @router.post("/api/repository/bootstrap")
 async def bootstrap(request: Request):
-    current_user(request)
-    return repo().bootstrap_legacy((await body(request)).get("legacy"))
+    return repo().bootstrap_legacy(current_user(request), (await body(request)).get("legacy"))
 
 
 @router.get("/api/repository/state")
@@ -239,34 +238,8 @@ def get_state(request: Request):
 
 @router.post("/api/repository/state")
 async def save_state(request: Request):
-    user = current_user(request)
-    payload = await body(request)
-    config = repo().get_json("systemConfig", {}) or {}
-    if config.get("repositoryMode") == "lan":
-        raise AppError("Chưa kết nối máy chủ LAN; dữ liệu không được ghi để tránh xung đột.")
-    old = repo().get_json("workspace", {}) or {}
-    workspace = payload.get("workspace") or {}
-    for plan in workspace.get("plans") or []:
-        previous = next((item for item in (old.get("plans") or []) if item.get("id") == plan.get("id")), None)
-        if not previous:
-            authorize(user, "plan.create", plan)
-        elif previous != plan:
-            authorize(user, "plan.edit", plan)
-            if (previous.get("workflowStatus") or "draft") not in ("draft", "changes_requested"):
-                raise AppError("Bản kế hoạch đang gửi đã bị khóa.")
-    if ADMIN not in (user.get("roles") or []):
-        for key in ("schoolProfile", "classes", "staff", "signatures", "customRecords", "edits", "sourceDocuments"):
-            if key in old:
-                workspace[key] = old[key]
-            else:
-                workspace.pop(key, None)
-        payload["workspace"] = workspace
-    return repo().save_state(user, payload)
-
-
-@router.post("/api/plans/{plan_id}/transition")
-async def transition(plan_id: str, request: Request):
-    return repo().transition(current_user(request), plan_id, (await body(request)).get("toStatus"))
+    # Mỗi người chỉ ghi vào kho của chính mình, nên không cần kiểm tra quyền theo từng kế hoạch như bản một trường.
+    return repo().save_state(current_user(request), await body(request))
 
 
 @router.post("/api/repository/config")
@@ -393,8 +366,8 @@ def file_response(content: bytes, filename: str, content_type: str) -> Response:
 
 
 def authorize_export(user: dict, payload: dict) -> None:
-    own = payload.get("authorTeacherId") == user.get("staffId")
-    authorize(user, "document.export_own" if own else "document.export", payload)
+    # Dữ liệu xuất lấy từ kho riêng của người đang đăng nhập.
+    authorize(user, "document.export")
 
 
 @router.post("/api/exports/word")
@@ -405,9 +378,6 @@ async def export_word(request: Request):
     school = data.get("school") or {}
     authorize_export(user, payload)
     signers = payload.get("signers") or []
-    for signer in signers:
-        if signer.get("mode") == "image":
-            authorize(user, "signature.use", {**payload, "ownerStaffId": signer.get("staffId")})
     safe_name = safe_export_name(data.get("filename"), ".docx")
     is_review = data.get("type") == "review"
     content = None if is_review else templates().render_custom(payload.get("templateId"), payload, school)
@@ -433,7 +403,7 @@ async def export_pdf(request: Request):
 @router.post("/api/exports/excel")
 async def export_excel(request: Request):
     user = current_user(request)
-    authorize(user, "data.manage" if ADMIN in (user.get("roles") or []) else "document.export")
+    authorize(user, "document.export")
     data = await body(request)
     safe_name = safe_export_name(data.get("filename"), ".xlsx")
     content = create_professional_workbook(data.get("payload") or {})

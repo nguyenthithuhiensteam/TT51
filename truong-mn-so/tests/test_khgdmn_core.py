@@ -102,49 +102,83 @@ def test_children_assessments_and_objectives(client):
     assert dup.json()["error"] == "Mã MT-X đã tồn tại trong nhóm tuổi này."
 
 
-def test_workspace_plan_workflow_backup_restore(client):
+def add_teacher(client, admin, username, full_name):
+    client.post("/api/accounts", headers=admin, json={"username": username, "fullName": full_name, "password": "matkhau123",
+                                                       "roles": ["teacher"], "mustChangePassword": False})
+    return login(client, username, "matkhau123")
+
+
+def test_each_user_has_private_workspace(client):
     admin = setup_admin(client)
-    client.post("/api/accounts", headers=admin, json={"username": "gv.hoa", "fullName": "Cô Hoa", "password": "matkhau123", "roles": ["teacher"], "staffId": "staff-hoa", "mustChangePassword": False})
-    assert client.post("/api/repository/bootstrap", headers=admin, json={"legacy": {"workspace": {"schoolProfile": {"name": "MN Hướng Dương"}}}}).json() is True
-    state = client.get("/api/repository/state", headers=admin).json()
-    assert state["workspace"]["schemaVersion"] == 4
-    assert client.get("/api/branding/public").json()["schoolName"] == "MN Hướng Dương"
+    hoa = add_teacher(client, admin, "gv.hoa", "Cô Hoa")
+    lan = add_teacher(client, admin, "gv.lan", "Cô Lan")
+    for headers in (admin, hoa, lan):
+        assert client.post("/api/repository/bootstrap", headers=headers, json={"legacy": {}}).json() is True
 
-    teacher = login(client, "gv.hoa", "matkhau123")
-    workspace = client.get("/api/repository/state", headers=teacher).json()["workspace"]
-    workspace["plans"] = [{"id": "plan-1", "title": "KH tuần 1", "authorTeacherId": "staff-hoa", "workflowStatus": "draft"}]
-    workspace["schoolProfile"] = {"name": "Bị sửa trái phép"}
-    assert client.post("/api/repository/state", headers=teacher, json={"workspace": workspace, "review": {}}).json() is True
-    saved = client.get("/api/repository/state", headers=admin).json()["workspace"]
-    assert saved["schoolProfile"]["name"] == "MN Hướng Dương"
-    assert [p["id"] for p in saved["plans"]] == ["plan-1"]
+    workspace = client.get("/api/repository/state", headers=hoa).json()["workspace"]
+    assert workspace["schemaVersion"] == 4 and workspace["plans"] == []
+    workspace["plans"] = [{"id": "plan-1", "title": "KH tuần 1 của cô Hoa"}]
+    workspace["schoolProfile"] = {"name": "MN Hướng Dương", "schoolYear": "2026–2027"}
+    assert client.post("/api/repository/state", headers=hoa, json={"workspace": workspace, "review": {}}).json() is True
 
-    other = {**workspace, "plans": [{"id": "plan-2", "authorTeacherId": "staff-khac"}]}
-    rejected = client.post("/api/repository/state", headers=teacher, json={"workspace": other})
-    assert rejected.json()["error"] == "Giáo viên chỉ được tạo kế hoạch của chính mình."
+    hoa_saved = client.get("/api/repository/state", headers=hoa).json()["workspace"]
+    assert hoa_saved["schoolProfile"]["name"] == "MN Hướng Dương" and [p["id"] for p in hoa_saved["plans"]] == ["plan-1"]
+    # Giáo viên khác và cả quản trị đều không thấy kho của cô Hoa.
+    assert client.get("/api/repository/state", headers=lan).json()["workspace"]["plans"] == []
+    assert client.get("/api/repository/state", headers=admin).json()["workspace"]["plans"] == []
+    # Quy trình duyệt nhiều cấp đã bỏ.
+    assert client.post("/api/plans/plan-1/transition", headers=hoa, json={"toStatus": "sent_team"}).status_code == 501
 
-    moved = client.post("/api/plans/plan-1/transition", headers=teacher, json={"toStatus": "sent_team"}).json()
-    assert moved["workflowStatus"] == "sent_team"
-    locked = client.post("/api/plans/plan-1/transition", headers=teacher, json={"toStatus": "approved"})
-    assert locked.json()["error"] == "Chuyển trạng thái kế hoạch không hợp lệ."
 
-    backup = client.get("/api/repository/backup", headers=admin).json()
-    assert backup["format"] == "ctgdmn-sqlite-backup" and len(backup["users"]) == 2
-    assert client.post("/api/repository/restore", headers=admin, json=backup).json() is True
+def test_personal_and_full_backup(client):
+    admin = setup_admin(client)
+    hoa = add_teacher(client, admin, "gv.hoa", "Cô Hoa")
+    client.post("/api/repository/bootstrap", headers=hoa, json={"legacy": {}})
+    client.post("/api/repository/state", headers=hoa, json={"workspace": {"plans": [{"id": "plan-hoa"}]}, "review": {}})
+
+    personal = client.get("/api/repository/backup", headers=hoa).json()
+    assert personal["format"] == "truong-mn-so-personal-backup" and personal["owner"] == "gv.hoa"
+    assert "users" not in personal
+    client.post("/api/repository/state", headers=hoa, json={"workspace": {"plans": []}, "review": {}})
+    assert client.post("/api/repository/restore", headers=hoa, json=personal).json() is True
+    assert [p["id"] for p in client.get("/api/repository/state", headers=hoa).json()["workspace"]["plans"]] == ["plan-hoa"]
+
+    full = client.get("/api/repository/backup", headers=admin).json()
+    assert full["format"] == "truong-mn-so-backup" and len(full["users"]) == 2
+    denied = client.post("/api/repository/restore", headers=hoa, json=full)
+    assert denied.json()["error"] == "Giáo viên chỉ khôi phục được tệp sao lưu kho của riêng mình."
+    client.post("/api/repository/state", headers=hoa, json={"workspace": {"plans": []}, "review": {}})
+    assert client.post("/api/repository/restore", headers=admin, json=full).json() is True
+    assert [p["id"] for p in client.get("/api/repository/state", headers=hoa).json()["workspace"]["plans"]] == ["plan-hoa"]
+
+
+def test_restore_node_single_school_backup(client):
+    """Tệp sao lưu của KH GDMN cũ: tài khoản giữ mật khẩu, vai trò cũ quy về giáo viên, kho chung giao cho quản trị."""
+    admin = setup_admin(client)
+    legacy = {
+        "format": "ctgdmn-sqlite-backup", "version": 4,
+        "state": {"workspace": {"schoolProfile": {"name": "MN Cũ"}, "plans": [{"id": "plan-cu"}]}, "review": {}, "systemConfig": {}},
+        "users": [{
+            "id": "user-node", "username": "tu.node", "full_name": "Hiệu trưởng cũ", "staff_id": "", "title": "", "team": "",
+            "class_ids_json": "[]", "roles_json": '["principal"]', "scope_json": "{}", "active": 1, "password_hash": NODE_HASH,
+            "must_change_password": 0, "created_at": "2026-09-01T00:00:00.000Z", "last_login_at": None, "created_by": "",
+        }],
+    }
+    assert client.post("/api/repository/restore", headers=admin, json=legacy).json() is True
+    old_user = login(client, "tu.node", "matkhau123")
+    assert [u["roles"] for u in client.get("/api/accounts", headers=admin).json() if u["username"] == "tu.node"] == [["teacher"]]
+    assert client.get("/api/repository/state", headers=old_user).json()["workspace"]["plans"] == []
+    admin_ws = client.get("/api/repository/state", headers=admin).json()["workspace"]
+    assert admin_ws["schoolProfile"]["name"] == "MN Cũ" and [p["id"] for p in admin_ws["plans"]] == ["plan-cu"]
     actions = [row["action"] for row in client.get("/api/repository/audit", headers=admin).json()]
-    assert "backup.restore" in actions and "plan.transition" in actions
+    assert "backup.restore" in actions
 
 
-def test_restore_accepts_node_backup_users(client):
+def test_admin_only_creates_admin_or_teacher(client):
     admin = setup_admin(client)
-    backup = client.get("/api/repository/backup", headers=admin).json()
-    backup["users"].append({
-        "id": "user-node", "username": "tu.node", "full_name": "Từ bản Node", "staff_id": "", "title": "", "team": "",
-        "class_ids_json": "[]", "roles_json": '["teacher"]', "scope_json": "{}", "active": 1, "password_hash": NODE_HASH,
-        "must_change_password": 0, "created_at": "2026-09-01T00:00:00.000Z", "last_login_at": None, "created_by": "",
-    })
-    assert client.post("/api/repository/restore", headers=admin, json=backup).json() is True
-    login(client, "tu.node", "matkhau123")
+    created = client.post("/api/accounts", headers=admin, json={"username": "hieu.truong", "fullName": "X", "password": "matkhau123",
+                                                                 "roles": ["principal"]}).json()
+    assert created["roles"] == ["teacher"]
 
 
 def test_not_ported_routes_and_frontend(client):
@@ -197,3 +231,20 @@ def test_online_videos(client):
     assert client.post("/api/videos/builtin-video-ctgdmn-guide/open-online", headers=teacher).json()["url"].startswith("https://")
     assert "đã được sử dụng" in client.delete("/api/videos/builtin-video-ctgdmn-guide", headers=admin).json()["error"]
     assert client.delete(f"/api/videos/{created['id']}", headers=admin).json() is True
+
+
+def test_shared_workspace_moves_to_first_admin(tmp_path):
+    """Dữ liệu của bản một trường (kho chung) được giao cho quản trị đầu tiên khi máy chủ khởi động lại."""
+    url = f"sqlite:///{tmp_path / 'legacy.sqlite'}"
+    first = create_app(url, mount_ct388=False)
+    with TestClient(first) as c:
+        admin = setup_admin(c)
+        repo = first.state.repository
+        repo.set_json("workspace", {"plans": [{"id": "plan-chung"}], "schoolProfile": {"name": "MN Chung"}})
+    second = create_app(url, mount_ct388=False)
+    with TestClient(second) as c:
+        admin = login(c, "admin", "matkhau123")
+        plans = c.get("/api/repository/state", headers=admin).json()["workspace"]["plans"]
+        assert [p["id"] for p in plans] == ["plan-chung"]
+        assert second.state.repository.get_json("workspace", None) is None
+        assert second.state.repository.get_json("legacy-shared-workspace", None)["schoolProfile"]["name"] == "MN Chung"

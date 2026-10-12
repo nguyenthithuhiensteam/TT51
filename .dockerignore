@@ -3,7 +3,8 @@
 !truong-mn-so/requirements.txt
 !truong-mn-so/backend
 !truong-mn-so/ct388
-!ctgdmn-windows-fixed/src
+!truong-mn-so/web
+!ctgdmn-windows-fixed/src/data
 !ctgdmn-windows-fixed/assets
 !ctgdmn-windows-fixed/guides
 !ctgdmn-windows-fixed/program-documents

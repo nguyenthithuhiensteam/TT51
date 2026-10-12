@@ -21,7 +21,7 @@ from . import security
 from .db import metadata
 from .errors import AppError
 from .plan_schema import DEVELOPMENT_DOMAINS, domains_for_age_group
-from .security import ADMIN, LEAD, PRINCIPAL, TEACHER, VICE, VIEWER, authorize, hash_password, scope_allows, verify_password
+from .security import ADMIN, TEACHER, authorize, hash_password, verify_password
 
 ASSESSMENT_LEVELS = ("Đạt", "Chưa đạt", "Cần hỗ trợ thêm")
 USERNAME_RE = re.compile(r"^[a-z0-9._-]{3,40}$")
@@ -41,13 +41,6 @@ def s(value) -> str:
     return str(value).strip() if value not in (None, "", 0, False) or isinstance(value, (list, dict)) else ""
 
 
-def js_or_none(value):
-    """Tương đương `value||null`: chuỗi rỗng/0/false/undefined → None; mảng và object rỗng vẫn giữ."""
-    if isinstance(value, (list, dict)):
-        return value
-    return value if value not in (None, "", 0) else None
-
-
 def _new_id(prefix: str) -> str:
     return f"{prefix}-{uuid.uuid4()}"
 
@@ -59,6 +52,24 @@ class Repository:
         metadata.create_all(engine)
         self.seed_builtin_resources()
         self.seed_builtin_objectives()
+        self.migrate_shared_workspace()
+
+    def migrate_shared_workspace(self) -> None:
+        """Bản một trường lưu một kho chung ("workspace"). Chuyển kho đó cho quản trị tạo sớm nhất (nếu người này chưa
+        có kho riêng) rồi đổi tên khóa cũ để giữ làm bản lưu — chỉ chạy một lần."""
+        shared = self.get_json("workspace", None)
+        if shared is None:
+            return
+        admins = [row for row in self._all("SELECT id, roles_json FROM kh_users ORDER BY created_at") if ADMIN in json.loads(row["roles_json"])]
+        if not admins:
+            return
+        owner = admins[0]["id"]
+        if self.get_json(f"workspace:{owner}", None) is None:
+            self.set_json(f"workspace:{owner}", shared)
+            self.set_json(f"review:{owner}", self.get_json("review", {}) or {})
+        self.set_json("legacy-shared-workspace", shared)
+        self._exec("DELETE FROM kh_app_state WHERE key IN ('workspace','review')")
+        self.audit(None, "migration.shared_workspace", "workspace", owner)
 
     # ---- tiện ích SQL ----
     def _one(self, sql: str, **params):
@@ -153,7 +164,7 @@ class Repository:
         user = {
             "id": _new_id("user"), "username": username, "fullName": s(data.get("fullName")),
             "staffId": data.get("staffId") or "", "title": data.get("title") or "", "team": data.get("team") or "",
-            "classIds": data.get("classIds") or [], "roles": data.get("roles") or [VIEWER], "scope": data.get("scope") or {},
+            "classIds": data.get("classIds") or [], "roles": data.get("roles") or [TEACHER], "scope": data.get("scope") or {},
             "active": True, "mustChangePassword": data.get("mustChangePassword") is not False,
             "createdAt": iso(), "createdBy": (actor or {}).get("id") or "",
         }
@@ -175,7 +186,8 @@ class Repository:
 
     def create_user(self, actor: dict, data: dict) -> dict:
         authorize(actor, "accounts.manage")
-        return self._insert_user(actor, data)
+        roles = [role for role in (data.get("roles") or [TEACHER]) if role in (ADMIN, TEACHER)] or [TEACHER]
+        return self._insert_user(actor, {**data, "roles": roles})
 
     def import_users(self, actor: dict, rows) -> dict:
         authorize(actor, "accounts.manage")
@@ -183,7 +195,7 @@ class Repository:
             raise AppError("Tệp Excel không có tài khoản hợp lệ.")
         if len(rows) > 500:
             raise AppError("Mỗi lần chỉ được nhập tối đa 500 tài khoản.")
-        allowed_roles = {PRINCIPAL, VICE, LEAD, TEACHER, VIEWER}
+        allowed_roles = {TEACHER}
         result = {"created": 0, "skipped": 0, "errors": []}
         for index, row in enumerate(rows):
             row = row or {}
@@ -326,14 +338,19 @@ class Repository:
         self.audit(actor["id"], "account.request_reject", "account_request", request_id, 0, "success", {"username": request["username"]})
         return {"ok": True}
 
-    # ---- kho kế hoạch (workspace) ----
-    def bootstrap_legacy(self, legacy: dict | None) -> bool:
-        legacy = legacy or {}
-        workspace = self.get_json("workspace", None)
-        if not workspace:
-            workspace = legacy.get("workspace") or {}
-            self.set_json("review", legacy.get("review") or {})
-            self.set_json("systemConfig", {"repositoryMode": "local", "serverUrl": "", "idleMinutes": 30, "migratedAt": iso()})
+    # ---- kho kế hoạch: mỗi tài khoản một kho riêng ----
+    # Khóa trong kh_app_state: "workspace:<userId>", "review:<userId>". Cấu hình hệ thống ("systemConfig") dùng chung.
+    @staticmethod
+    def _ws_key(user_id: str) -> str:
+        return f"workspace:{user_id}"
+
+    @staticmethod
+    def _review_key(user_id: str) -> str:
+        return f"review:{user_id}"
+
+    @staticmethod
+    def _normalize_workspace(workspace: dict | None) -> dict:
+        workspace = dict(workspace or {})
         school_id = (workspace.get("schoolProfile") or {}).get("id") or "school-main"
         defaults = {key: [] for key in ("customRecords", "plans", "sourceDocuments", "importHistory", "importLog", "classes", "staff",
                                         "professionalReviews", "signatures", "signatureLog", "planVersions", "publicationSnapshots", "planStatusHistory")}
@@ -341,93 +358,36 @@ class Repository:
         plan_defaults = {"version": 1, "workflowStatus": "draft", "schoolId": school_id, "classId": "", "authorTeacherId": "",
                          "collaboratingTeacherIds": [], "reviewerIds": [], "approverId": "", "signatureConfigurationIds": []}
         workspace["plans"] = [{**plan_defaults, **plan} for plan in (workspace.get("plans") or [])]
-        self.set_json("workspace", workspace)
-        self.audit(None, "migration.localStorage", "workspace", "main", 4, "success", {"hadWorkspace": bool(legacy.get("workspace"))})
+        return workspace
+
+    def bootstrap_legacy(self, user: dict, legacy: dict | None) -> bool:
+        """Lần đầu tài khoản mở app: tạo kho riêng (lấy dữ liệu trình duyệt cũ nếu có)."""
+        legacy = legacy or {}
+        workspace = self.get_json(self._ws_key(user["id"]), None)
+        if not workspace:
+            workspace = legacy.get("workspace") or {}
+            self.set_json(self._review_key(user["id"]), legacy.get("review") or {})
+            if self.get_json("systemConfig", None) is None:
+                self.set_json("systemConfig", {"repositoryMode": "local", "serverUrl": "", "idleMinutes": 30, "migratedAt": iso()})
+        self.set_json(self._ws_key(user["id"]), self._normalize_workspace(workspace))
+        self.audit(user["id"], "migration.localStorage", "workspace", user["id"], 4, "success", {"hadWorkspace": bool(legacy.get("workspace"))})
         return True
 
     def get_state(self, user: dict) -> dict:
-        roles = user.get("roles") or []
-        authorize(user, "data.manage" if ADMIN in roles else "data.read_shared" if VIEWER in roles else "data.read")
-        workspace = self.get_json("workspace", {}) or {}
-        if not (ADMIN in roles or PRINCIPAL in roles):
-            staff = workspace.get("staff") or []
-
-            def visible(plan):
-                author = next((person for person in staff if person.get("id") == plan.get("authorTeacherId")), None)
-                return scope_allows(user, {**plan, "team": plan.get("team") or (author or {}).get("team")})
-
-            plans = [plan for plan in (workspace.get("plans") or []) if visible(plan)]
-            ids = {plan.get("id") for plan in plans}
-            workspace["plans"] = plans
-            workspace["planVersions"] = [p for p in (workspace.get("planVersions") or []) if p.get("id") in ids]
-            workspace["professionalReviews"] = [r for r in (workspace.get("professionalReviews") or []) if r.get("planId") in ids]
-            workspace["publicationSnapshots"] = [x for x in (workspace.get("publicationSnapshots") or []) if x.get("planId") in ids]
-            workspace["signatures"] = [sig if sig.get("staffId") == user.get("staffId") else {**sig, "imageData": ""}
-                                       for sig in (workspace.get("signatures") or [])]
+        authorize(user, "data.read")
         return {
-            "workspace": workspace,
-            "review": self.get_json("review", {}),
+            "workspace": self.get_json(self._ws_key(user["id"]), None) or self._normalize_workspace({}),
+            "review": self.get_json(self._review_key(user["id"]), {}),
             "systemConfig": self.get_json("systemConfig", {"repositoryMode": "local", "idleMinutes": 30}),
         }
 
     def save_state(self, user: dict, payload: dict) -> bool:
-        roles = user.get("roles") or []
-        authorize(user, "data.manage" if ADMIN in roles else "data.read")
-        old = self.get_json("workspace", {}) or {}
-        new = payload.get("workspace") or {}
-        if VIEWER in roles:
-            raise AppError("Người xem không được sửa dữ liệu.")
-        admin = ADMIN in roles
-        if not admin:
-            for key in ("schoolProfile", "classes", "staff", "signatures", "customRecords", "edits", "sourceDocuments"):
-                if js_or_none(old.get(key)) != js_or_none(new.get(key)):
-                    raise AppError("Bạn không được thay đổi cấu hình hoặc kho dữ liệu quản trị.")
-        if TEACHER in roles and not any(role in roles for role in (ADMIN, PRINCIPAL, VICE, LEAD)):
-            for plan in new.get("plans") or []:
-                previous = next((p for p in (old.get("plans") or []) if p.get("id") == plan.get("id")), None)
-                if previous != plan and plan.get("authorTeacherId") != user.get("staffId"):
-                    raise AppError("Giáo viên chỉ được sửa kế hoạch của mình.")
-                if previous and previous.get("workflowStatus") and previous.get("workflowStatus") not in ("draft", "changes_requested") and previous != plan:
-                    raise AppError("Bản kế hoạch đang gửi đã bị khóa.")
-        saved = new
-        if not admin:
-            saved = dict(old)
-            plan_map = {plan.get("id"): plan for plan in (old.get("plans") or [])}
-            for plan in new.get("plans") or []:
-                plan_map[plan.get("id")] = plan
-            saved["plans"] = list(plan_map.values())
-            review_map = {review.get("id"): review for review in (old.get("professionalReviews") or [])}
-            for review in new.get("professionalReviews") or []:
-                review_map[review.get("id")] = review
-            saved["professionalReviews"] = list(review_map.values())
-            for key in ("planVersions", "publicationSnapshots", "signatureLog", "importHistory", "importLog"):
-                if new.get(key):
-                    saved[key] = new[key]
-        self.set_json("workspace", saved)
-        self.set_json("review", payload.get("review") or {})
+        authorize(user, "data.read")
+        self.set_json(self._ws_key(user["id"]), payload.get("workspace") or {})
+        self.set_json(self._review_key(user["id"]), payload.get("review") or {})
         self.audit(user["id"], payload.get("action") or "data.update", payload.get("targetType") or "workspace",
-                   payload.get("targetId") or "main", payload.get("version") or 0)
+                   payload.get("targetId") or user["id"], payload.get("version") or 0)
         return True
-
-    def transition(self, user: dict, plan_id: str, to_status: str) -> dict:
-        workspace = self.get_json("workspace", {}) or {}
-        plans = workspace.get("plans") or []
-        index = next((i for i, plan in enumerate(plans) if plan.get("id") == plan_id), -1)
-        if index < 0:
-            raise AppError("Không tìm thấy kế hoạch.")
-        previous = plans[index]
-        author = next((p for p in (workspace.get("staff") or []) if p.get("id") == previous.get("authorTeacherId")), None)
-        changed = security.transition_plan(user, {**previous, "team": previous.get("team") or (author or {}).get("team")}, to_status)
-        plans[index] = changed
-        workspace["plans"] = plans
-        workspace["planStatusHistory"] = [*(workspace.get("planStatusHistory") or []), {
-            "id": _new_id("status"), "planId": plan_id, "planVersion": changed["version"],
-            "fromStatus": previous.get("workflowStatus") or "draft", "toStatus": to_status, "actorUserId": user["id"], "createdAt": iso(),
-        }]
-        self.set_json("workspace", workspace)
-        self.audit(user["id"], "plan.transition", "plan", plan_id, changed["version"], "success",
-                   {"from": previous.get("workflowStatus") or "draft", "to": to_status})
-        return changed
 
     def update_config(self, actor: dict, config: dict) -> None:
         authorize(actor, "school.configure")
@@ -436,40 +396,72 @@ class Repository:
         self.audit(actor["id"], "system.configure", "config", "main")
 
     # ---- sao lưu ----
+    # Quản trị: toàn hệ thống (tài khoản + kho của mọi người). Giáo viên: kho của riêng mình.
+    FULL_FORMAT = "truong-mn-so-backup"
+    PERSONAL_FORMAT = "truong-mn-so-personal-backup"
+    LEGACY_FORMAT = "ctgdmn-sqlite-backup"  # bản sao lưu của KH GDMN cũ (Node, một trường)
+
     def create_backup(self, actor: dict) -> dict:
-        authorize(actor, "backup.manage")
+        authorize(actor, "data.read")
+        if ADMIN not in (actor.get("roles") or []):
+            payload = {"format": self.PERSONAL_FORMAT, "version": 1, "exportedAt": iso(), "owner": actor["username"],
+                       "workspace": self.get_json(self._ws_key(actor["id"]), {}), "review": self.get_json(self._review_key(actor["id"]), {})}
+            self.audit(actor["id"], "backup.export_personal", "workspace", actor["id"])
+            return payload
+        users = self._all("SELECT * FROM kh_users")
         payload = {
-            "format": "ctgdmn-sqlite-backup", "version": 4, "exportedAt": iso(),
-            "state": {"workspace": self.get_json("workspace", {}), "review": self.get_json("review", {}), "systemConfig": self.get_json("systemConfig", {})},
-            "users": self._all("SELECT * FROM kh_users"),
+            "format": self.FULL_FORMAT, "version": 1, "exportedAt": iso(),
+            "systemConfig": self.get_json("systemConfig", {}),
+            "workspaces": {u["id"]: {"workspace": self.get_json(self._ws_key(u["id"]), None),
+                                     "review": self.get_json(self._review_key(u["id"]), None)} for u in users},
+            "users": users,
         }
         self.audit(actor["id"], "backup.export", "database", "main")
         return payload
 
     def restore_backup(self, actor: dict, payload: dict) -> bool:
-        authorize(actor, "backup.manage")
-        if not isinstance(payload, dict) or payload.get("format") != "ctgdmn-sqlite-backup" or not payload.get("state") or not isinstance(payload.get("users"), list):
+        authorize(actor, "data.read")
+        fmt = payload.get("format") if isinstance(payload, dict) else None
+        if fmt == self.PERSONAL_FORMAT:
+            self.set_json(self._ws_key(actor["id"]), self._normalize_workspace(payload.get("workspace")))
+            self.set_json(self._review_key(actor["id"]), payload.get("review") or {})
+            self.audit(actor["id"], "backup.restore_personal", "workspace", actor["id"])
+            return True
+        if ADMIN not in (actor.get("roles") or []):
+            raise AppError("Giáo viên chỉ khôi phục được tệp sao lưu kho của riêng mình.")
+        if fmt not in (self.FULL_FORMAT, self.LEGACY_FORMAT) or not isinstance(payload.get("users"), list):
             raise AppError("Tệp sao lưu không hợp lệ.")
         for row in payload["users"]:
             if not str(row.get("password_hash") or "").startswith("scrypt$"):
                 raise AppError("Bản sao lưu chứa thông tin xác thực không hợp lệ.")
-        state = payload["state"]
-        now = iso()
-        upsert_state = text(
-            "INSERT INTO kh_app_state(key,value_json,updated_at) VALUES(:key,:value,:now) "
-            "ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json,updated_at=excluded.updated_at"
-        )
         columns = ("id", "username", "full_name", "staff_id", "title", "team", "class_ids_json", "roles_json", "scope_json",
                    "active", "password_hash", "must_change_password", "created_at", "last_login_at", "created_by")
         insert_user = text(f"INSERT INTO kh_users({','.join(columns)}) VALUES({','.join(':' + c for c in columns)})")
         with self.engine.begin() as conn:
-            for key in ("workspace", "review", "systemConfig"):
-                conn.execute(upsert_state, {"key": key, "value": dumps(state.get(key) or {}), "now": now})
             for row in payload["users"]:
+                row = dict(row)
+                if fmt == self.LEGACY_FORMAT:
+                    # Bản cũ có hiệu trưởng/tổ trưởng/...: nay chỉ còn quản trị và giáo viên.
+                    roles = json.loads(row.get("roles_json") or "[]")
+                    row["roles_json"] = dumps([ADMIN] if ADMIN in roles else [TEACHER])
                 # Tương đương INSERT OR REPLACE của SQLite: thay cả bản ghi trùng id hoặc trùng tên đăng nhập.
                 conn.execute(text("DELETE FROM kh_users WHERE id=:id OR username=:username"), {"id": row.get("id"), "username": row.get("username")})
                 conn.execute(insert_user, {c: row.get(c) for c in columns})
-        self.audit(actor["id"], "backup.restore", "database", "main")
+        if fmt == self.FULL_FORMAT:
+            self.set_json("systemConfig", payload.get("systemConfig") or {})
+            for user_id, entry in (payload.get("workspaces") or {}).items():
+                if (entry or {}).get("workspace") is not None:
+                    self.set_json(self._ws_key(user_id), entry["workspace"])
+                if (entry or {}).get("review") is not None:
+                    self.set_json(self._review_key(user_id), entry["review"])
+        else:
+            # Kho chung của trường cũ giao cho tài khoản quản trị đang khôi phục (tìm lại theo tên đăng nhập
+            # vì bản ghi của chính người này có thể vừa được thay bằng bản ghi cũ).
+            owner = self._one("SELECT id FROM kh_users WHERE username=:u", u=actor["username"]) or {"id": actor["id"]}
+            state = payload.get("state") or {}
+            self.set_json(self._ws_key(owner["id"]), self._normalize_workspace(state.get("workspace")))
+            self.set_json(self._review_key(owner["id"]), state.get("review") or {})
+        self.audit(actor["id"], "backup.restore", "database", "main", 0, "success", {"format": fmt})
         return True
 
     def audit_rows(self, actor: dict, limit=500) -> list[dict]:
@@ -587,8 +579,7 @@ class Repository:
 
     @staticmethod
     def can_manage_system_objectives(actor: dict) -> bool:
-        roles = actor.get("roles") or []
-        return ADMIN in roles or PRINCIPAL in roles
+        return ADMIN in (actor.get("roles") or [])
 
     def list_objectives(self, actor: dict, age_group: str = "") -> list[dict]:
         authorize(actor, "objectives.manage")
@@ -620,7 +611,7 @@ class Repository:
         can_manage_system = self.can_manage_system_objectives(actor)
         wants_system = data.get("scope") == "system"
         if wants_system and not can_manage_system:
-            raise AppError("Chỉ hiệu trưởng hoặc quản trị hệ thống mới sửa được ngân hàng mục tiêu dùng chung toàn trường.")
+            raise AppError("Chỉ quản trị mới sửa được ngân hàng mục tiêu dùng chung.")
         objective_id = s(data.get("id"))
         duplicate = f"Mã {code} đã tồn tại trong nhóm tuổi này."
         if objective_id:
@@ -629,7 +620,7 @@ class Repository:
                 raise AppError("Không tìm thấy mục tiêu.")
             is_system_row = existing["owner_id"] == "system"
             if is_system_row and not can_manage_system:
-                raise AppError("Bạn không có quyền sửa mục tiêu dùng chung toàn trường.")
+                raise AppError("Bạn không có quyền sửa mục tiêu dùng chung.")
             if not is_system_row and existing["owner_id"] != actor["id"]:
                 raise AppError("Không tìm thấy mục tiêu hoặc bạn không có quyền sửa.")
             try:
@@ -658,7 +649,7 @@ class Repository:
             raise AppError("Không tìm thấy mục tiêu.")
         is_system_row = existing["owner_id"] == "system"
         if is_system_row and not self.can_manage_system_objectives(actor):
-            raise AppError("Bạn không có quyền xóa mục tiêu dùng chung toàn trường.")
+            raise AppError("Bạn không có quyền xóa mục tiêu dùng chung.")
         if not is_system_row and existing["owner_id"] != actor["id"]:
             raise AppError("Không tìm thấy mục tiêu hoặc bạn không có quyền xóa.")
         self._exec("UPDATE kh_objectives SET active=0,updated_at=:now WHERE id=:id", now=iso(), id=objective_id)

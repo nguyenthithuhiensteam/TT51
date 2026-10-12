@@ -29,9 +29,9 @@ def node(*args) -> str:
 @pytest.mark.skipif(shutil.which("node") is None, reason="Không có Node để đối chiếu")
 @pytest.mark.parametrize("action,plan", [("generate", LESSON), ("improve", THEME), ("validate", THEME)])
 def test_prompt_matches_node(tmp_path, action, plan):
-    from backend.main import KHGDMN_FRONTEND
+    from backend.main import KHGDMN_PROGRAM_DATA
 
-    ai.set_program_index_path(KHGDMN_FRONTEND / "data" / "program-index.json")
+    ai.set_program_index_path(KHGDMN_PROGRAM_DATA / "program-index.json")
     plan_file = tmp_path / "plan.json"
     plan_file.write_text(json.dumps(plan, ensure_ascii=False), encoding="utf-8")
     assert build_prompt(action, plan) == json.loads(node("prompt", action, str(plan_file)))

@@ -30,11 +30,12 @@ ROLE_LABELS = {
 }
 
 PERMISSIONS = {
-    ADMIN: ["accounts.manage", "school.configure", "backup.manage", "video.manage", "audit.view", "data.manage", "data.read", "assessment.manage", "objectives.manage", "plan.read", "plan.create", "plan.edit"],
+    # Nền tảng nhiều giáo viên: chỉ còn quản trị và giáo viên; mỗi người làm việc trên kho riêng của mình.
+    ADMIN: ["accounts.manage", "school.configure", "backup.manage", "video.manage", "audit.view", "data.manage", "data.read", "assessment.manage", "objectives.manage", "plan.read", "plan.create", "plan.edit", "document.export"],
     PRINCIPAL: ["plan.read", "plan.review", "plan.approve", "report.read", "signature.use", "document.export", "data.read", "assessment.manage", "objectives.manage"],
     VICE: ["plan.read", "plan.review", "plan.submit_approval", "plan.approve_configured", "report.read", "document.export", "data.read", "assessment.manage", "objectives.manage"],
     LEAD: ["plan.read", "plan.review", "plan.request_changes", "plan.submit_professional", "data.read", "assessment.manage", "objectives.manage"],
-    TEACHER: ["plan.read", "plan.create", "plan.edit", "plan.submit_team", "review.respond", "data.read", "document.export_own", "assessment.manage", "objectives.manage"],
+    TEACHER: ["plan.read", "plan.create", "plan.edit", "data.read", "document.export", "assessment.manage", "objectives.manage"],
     VIEWER: ["plan.read_shared", "data.read_shared", "video.view"],
 }
 

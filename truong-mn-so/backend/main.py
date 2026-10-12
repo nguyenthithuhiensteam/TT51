@@ -1,7 +1,4 @@
-"""Trường Mầm non Số — máy chủ FastAPI gộp KH GDMN và CT388.
-
-Giai đoạn 1: phần KH GDMN (tài khoản, hồ sơ trẻ, đánh giá, mục tiêu, kho kế hoạch, nhật ký, sao lưu).
-Các nhóm API còn lại (nhập/xuất tệp, mẫu, video, tài liệu, AI) và CT388 (/ct388) sẽ nối ở các bước sau.
+"""Trường Mầm non Số — máy chủ FastAPI gộp KH GDMN (nhiều giáo viên, mỗi người một kho riêng) và CT388 (/ct388).
 
 Chạy trên máy:  uvicorn backend.main:app --port 8787   (trong thư mục truong-mn-so)
 """
@@ -22,9 +19,12 @@ from backend.khgdmn.repository import Repository
 
 logger = logging.getLogger("truong-mn-so")
 
-# Giao diện KH GDMN giữ nguyên. Tạm dùng trực tiếp thư mục của bản Node; khi đóng gói Docker sẽ chép vào.
-KHGDMN_FRONTEND = Path(os.environ.get("KHGDMN_FRONTEND_DIR") or PROJECT_ROOT.parent / "ctgdmn-windows-fixed" / "src").resolve()
-KHGDMN_ASSETS = Path(os.environ.get("KHGDMN_ASSETS_DIR") or KHGDMN_FRONTEND.parent / "assets").resolve()
+# Giao diện web nhiều giáo viên (web/, tách từ bản Windows ctgdmn-windows-fixed/src). Dữ liệu chương trình
+# (data/, ~13 MB) và ảnh (assets/) dùng chung với bản Windows nên không chép lại.
+_NODE_APP = PROJECT_ROOT.parent / "ctgdmn-windows-fixed"
+KHGDMN_FRONTEND = Path(os.environ.get("KHGDMN_FRONTEND_DIR") or PROJECT_ROOT / "web").resolve()
+KHGDMN_PROGRAM_DATA = Path(os.environ.get("KHGDMN_PROGRAM_DATA_DIR") or _NODE_APP / "src" / "data").resolve()
+KHGDMN_ASSETS = Path(os.environ.get("KHGDMN_ASSETS_DIR") or _NODE_APP / "assets").resolve()
 
 
 def create_app(database_url: str | None = None, mount_ct388: bool = True) -> FastAPI:
@@ -40,7 +40,7 @@ def create_app(database_url: str | None = None, mount_ct388: bool = True) -> Fas
         return JSONResponse({"error": str(error) or "Có lỗi không xác định."}, status_code=500)
 
     repository = Repository(make_engine(database_url))
-    khgdmn_routes.configure(repository, KHGDMN_FRONTEND)
+    khgdmn_routes.configure(repository, KHGDMN_PROGRAM_DATA)
     app.state.repository = repository
     app.include_router(khgdmn_routes.router)
 
@@ -69,6 +69,8 @@ def create_app(database_url: str | None = None, mount_ct388: bool = True) -> Fas
 
     if KHGDMN_ASSETS.exists():
         app.mount("/assets", StaticFiles(directory=KHGDMN_ASSETS), name="assets")
+    if KHGDMN_PROGRAM_DATA.exists():
+        app.mount("/data", StaticFiles(directory=KHGDMN_PROGRAM_DATA), name="program-data")
     if KHGDMN_FRONTEND.exists():
         @app.get("/", include_in_schema=False)
         def index():

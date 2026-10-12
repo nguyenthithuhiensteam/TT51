@@ -13,14 +13,16 @@ RUN python3 -m pip install --no-cache-dir --break-system-packages -r requirement
 COPY truong-mn-so/backend ./backend
 COPY truong-mn-so/ct388 ./ct388
 
-# Giao diện và tài liệu đi kèm của KH GDMN (giữ nguyên, dùng chung với bản Windows)
-COPY ctgdmn-windows-fixed/src ./khgdmn/src
+# Giao diện web nhiều giáo viên + dữ liệu chương trình, ảnh, tài liệu dùng chung với bản Windows
+COPY truong-mn-so/web ./khgdmn/web
+COPY ctgdmn-windows-fixed/src/data ./khgdmn/data
 COPY ctgdmn-windows-fixed/assets ./khgdmn/assets
 COPY ctgdmn-windows-fixed/guides ./khgdmn/guides
 COPY ctgdmn-windows-fixed/program-documents ./khgdmn/program-documents
 
 ENV PYTHONUNBUFFERED=1 \
-    KHGDMN_FRONTEND_DIR=/app/khgdmn/src \
+    KHGDMN_FRONTEND_DIR=/app/khgdmn/web \
+    KHGDMN_PROGRAM_DATA_DIR=/app/khgdmn/data \
     KHGDMN_ASSETS_DIR=/app/khgdmn/assets \
     KHGDMN_GUIDES_DIR=/app/khgdmn/guides \
     KHGDMN_DOCUMENTS_DIR=/app/khgdmn/program-documents \
