@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
+import logging
 import os
 import re
 import secrets
@@ -197,9 +198,18 @@ class SecretBox:
     """AES-256-GCM, định dạng iv(12) | tag(16) | dữ liệu — giống ServerSafeStorage của bản Node."""
 
     def __init__(self, master_key_b64: str):
-        self.key = base64.b64decode(master_key_b64) if master_key_b64 else None
-        if self.key is not None and len(self.key) != 32:
-            raise RuntimeError("AI_CONFIG_ENCRYPTION_KEY phải là chuỗi base64 mã hóa đúng 32 byte (dùng: openssl rand -base64 32).")
+        # Khóa sai định dạng không được làm sập cả máy chủ: chỉ tắt việc lưu khóa AI và ghi cảnh báo.
+        self.key = None
+        if master_key_b64.strip():
+            try:
+                key = base64.b64decode(master_key_b64.strip(), validate=True)
+            except ValueError:
+                key = b""
+            if len(key) == 32:
+                self.key = key
+            else:
+                logging.getLogger("truong-mn-so").warning(
+                    "AI_CONFIG_ENCRYPTION_KEY phải là chuỗi base64 mã hóa đúng 32 byte (openssl rand -base64 32); tạm tắt lưu khóa AI.")
 
     def available(self) -> bool:
         return self.key is not None
