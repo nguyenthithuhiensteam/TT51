@@ -16,6 +16,11 @@ services:
         sync: false
       - key: CT388_AUTH_SECRET
         sync: false
+      # Tài khoản quản trị tổng của CT388 (trang /ct388/admin.html) — chép từ ct388-app.
+      - key: CT388_SUPERADMIN_EMAIL
+        sync: false
+      - key: CT388_SUPERADMIN_PASSWORD
+        sync: false
       # Khóa Claude của CT388 — KH GDMN cũng tự dùng khóa này khi chưa cấu hình AI riêng.
       - key: CT388_ANTHROPIC_API_KEY
         sync: false
