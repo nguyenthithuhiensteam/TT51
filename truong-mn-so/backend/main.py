@@ -40,6 +40,16 @@ def create_app(database_url: str | None = None, mount_ct388: bool = True) -> Fas
         return JSONResponse({"error": str(error) or "Có lỗi không xác định."}, status_code=500)
 
     repository = Repository(make_engine(database_url))
+    reset_user = os.environ.get("KHGDMN_RESET_ADMIN_USERNAME", "").strip()
+    reset_password = os.environ.get("KHGDMN_RESET_ADMIN_PASSWORD", "")
+    if reset_user and reset_password:
+        try:
+            outcome = repository.reset_admin_from_env(reset_user, reset_password)
+            logger.warning("Đã %s tài khoản quản trị '%s' từ biến môi trường. Hãy XÓA KHGDMN_RESET_ADMIN_USERNAME và "
+                           "KHGDMN_RESET_ADMIN_PASSWORD sau khi đăng nhập và đổi mật khẩu.",
+                           "đặt lại mật khẩu cho" if outcome == "reset" else "tạo", reset_user)
+        except AppError as error:
+            logger.error("Không khôi phục được tài khoản quản trị: %s", error.message)
     khgdmn_routes.configure(repository, KHGDMN_PROGRAM_DATA)
     app.state.repository = repository
     app.include_router(khgdmn_routes.router)

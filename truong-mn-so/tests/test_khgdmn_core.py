@@ -248,3 +248,20 @@ def test_shared_workspace_moves_to_first_admin(tmp_path):
         assert [p["id"] for p in plans] == ["plan-chung"]
         assert second.state.repository.get_json("workspace", None) is None
         assert second.state.repository.get_json("legacy-shared-workspace", None)["schoolProfile"]["name"] == "MN Chung"
+
+
+def test_reset_admin_from_env(tmp_path, monkeypatch):
+    """Quên mật khẩu quản trị: đặt biến môi trường rồi khởi động lại máy chủ."""
+    url = f"sqlite:///{tmp_path / 'reset.sqlite'}"
+    with TestClient(create_app(url, mount_ct388=False)) as c:
+        setup_admin(c)
+    monkeypatch.setenv("KHGDMN_RESET_ADMIN_USERNAME", "Admin")
+    monkeypatch.setenv("KHGDMN_RESET_ADMIN_PASSWORD", "MatKhauTam-2026")
+    with TestClient(create_app(url, mount_ct388=False)) as c:
+        assert c.post("/api/auth/login", json={"username": "admin", "password": "matkhau123"}).status_code == 400
+        result = c.post("/api/auth/login", json={"username": "admin", "password": "MatKhauTam-2026"}).json()
+        assert result["user"]["roles"] == ["system_admin"] and result["user"]["mustChangePassword"] is True
+    monkeypatch.setenv("KHGDMN_RESET_ADMIN_USERNAME", "quantri.moi")
+    with TestClient(create_app(url, mount_ct388=False)) as c:
+        created = c.post("/api/auth/login", json={"username": "quantri.moi", "password": "MatKhauTam-2026"}).json()
+        assert created["user"]["roles"] == ["system_admin"]

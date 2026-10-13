@@ -54,6 +54,26 @@ class Repository:
         self.seed_builtin_objectives()
         self.migrate_shared_workspace()
 
+    def reset_admin_from_env(self, username: str, password: str) -> str:
+        """Khôi phục quyền quản trị khi quên mật khẩu (biến môi trường KHGDMN_RESET_ADMIN_USERNAME/PASSWORD).
+        Tài khoản có sẵn: đặt lại mật khẩu, mở khóa, gán vai trò quản trị. Chưa có: tạo mới tài khoản quản trị.
+        Luôn bắt buộc đổi mật khẩu ở lần đăng nhập đầu vì mật khẩu tạm đã nằm trong cấu hình máy chủ."""
+        name = s(username).lower()
+        if not USERNAME_RE.match(name):
+            raise AppError("KHGDMN_RESET_ADMIN_USERNAME phải có 3–40 ký tự không dấu (chữ thường, số, . _ -).")
+        password_hash = hash_password(password)
+        row = self._one("SELECT id FROM kh_users WHERE username=:u", u=name)
+        if row:
+            self._exec("UPDATE kh_users SET password_hash=:h,must_change_password=1,active=1,roles_json=:r WHERE id=:id",
+                       h=password_hash, r=dumps([ADMIN]), id=row["id"])
+            user_id, outcome = row["id"], "reset"
+        else:
+            user_id = self._insert_user(None, {"username": name, "fullName": "Quản trị", "passwordHash": password_hash,
+                                               "roles": [ADMIN], "mustChangePassword": True})["id"]
+            outcome = "created"
+        self.audit(None, "account.admin_reset_env", "user", user_id, 0, "success", {"username": name, "outcome": outcome})
+        return outcome
+
     def migrate_shared_workspace(self) -> None:
         """Bản một trường lưu một kho chung ("workspace"). Chuyển kho đó cho quản trị tạo sớm nhất (nếu người này chưa
         có kho riêng) rồi đổi tên khóa cũ để giữ làm bản lưu — chỉ chạy một lần."""
