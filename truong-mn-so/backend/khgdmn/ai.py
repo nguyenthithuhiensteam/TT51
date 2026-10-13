@@ -375,6 +375,16 @@ async def _post_json(url: str, headers: dict, payload: dict, timeout_s: float) -
     return data
 
 
+def _claude_detail(error) -> str:
+    """Lý do Anthropic trả về (ví dụ "invalid x-api-key", "credit balance is too low") để hiện cho quản trị."""
+    body = getattr(error, "body", None)
+    if isinstance(body, dict):
+        inner = body.get("error") if isinstance(body.get("error"), dict) else body
+        if inner.get("message"):
+            return str(inner["message"])
+    return str(getattr(error, "message", "") or error)
+
+
 async def _request_claude(config: dict, api_key: str, prompt: dict, schema: dict, timeout_s: float) -> str:
     base_url = ensure_safe_base_url(config.get("baseUrl"), DEFAULTS["claude"]["baseUrl"])
     base_url = re.sub(r"/v1$", "", base_url)  # thư viện tự thêm /v1
@@ -385,12 +395,30 @@ async def _request_claude(config: dict, api_key: str, prompt: dict, schema: dict
         "output_config": {"format": {"type": "json_schema", "schema": schema}},
     }
     try:
+        response = None
         if config["model"] in CLAUDE_FALLBACK_MODELS:
-            response = await client.beta.messages.create(**request, betas=["server-side-fallback-2026-07-01"], fallbacks="default")
-        else:
+            # Tài khoản chưa được dùng tính năng chuyển mô hình dự phòng (beta) → gọi lại bình thường, không kèm beta.
+            try:
+                response = await client.beta.messages.create(**request, betas=["server-side-fallback-2026-07-01"], fallbacks="default")
+            except anthropic.PermissionDeniedError:
+                response = None
+            except anthropic.BadRequestError as error:
+                if not re.search(r"fallback|beta", _claude_detail(error), re.IGNORECASE):
+                    raise
+        if response is None:
             response = await client.messages.create(**request)
-    except (anthropic.AuthenticationError, anthropic.PermissionDeniedError) as error:
-        raise AIError("Khóa API không hợp lệ hoặc không có quyền.", INVALID_KEY) from error
+    except anthropic.AuthenticationError as error:
+        raise AIError("Khóa API không hợp lệ: Anthropic không nhận khóa này (khóa Claude bắt đầu bằng sk-ant-, kiểm tra còn hiệu lực "
+                      f"trong console.anthropic.com). Chi tiết: {_claude_detail(error)}", INVALID_KEY) from error
+    except anthropic.PermissionDeniedError as error:
+        raise AIError(f"Khóa hợp lệ nhưng tài khoản Anthropic chưa có quyền dùng mô hình {config['model']}. Chi tiết: {_claude_detail(error)}",
+                      INVALID_KEY) from error
+    except anthropic.BadRequestError as error:
+        detail = _claude_detail(error)
+        if re.search(r"credit balance|billing|purchase credits", detail, re.IGNORECASE):
+            raise AIError(f"Tài khoản Anthropic đã hết số dư; hãy nạp thêm trong console.anthropic.com (Plans & Billing). Chi tiết: {detail}",
+                          QUOTA) from error
+        raise _http_error(error.status_code, detail) from error
     except anthropic.RateLimitError as error:
         raise AIError("Tài khoản không đủ hạn mức hoặc đang bị giới hạn.", QUOTA) from error
     except anthropic.NotFoundError as error:

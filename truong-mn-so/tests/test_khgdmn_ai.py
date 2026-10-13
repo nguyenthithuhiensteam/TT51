@@ -180,3 +180,65 @@ def test_ai_quota_and_per_user_switch(client, fake_provider):
     client.post("/api/accounts", headers=admin, json={"username": "gv.moi", "fullName": "Cô Mới", "password": "matkhau123",
                                                        "roles": ["teacher"], "mustChangePassword": False})
     assert client.get("/api/ai/my-status", headers=login(client, "gv.moi", "matkhau123")).json()["enabled"] is False
+
+
+def _anthropic_error(cls, status, message):
+    import httpx2
+
+    response = httpx2.Response(status, request=httpx2.Request("POST", "https://api.anthropic.com/v1/messages"))
+    return cls(message, response=response, body={"type": "error", "error": {"type": "x", "message": message}})
+
+
+def _fake_claude(monkeypatch, beta_error=None, plain_error=None):
+    calls = {"beta": 0, "plain": 0}
+
+    class FakeBlock:
+        type = "text"
+        text = json.dumps(GOOD_LESSON)
+
+    class FakeResponse:
+        stop_reason = "end_turn"
+        content = [FakeBlock()]
+
+    class Messages:
+        def __init__(self, kind, error):
+            self.kind, self.error = kind, error
+
+        async def create(self, **kwargs):
+            calls[self.kind] += 1
+            if self.error:
+                raise self.error
+            return FakeResponse()
+
+    class FakeClient:
+        def __init__(self, **kwargs):
+            self.messages = Messages("plain", plain_error)
+            self.beta = type("Beta", (), {"messages": Messages("beta", beta_error)})()
+
+        async def close(self):
+            pass
+
+    monkeypatch.setattr(ai.anthropic, "AsyncAnthropic", FakeClient)
+    return calls
+
+
+CLAUDE_CONFIG = {"provider": "claude", "model": "claude-opus-5-5", "baseUrl": "https://api.anthropic.com/v1", "timeoutMs": 30000}
+PROMPT = {"instructions": "x", "input": "{}"}
+
+
+async def test_claude_retries_without_fallback_beta_when_not_permitted(monkeypatch):
+    calls = _fake_claude(monkeypatch, beta_error=_anthropic_error(ai.anthropic.PermissionDeniedError, 403, "beta not enabled"))
+    assert json.loads(await ai.request_provider(CLAUDE_CONFIG, "sk-x", PROMPT, ai.LESSON_RESPONSE_SCHEMA)) == GOOD_LESSON
+    assert calls == {"beta": 1, "plain": 1}
+
+
+async def test_claude_error_messages_show_anthropic_reason(monkeypatch):
+    _fake_claude(monkeypatch, beta_error=_anthropic_error(ai.anthropic.AuthenticationError, 401, "invalid x-api-key"))
+    with pytest.raises(ai.AIError) as bad_key:
+        await ai.request_provider(CLAUDE_CONFIG, "sk-x", PROMPT, ai.LESSON_RESPONSE_SCHEMA)
+    assert "Khóa API không hợp lệ" in bad_key.value.message and "invalid x-api-key" in bad_key.value.message
+
+    _fake_claude(monkeypatch, plain_error=_anthropic_error(ai.anthropic.BadRequestError, 400, "Your credit balance is too low to access the Anthropic API."))
+    with pytest.raises(ai.AIError) as no_credit:
+        await ai.request_provider({**CLAUDE_CONFIG, "model": "claude-sonnet-4-6"}, "sk-x", PROMPT, ai.LESSON_RESPONSE_SCHEMA)
+    assert no_credit.value.code == ai.QUOTA and "hết số dư" in no_credit.value.message
