@@ -48,7 +48,8 @@ def get_engine() -> Engine:
     if _engine is None:
         url = get_database_url()
         connect_args = {"check_same_thread": False} if url.startswith("sqlite") else {}
-        _engine = create_engine(url, connect_args=connect_args, future=True)
+        # pool_pre_ping: kiểm tra kết nối trước khi dùng — Postgres có thể đã đóng kết nối cũ trong lúc app (Render free) ngủ.
+        _engine = create_engine(url, connect_args=connect_args, future=True, pool_pre_ping=True)
     return _engine
 
 
