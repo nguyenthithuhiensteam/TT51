@@ -137,3 +137,46 @@ async def test_claude_request_uses_sdk_structured_output(monkeypatch):
     assert captured["client"]["base_url"] == "https://api.anthropic.com" and captured["client"]["max_retries"] == 0
     assert captured["output_config"] == {"format": {"type": "json_schema", "schema": ai.LESSON_RESPONSE_SCHEMA}}
     assert captured["fallbacks"] == "default" and captured["betas"] == ["server-side-fallback-2026-07-01"]
+
+
+def test_ai_quota_and_per_user_switch(client, fake_provider):
+    from test_khgdmn_core import login
+
+    admin = setup_admin(client)
+    routes.ai_service().store.box = SecretBox(KEY)
+    client.post("/api/ai/config", headers=admin, json={"provider": "claude", "apiKey": "sk-ant-123456789", "consentAccepted": True, "retries": 0})
+    client.post("/api/accounts", headers=admin, json={"username": "gv.ai", "fullName": "Cô AI", "password": "matkhau123",
+                                                       "roles": ["teacher"], "mustChangePassword": False})
+    teacher = login(client, "gv.ai", "matkhau123")
+    teacher_id = next(u["id"] for u in client.get("/api/accounts", headers=admin).json() if u["username"] == "gv.ai")
+
+    assert client.get("/api/ai/my-status", headers=teacher).json() == {"enabled": True, "used": 0, "limit": 10, "remaining": 10, "configured": True}
+    assert client.post("/api/ai/policy", headers=admin, json={"dailyLimit": 2}).json()["dailyLimit"] == 2
+    assert client.post("/api/ai/policy", headers=teacher, json={"dailyLimit": 99}).json()["error"] == "Bạn không có quyền thực hiện thao tác này."
+
+    fake_provider.replies = [json.dumps(GOOD_LESSON), json.dumps(GOOD_LESSON)]
+    for _ in range(2):
+        assert client.post("/api/ai/generate", headers=teacher, json={"action": "generate", "plan": LESSON}).json()["result"] == GOOD_LESSON
+    over = client.post("/api/ai/generate", headers=teacher, json={"action": "generate", "plan": LESSON})
+    assert "hết 2 lượt AI hôm nay" in over.json()["error"]
+    assert len(fake_provider.calls) == 2  # lượt thứ 3 không gọi dịch vụ AI
+    assert client.get("/api/ai/my-status", headers=teacher).json()["remaining"] == 0
+
+    accounts = {u["username"]: u for u in client.get("/api/accounts", headers=admin).json()}
+    assert accounts["gv.ai"]["aiUsedToday"] == 2 and accounts["gv.ai"]["aiEnabled"] is True
+
+    client.post(f"/api/accounts/{teacher_id}/ai", headers=admin, json={"enabled": False})
+    client.post("/api/ai/policy", headers=admin, json={"dailyLimit": 0})
+    blocked = client.post("/api/ai/generate", headers=teacher, json={"action": "generate", "plan": LESSON})
+    assert blocked.json()["error"] == "Tài khoản của bạn chưa được quản trị cho phép dùng AI."
+
+    # Quản trị luôn dùng được, không giới hạn.
+    fake_provider.replies = [json.dumps(GOOD_LESSON)]
+    assert client.post("/api/ai/generate", headers=admin, json={"action": "generate", "plan": LESSON}).json()["result"] == GOOD_LESSON
+    assert client.get("/api/ai/my-status", headers=admin).json()["limit"] == 0
+
+    # Giáo viên mới mặc định không được dùng khi quản trị tắt mặc định.
+    client.post("/api/ai/policy", headers=admin, json={"defaultEnabled": False})
+    client.post("/api/accounts", headers=admin, json={"username": "gv.moi", "fullName": "Cô Mới", "password": "matkhau123",
+                                                       "roles": ["teacher"], "mustChangePassword": False})
+    assert client.get("/api/ai/my-status", headers=login(client, "gv.moi", "matkhau123")).json()["enabled"] is False

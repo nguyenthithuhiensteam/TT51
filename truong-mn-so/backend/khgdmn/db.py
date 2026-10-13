@@ -152,6 +152,14 @@ template_files = Table(
 )
 
 
+# Số lượt dùng AI của mỗi tài khoản theo ngày (giờ Việt Nam).
+ai_usage = Table(
+    "kh_ai_usage", metadata,
+    Column("user_id", String, primary_key=True),
+    Column("day", String, primary_key=True),
+    Column("count", Integer, nullable=False, default=0),
+)
+
 # PDF nguồn do người dùng thêm (bản Node lưu ở /data/program-documents-added).
 added_documents = Table(
     "kh_added_documents", metadata,

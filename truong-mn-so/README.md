@@ -32,6 +32,7 @@ python -m venv .venv
 | Nhập Word/Excel/PDF, kho PDF chương trình, hướng dẫn | Xong — PDF bổ sung lưu trong CSDL |
 | Video MP4 ngoại tuyến | Chưa |
 | Nền tảng nhiều giáo viên: đăng ký → quản trị duyệt, mỗi người một kho riêng | Xong |
+| Soạn giáo án bằng AI (nút nhanh), hạn mức lượt/ngày, bật/tắt AI từng người | Xong |
 | CT388 gắn tại `/ct388` (mã chép từ repo CTGDMN_388 @ c47ff3e) | Xong — đăng nhập vẫn riêng |
 | Dockerfile + `render.yaml` (service mới `truong-mn-so`) | Đã viết, chưa build thử (máy không có Docker) |
 

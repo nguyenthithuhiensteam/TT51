@@ -162,6 +162,10 @@
     clearAIConfig: () => api('DELETE', '/api/ai/config'),
     testAIConnection: () => api('POST', '/api/ai/test'),
     runAI: (action, plan, requestId) => api('POST', '/api/ai/generate', { action, plan, requestId }),
+    getMyAIStatus: () => api('GET', '/api/ai/my-status'),
+    getAIPolicy: () => api('GET', '/api/ai/policy'),
+    saveAIPolicy: (policy) => api('POST', '/api/ai/policy', policy),
+    setUserAI: (userId, enabled) => api('POST', `/api/accounts/${encodeURIComponent(userId)}/ai`, { enabled }),
     cancelAI: (requestId) => api('POST', '/api/ai/cancel', { requestId }),
 
     listTemplates: () => api('GET', '/api/templates'),

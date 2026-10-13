@@ -11,6 +11,7 @@ from fastapi import APIRouter, Request, Response
 from fastapi.responses import FileResponse
 
 from .ai import AIConfigStore, AIService, SecretBox, set_program_index_path
+from .ai_quota import AIQuota
 from .db import data_dir
 from .documents import ADDED_PREFIX, AddedDocuments, PendingImports, added_filename, resolve_guide, resolve_program_document, trusted_resource_url
 from .errors import AppError
@@ -30,12 +31,13 @@ _repository: Repository | None = None
 _templates: TemplateManager | None = None
 _added_documents: AddedDocuments | None = None
 _ai_service: AIService | None = None
+_ai_quota: AIQuota | None = None
 _pending_imports = PendingImports()
 _program_data_dir: Path | None = None
 
 
 def configure(repository: Repository, program_data_dir: Path) -> None:
-    global _repository, _templates, _added_documents, _ai_service, _program_data_dir
+    global _repository, _templates, _added_documents, _ai_service, _ai_quota, _program_data_dir
     _repository = repository
     _templates = TemplateManager(repository)
     _added_documents = AddedDocuments(repository)
@@ -44,6 +46,13 @@ def configure(repository: Repository, program_data_dir: Path) -> None:
     store = AIConfigStore(repository, SecretBox(os.environ.get("AI_CONFIG_ENCRYPTION_KEY", "")))
     store.seed_from_env()
     _ai_service = AIService(store, audit=lambda action, details: None)
+    _ai_quota = AIQuota(repository)
+
+
+def ai_quota() -> AIQuota:
+    if _ai_quota is None:
+        raise RuntimeError("AIQuota chưa được khởi tạo.")
+    return _ai_quota
 
 
 def ai_service() -> AIService:
@@ -139,7 +148,18 @@ async def change_password(request: Request):
 # ---- Tài khoản ----
 @router.get("/api/accounts")
 def list_accounts(request: Request):
-    return repo().list_users(current_user(request))
+    user = current_user(request)
+    users = repo().list_users(user)
+    view = ai_quota().admin_view(user)
+    for item in users:
+        item["aiEnabled"] = ADMIN in item["roles"] or bool(view["users"].get(item["id"], view["defaultEnabled"]))
+        item["aiUsedToday"] = view["usageToday"].get(item["id"], 0)
+    return users
+
+
+@router.post("/api/accounts/{user_id}/ai")
+async def set_account_ai(user_id: str, request: Request):
+    return ai_quota().set_user_enabled(current_user(request), user_id, bool((await body(request)).get("enabled")))
 
 
 @router.post("/api/accounts")
@@ -569,7 +589,12 @@ def clear_ai_config(request: Request):
 @router.post("/api/ai/test")
 async def test_ai(request: Request):
     user = current_user(request)
+    is_admin = ADMIN in (user.get("roles") or [])
+    if not is_admin:
+        ai_quota().check(user)
     result = await ai_service().test_connection()
+    if not is_admin and result["status"] != "unconfigured":
+        ai_quota().record(user)  # thử kết nối cũng là một lần gọi AI thật
     repo().audit(user["id"], "ai.connection_test", "ai", ai_service().store.get_public_config()["provider"], 0,
                  "success" if result["ok"] else "failure", {"status": result["status"]})
     return result
@@ -583,7 +608,9 @@ async def generate_ai(request: Request):
     if action not in ("generate", "improve", "validate"):
         raise AppError("Thao tác AI không hợp lệ.")
     plan = data.get("plan") or {}
+    ai_quota().check(user)
     result = await ai_service().run(action, plan, data.get("requestId"))
+    ai_quota().record(user)
     repo().audit(user["id"], f"ai.{action}", "plan", plan.get("id") or "", plan.get("version") or 0, "success",
                  {"provider": ai_service().store.get_public_config()["provider"]})
     return result
@@ -593,3 +620,21 @@ async def generate_ai(request: Request):
 async def cancel_ai(request: Request):
     current_user(request)
     return ai_service().cancel((await body(request)).get("requestId"))
+
+
+@router.get("/api/ai/my-status")
+def my_ai_status(request: Request):
+    """Giáo viên xem mình có được dùng AI không và còn bao nhiêu lượt hôm nay."""
+    user = current_user(request)
+    configured, _config = ai_service().check_configuration()
+    return {**ai_quota().status(user), "configured": configured}
+
+
+@router.get("/api/ai/policy")
+def get_ai_policy(request: Request):
+    return ai_quota().admin_view(current_user(request))
+
+
+@router.post("/api/ai/policy")
+async def save_ai_policy(request: Request):
+    return ai_quota().save_policy(current_user(request), await body(request))
