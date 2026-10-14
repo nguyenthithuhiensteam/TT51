@@ -49,6 +49,9 @@ class Repository:
     def __init__(self, engine: Engine):
         self.engine = engine
         self.sessions: dict[str, dict] = {}
+        # Bộ nhớ đệm kh_app_state (cấu hình, kho kế hoạch...). Mọi lần ghi bảng này đều đi qua set_json/_exec của
+        # chính tiến trình này nên đệm luôn đúng — với điều kiện chỉ chạy MỘT tiến trình máy chủ (như Render hiện nay).
+        self._state_cache: dict[str, str | None] = {}
         metadata.create_all(engine)
         self.seed_builtin_resources()
         self.seed_builtin_objectives()
@@ -92,18 +95,22 @@ class Repository:
         self.audit(None, "migration.shared_workspace", "workspace", owner)
 
     # ---- tiện ích SQL ----
+    # Đọc ở chế độ autocommit: không mở/đóng giao dịch (BEGIN/ROLLBACK) → bớt 2 lượt đi-về mỗi lần đọc,
+    # đáng kể khi Postgres ở xa máy chủ app.
     def _one(self, sql: str, **params):
-        with self.engine.connect() as conn:
+        with self.engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
             row = conn.execute(text(sql), params).mappings().first()
             return dict(row) if row else None
 
     def _all(self, sql: str, **params) -> list[dict]:
-        with self.engine.connect() as conn:
+        with self.engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
             return [dict(row) for row in conn.execute(text(sql), params).mappings().all()]
 
     def _exec(self, sql: str, **params) -> None:
         with self.engine.begin() as conn:
             conn.execute(text(sql), params)
+        if "kh_app_state" in sql:
+            self._state_cache.clear()
 
     # ---- dữ liệu mặc định ----
     def seed_builtin_resources(self) -> None:
@@ -157,8 +164,11 @@ class Repository:
         )
 
     def get_json(self, key: str, fallback=None):
-        row = self._one("SELECT value_json FROM kh_app_state WHERE key=:key", key=key)
-        return json.loads(row["value_json"]) if row else fallback
+        if key not in self._state_cache:
+            row = self._one("SELECT value_json FROM kh_app_state WHERE key=:key", key=key)
+            self._state_cache[key] = row["value_json"] if row else None
+        raw = self._state_cache[key]
+        return json.loads(raw) if raw is not None else fallback
 
     def set_json(self, key: str, value) -> None:
         self._exec(
@@ -166,6 +176,7 @@ class Repository:
             "ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json,updated_at=excluded.updated_at",
             key=key, value=dumps(value), now=iso(),
         )
+        self._state_cache[key] = dumps(value)
 
     def get_public_branding(self) -> dict:
         school = (self.get_json("workspace", {}) or {}).get("schoolProfile") or {}
@@ -384,6 +395,8 @@ class Repository:
         """Lần đầu tài khoản mở app: tạo kho riêng (lấy dữ liệu trình duyệt cũ nếu có)."""
         legacy = legacy or {}
         workspace = self.get_json(self._ws_key(user["id"]), None)
+        if workspace and workspace.get("schemaVersion") == 4:
+            return True  # kho đã có và đúng cấu trúc: không ghi lại mỗi lần mở app
         if not workspace:
             workspace = legacy.get("workspace") or {}
             self.set_json(self._review_key(user["id"]), legacy.get("review") or {})
