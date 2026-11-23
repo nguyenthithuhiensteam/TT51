@@ -5,3 +5,6 @@ __pycache__/
 ct388/config/
 ct388/database/
 ct388/license/
+desktop/dist/
+desktop/build/
+desktop/Output/

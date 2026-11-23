@@ -90,7 +90,14 @@ def token_from(request: Request) -> str:
     return token or str(request.query_params.get("token", ""))
 
 
+def local_mode() -> bool:
+    """Bản cài trên máy cá nhân (KHGDMN_LOCAL_MODE=1): một người dùng, không màn hình đăng nhập."""
+    return os.environ.get("KHGDMN_LOCAL_MODE") == "1"
+
+
 def current_user(request: Request) -> dict:
+    if local_mode():
+        return repo().session(token_from(request), 10 ** 7)  # máy cá nhân: phiên không hết hạn khi để lâu
     config = repo().get_json("systemConfig", {"idleMinutes": 30}) or {}
     try:
         idle = float(config.get("idleMinutes") or 30)
@@ -112,7 +119,17 @@ def branding():
 
 @router.get("/api/auth/status")
 def auth_status():
-    return {"hasUsers": repo().has_users()}
+    return {"hasUsers": repo().has_users(), "localMode": local_mode()}
+
+
+@router.get("/api/local/session")
+def local_session(request: Request):
+    # Chỉ bản cài cá nhân, và chỉ nhận yêu cầu từ chính máy này (máy chủ cục bộ chỉ nghe 127.0.0.1).
+    if not local_mode():
+        raise AppError("Chỉ dùng được trên bản cài trên máy cá nhân.", 404)
+    if (request.client.host if request.client else "") not in ("127.0.0.1", "::1", "localhost", "testclient"):
+        raise AppError("Chỉ truy cập được từ chính máy này.", 403)
+    return repo().local_session()
 
 
 @router.post("/api/auth/setup-first-admin")
@@ -275,7 +292,7 @@ def audit(request: Request):
 
 @router.get("/api/repository/backup")
 def backup(request: Request):
-    return repo().create_backup(current_user(request))
+    return repo().create_backup(current_user(request), personal=local_mode() or request.query_params.get("scope") == "personal")
 
 
 @router.post("/api/repository/restore")

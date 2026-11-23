@@ -12,4 +12,4 @@ def test_ct388_served_under_prefix(client):
     domains = client.get("/ct388/api/domains")
     assert domains.status_code in (200, 401), domains.text
     # API của KH GDMN vẫn là của KH GDMN.
-    assert client.get("/api/auth/status").json() == {"hasUsers": False}
+    assert client.get("/api/auth/status").json()["hasUsers"] is False

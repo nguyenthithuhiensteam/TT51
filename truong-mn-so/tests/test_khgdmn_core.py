@@ -48,9 +48,9 @@ def test_password_hash_compatible_with_node():
 
 
 def test_first_admin_and_login_flow(client):
-    assert client.get("/api/auth/status").json() == {"hasUsers": False}
+    assert client.get("/api/auth/status").json()["hasUsers"] is False
     admin = setup_admin(client)
-    assert client.get("/api/auth/status").json() == {"hasUsers": True}
+    assert client.get("/api/auth/status").json()["hasUsers"] is True
     again = client.post("/api/auth/setup-first-admin", json={"username": "x2", "fullName": "B", "password": "matkhau123"})
     assert again.status_code == 400 and "đã được thiết lập" in again.json()["error"]
     bad = client.post("/api/auth/login", json={"username": "admin", "password": "sai"})
@@ -265,3 +265,24 @@ def test_reset_admin_from_env(tmp_path, monkeypatch):
     with TestClient(create_app(url, mount_ct388=False)) as c:
         created = c.post("/api/auth/login", json={"username": "quantri.moi", "password": "MatKhauTam-2026"}).json()
         assert created["user"]["roles"] == ["system_admin"]
+
+
+def test_local_mode_single_user_without_login(tmp_path, monkeypatch):
+    """Bản cài trên máy cá nhân: vào thẳng không đăng nhập; sao lưu là tệp kho cá nhân dùng chung với bản online."""
+    monkeypatch.setenv("KHGDMN_LOCAL_MODE", "1")
+    with TestClient(create_app(f"sqlite:///{tmp_path / 'local.sqlite'}", mount_ct388=False)) as c:
+        assert c.get("/api/auth/status").json()["localMode"] is True
+        session = c.get("/api/local/session").json()
+        assert session["user"]["username"] == "giaovien" and session["user"]["roles"] == ["system_admin"]
+        headers = {"Authorization": f"Bearer {session['token']}"}
+        assert c.post("/api/repository/bootstrap", headers=headers, json={"legacy": {}}).json() is True
+        c.post("/api/repository/state", headers=headers, json={"workspace": {"plans": [{"id": "plan-may"}]}, "review": {}})
+        backup = c.get("/api/repository/backup", headers=headers).json()
+        assert backup["format"] == "truong-mn-so-personal-backup" and [p["id"] for p in backup["workspace"]["plans"]] == ["plan-may"]
+        # Mở lại app: vẫn đúng tài khoản cũ, dữ liệu còn nguyên.
+        again = {"Authorization": f"Bearer {c.get('/api/local/session').json()['token']}"}
+        assert [p["id"] for p in c.get("/api/repository/state", headers=again).json()["workspace"]["plans"]] == ["plan-may"]
+    monkeypatch.delenv("KHGDMN_LOCAL_MODE")
+    with TestClient(create_app(f"sqlite:///{tmp_path / 'online.sqlite'}", mount_ct388=False)) as c:
+        assert c.get("/api/local/session").status_code == 404
+        assert c.get("/api/auth/status").json()["localMode"] is False

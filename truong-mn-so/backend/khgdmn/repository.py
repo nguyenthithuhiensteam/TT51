@@ -57,6 +57,21 @@ class Repository:
         self.seed_builtin_objectives()
         self.migrate_shared_workspace()
 
+    LOCAL_USERNAME = "giaovien"
+
+    def local_session(self) -> dict:
+        """Bản cài trên máy cá nhân (một người dùng, không đăng nhập): dùng một tài khoản cục bộ duy nhất.
+        Tài khoản có quyền quản trị để tự cấu hình AI, mẫu văn bản... trên máy của mình."""
+        row = self._one("SELECT * FROM kh_users WHERE username=:u", u=self.LOCAL_USERNAME)
+        if not row:
+            self._insert_user(None, {"username": self.LOCAL_USERNAME, "fullName": "Giáo viên", "password": secrets.token_urlsafe(24),
+                                     "roles": [ADMIN], "mustChangePassword": False})
+            row = self._one("SELECT * FROM kh_users WHERE username=:u", u=self.LOCAL_USERNAME)
+        token = secrets.token_hex(32)
+        user = self.row_user(row)
+        self.sessions[token] = {"user": user, "lastActivity": time.time()}
+        return {"token": token, "user": user}
+
     def reset_admin_from_env(self, username: str, password: str) -> str:
         """Khôi phục quyền quản trị khi quên mật khẩu (biến môi trường KHGDMN_RESET_ADMIN_USERNAME/PASSWORD).
         Tài khoản có sẵn: đặt lại mật khẩu, mở khóa, gán vai trò quản trị. Chưa có: tạo mới tài khoản quản trị.
@@ -434,9 +449,11 @@ class Repository:
     PERSONAL_FORMAT = "truong-mn-so-personal-backup"
     LEGACY_FORMAT = "ctgdmn-sqlite-backup"  # bản sao lưu của KH GDMN cũ (Node, một trường)
 
-    def create_backup(self, actor: dict) -> dict:
+    def create_backup(self, actor: dict, personal: bool = False) -> dict:
+        """personal=True (luôn dùng ở bản cài cá nhân): chỉ kho của người này, cùng định dạng với giáo viên trên bản online
+        nên chuyển qua lại giữa hai bản bằng Sao lưu → Khôi phục."""
         authorize(actor, "data.read")
-        if ADMIN not in (actor.get("roles") or []):
+        if personal or ADMIN not in (actor.get("roles") or []):
             payload = {"format": self.PERSONAL_FORMAT, "version": 1, "exportedAt": iso(), "owner": actor["username"],
                        "workspace": self.get_json(self._ws_key(actor["id"]), {}), "review": self.get_json(self._review_key(actor["id"]), {})}
             self.audit(actor["id"], "backup.export_personal", "workspace", actor["id"])

@@ -496,7 +496,7 @@ function activeStaff(role = '') { return state.workspace.staff.filter((item) => 
 function hasRole(role){return (state.currentUser?.roles||[]).includes(role);}
 
 function settingsTabs() {
-  const tabs=[['school','Hồ sơ của tôi'],['signatures','Chữ ký của tôi']];if(hasRole('system_admin'))tabs.push(['templates','Mẫu văn bản'],['ai','Kết nối GenAI'],['accounts','Duyệt và quản lý tài khoản']);
+  const tabs=[['school','Hồ sơ của tôi'],['signatures','Chữ ký của tôi']];if(hasRole('system_admin'))tabs.push(['templates','Mẫu văn bản'],['ai','Kết nối GenAI']);if(hasRole('system_admin')&&!state.localMode)tabs.push(['accounts','Duyệt và quản lý tài khoản']);
   return `<nav class="settings-tabs">${tabs.map(([key,label]) => `<button data-settings-tab="${key}" class="${state.settingsTab===key?'is-active':''}">${label}</button>`).join('')}</nav>`;
 }
 
@@ -860,7 +860,7 @@ function buildLinkedObjectivesText(plan = {}) {
 async function openQuickAILesson(){
   let status;
   try{status=await window.ctgdmnDesktop.getMyAIStatus();}catch(error){showToast(error.message);return;}
-  const blocked=!status.configured?'Quản trị chưa kết nối AI cho hệ thống. Vui lòng liên hệ quản trị.':!status.enabled?'Tài khoản của bạn chưa được quản trị cho phép dùng AI.':(status.limit&&status.remaining<=0)?`Bạn đã dùng hết ${status.limit} lượt AI hôm nay. Hạn mức làm mới vào 0 giờ.`:'';
+  const blocked=!state.online?'Máy đang không có Internet. AI chỉ dùng được khi có mạng; các chức năng khác vẫn dùng bình thường.':!status.configured?(state.localMode?'Chưa nhập khóa AI. Vào Cài đặt → Kết nối GenAI để nhập khóa Claude.':'Quản trị chưa kết nối AI cho hệ thống. Vui lòng liên hệ quản trị.'):!status.enabled?'Tài khoản của bạn chưa được quản trị cho phép dùng AI.':(status.limit&&status.remaining<=0)?`Bạn đã dùng hết ${status.limit} lượt AI hôm nay. Hạn mức làm mới vào 0 giờ.`:'';
   const quota=status.limit?`Hôm nay bạn còn <strong>${status.remaining}/${status.limit}</strong> lượt AI.`:'Không giới hạn số lượt AI.';
   const ages=state.data.ageGroups.map((a)=>a.label);
   const domains=[...new Set(ages.flatMap((age)=>domainsForAgeGroup(age)))];
@@ -1693,7 +1693,7 @@ function bindEvents() {
     if (event.key === 'Escape') closeDrawer();
   });
   document.querySelector('#quick-add').addEventListener('click', () => { setRoute('library'); showToast('Chọn một tài liệu để rà soát hoặc ghi chú.'); });
-  document.querySelector('#logout-button').addEventListener('click',async()=>{await window.ctgdmnDesktop.logout();state.currentUser=null;els.app.classList.add('is-hidden');els.loading.classList.remove('is-hidden');authScreen('login');});
+  document.querySelector('#logout-button').addEventListener('click',async()=>{if(state.localMode)return;await window.ctgdmnDesktop.logout();state.currentUser=null;els.app.classList.add('is-hidden');els.loading.classList.remove('is-hidden');authScreen('login');});
   window.addEventListener('online',()=>{state.online=true;if(state.route==='videos')renderVideos();if(state.route==='online-resources')renderAIWorkspace();});window.addEventListener('offline',()=>{state.online=false;if(state.route==='videos')renderVideos();if(state.route==='online-resources')renderAIWorkspace();});
   els.backupImport.addEventListener('change', async () => {
     const file = els.backupImport.files?.[0]; if (!file) return;
@@ -1710,7 +1710,15 @@ async function init() {
     const [data,branding] = await Promise.all([loadData(),window.ctgdmnDesktop.getPublicBranding()]);
     state.data = data;
     syncPublicBranding(branding);
-    const auth=await window.ctgdmnDesktop.getAuthStatus();authScreen(auth.hasUsers?'login':'setup');
+    const auth=await window.ctgdmnDesktop.getAuthStatus();
+    if(auth.localMode){
+      // Bản cài trên máy cá nhân: vào thẳng, không đăng nhập; không có đăng xuất và quản lý tài khoản.
+      state.localMode=true;
+      document.querySelector('#logout-button')?.setAttribute('title','Bản cài trên máy cá nhân');
+      state.currentUser=await window.ctgdmnDesktop.localSession();
+      return await startAuthenticated();
+    }
+    authScreen(auth.hasUsers?'login':'setup');
   } catch (error) {
     els.loading.innerHTML = `<strong>Không thể khởi động ứng dụng</strong><small>${escapeHtml(error.message)}</small>`;
   }

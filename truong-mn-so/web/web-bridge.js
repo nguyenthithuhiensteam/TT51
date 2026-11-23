@@ -83,6 +83,13 @@
       sessionStorage.setItem('ctgdmn-web-token', authToken);
       return result.user;
     },
+    // Bản cài trên máy cá nhân: máy chủ cục bộ cấp phiên cho người dùng duy nhất, không cần mật khẩu.
+    localSession: async () => {
+      const result = await api('GET', '/api/local/session');
+      authToken = result.token;
+      sessionStorage.setItem('ctgdmn-web-token', authToken);
+      return result.user;
+    },
     logout: async () => { const result = await api('POST', '/api/auth/logout'); authToken = ''; sessionStorage.removeItem('ctgdmn-web-token'); return result; },
     changePassword: (currentPassword, newPassword) => api('POST', '/api/auth/change-password', { currentPassword, newPassword }),
 

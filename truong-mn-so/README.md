@@ -37,3 +37,15 @@ python -m venv .venv
 | Dockerfile + `render.yaml` (service mới `truong-mn-so`) | Đã viết, chưa build thử (máy không có Docker) |
 
 Các API chưa chuyển trả về mã 501 kèm thông báo tiếng Việt.
+
+## Bản cài trên máy cá nhân (không cần Internet)
+
+Cho trường sóng yếu: mỗi giáo viên cài trên máy mình (Windows 10/11 64-bit, không cần quyền quản trị).
+
+- Đóng gói: `powershell -ExecutionPolicy Bypass -File desktop\build.ps1` → `desktop\Output\TruongMNSo-CaiDat-<phiên bản>.exe`
+  (cần Inno Setup 6). Mã khởi động: `desktop/launcher.py`; cấu hình đóng gói: `desktop/truong-mn-so.spec`, `desktop/installer.iss`.
+- Chạy máy chủ ngay trên máy (chỉ 127.0.0.1), mở giao diện trong cửa sổ Edge; đóng cửa sổ là tắt.
+- `KHGDMN_LOCAL_MODE=1`: một người dùng, không đăng nhập; sao lưu là tệp kho cá nhân — nhập được vào bản online và ngược lại.
+- Dữ liệu: `%LOCALAPPDATA%\TruongMNSo` (SQLite chung cho KH GDMN và CT388, khóa riêng của máy, nhật ký) — giữ lại khi gỡ app.
+- Kèm sẵn PDF chương trình, dữ liệu chương trình, hướng dẫn, CT388. AI soạn giáo án chỉ chạy khi có mạng và đã nhập khóa.
+- Xuất PDF dùng Microsoft Edge có sẵn trên máy.
